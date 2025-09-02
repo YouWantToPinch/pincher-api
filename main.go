@@ -37,7 +37,7 @@ func main() {
 	(*config.apiKeys)["api"] = os.Getenv("API_KEY_1")
 	*/
 
-	//config.platform = os.Getenv("PLATFORM")
+	config.platform = os.Getenv("PLATFORM")
 	//config.secret = os.Getenv("SECRET")
 
 	mux := http.NewServeMux()
@@ -47,6 +47,7 @@ func main() {
 	// REGISTER HANDLERS
 	mux.HandleFunc("GET /api/healthz", endpReadiness)
 	mux.HandleFunc("GET /admin/metrics", config.endpFileserverHitCountGet)
+	mux.HandleFunc("POST /admin/reset", config.endpDeleteAllUsers)
 	mux.HandleFunc("POST /api/users", config.endpCreateUser)
 	mux.HandleFunc("PUT /api/users", config.endpUpdateUserCredentials)
 	mux.HandleFunc("POST /api/login", config.endpLoginUser)

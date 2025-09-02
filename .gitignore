@@ -1,4 +1,5 @@
 assets/
+http-testing/
 
 .env
 migup
