@@ -38,7 +38,7 @@ func main() {
 	*/
 
 	config.platform = os.Getenv("PLATFORM")
-	//config.secret = os.Getenv("SECRET")
+	config.secret = os.Getenv("SECRET")
 
 	mux := http.NewServeMux()
 	handler := config.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
@@ -48,12 +48,16 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", endpReadiness)
 	mux.HandleFunc("GET /admin/metrics", config.endpFileserverHitCountGet)
 	mux.HandleFunc("POST /admin/reset", config.endpDeleteAllUsers)
+	  // USER AUTH
 	mux.HandleFunc("POST /api/users", config.endpCreateUser)
 	mux.HandleFunc("PUT /api/users", config.endpUpdateUserCredentials)
 	mux.HandleFunc("POST /api/login", config.endpLoginUser)
 	mux.HandleFunc("POST /api/refresh", config.endpCheckRefreshToken)
 	mux.HandleFunc("POST /api/revoke", config.endpRevokeRefreshToken)
-	
+	  // GROUPS
+	mux.HandleFunc("POST /api/users/{user_id}/groups", config.endpCreateGroup)
+	mux.HandleFunc("GET /api/users/{user_id}/groups", config.endpGetGroupsByUserID)
+	mux.HandleFunc("DELETE /api/users/{user_id}/groups/{group_id}", config.endpDeleteGroup)
 
 	server := &http.Server{
 		Addr:		":" + port,

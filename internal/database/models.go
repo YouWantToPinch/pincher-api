@@ -15,10 +15,29 @@ type Account struct {
 	ID          uuid.UUID
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	OwnerID     uuid.UUID
+	UserID      uuid.UUID
 	AccountType string
 	Name        string
 	Description sql.NullString
+}
+
+type Category struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	UserID    uuid.UUID
+	Name      string
+	GroupID   uuid.NullUUID
+	Notes     string
+}
+
+type Group struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	UserID    uuid.UUID
+	Name      string
+	Notes     string
 }
 
 type RefreshToken struct {
@@ -39,10 +58,14 @@ type Transaction struct {
 	Datetime    time.Time
 	Payees      string
 	Notes       string
-	Categories  string
 	Amount      sql.NullInt32
 	SplitAmount string
 	Cleared     bool
+}
+
+type TransactionCategory struct {
+	TransactionID uuid.UUID
+	CategoryID    uuid.UUID
 }
 
 type User struct {

@@ -21,7 +21,6 @@ CREATE TABLE transactions (
     datetime TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     payees TEXT NOT NULL,
     notes TEXT NOT NULL,
-    categories TEXT NOT NULL,
     amount INTEGER,
     split_amount TEXT NOT NULL,
     cleared BOOLEAN NOT NULL,
