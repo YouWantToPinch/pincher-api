@@ -48,10 +48,10 @@ SELECT *
 FROM categories
 WHERE categories.id = $1;
 
--- name: GetCategoryByUserIDAndName :one
+-- name: GetCategoriesByUserID :many
 SELECT *
 FROM categories
-WHERE categories.name = $1 AND categories.user_id = $2;
+WHERE categories.user_id = $1;
 
 -- name: AssignCategoryToGroup :one
 UPDATE categories

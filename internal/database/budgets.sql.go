@@ -171,6 +171,43 @@ func (q *Queries) GetCategoriesByGroup(ctx context.Context, groupID uuid.NullUUI
 	return items, nil
 }
 
+const getCategoriesByUserID = `-- name: GetCategoriesByUserID :many
+SELECT id, created_at, updated_at, user_id, name, group_id, notes
+FROM categories
+WHERE categories.user_id = $1
+`
+
+func (q *Queries) GetCategoriesByUserID(ctx context.Context, userID uuid.UUID) ([]Category, error) {
+	rows, err := q.db.QueryContext(ctx, getCategoriesByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Category
+	for rows.Next() {
+		var i Category
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UserID,
+			&i.Name,
+			&i.GroupID,
+			&i.Notes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCategoryByID = `-- name: GetCategoryByID :one
 SELECT id, created_at, updated_at, user_id, name, group_id, notes
 FROM categories
@@ -179,32 +216,6 @@ WHERE categories.id = $1
 
 func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, error) {
 	row := q.db.QueryRowContext(ctx, getCategoryByID, id)
-	var i Category
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.UserID,
-		&i.Name,
-		&i.GroupID,
-		&i.Notes,
-	)
-	return i, err
-}
-
-const getCategoryByUserIDAndName = `-- name: GetCategoryByUserIDAndName :one
-SELECT id, created_at, updated_at, user_id, name, group_id, notes
-FROM categories
-WHERE categories.name = $1 AND categories.user_id = $2
-`
-
-type GetCategoryByUserIDAndNameParams struct {
-	Name   string
-	UserID uuid.UUID
-}
-
-func (q *Queries) GetCategoryByUserIDAndName(ctx context.Context, arg GetCategoryByUserIDAndNameParams) (Category, error) {
-	row := q.db.QueryRowContext(ctx, getCategoryByUserIDAndName, arg.Name, arg.UserID)
 	var i Category
 	err := row.Scan(
 		&i.ID,

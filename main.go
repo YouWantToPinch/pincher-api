@@ -48,16 +48,20 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", endpReadiness)
 	mux.HandleFunc("GET /admin/metrics", config.endpFileserverHitCountGet)
 	mux.HandleFunc("POST /admin/reset", config.endpDeleteAllUsers)
-	  // USER AUTH
+	  // User authentication
 	mux.HandleFunc("POST /api/users", config.endpCreateUser)
 	mux.HandleFunc("PUT /api/users", config.endpUpdateUserCredentials)
 	mux.HandleFunc("POST /api/login", config.endpLoginUser)
 	mux.HandleFunc("POST /api/refresh", config.endpCheckRefreshToken)
 	mux.HandleFunc("POST /api/revoke", config.endpRevokeRefreshToken)
-	  // GROUPS
+	  // Groups & Categories
 	mux.HandleFunc("POST /api/users/{user_id}/groups", config.endpCreateGroup)
+	mux.HandleFunc("POST /api/users/{user_id}/categories", config.endpCreateCategory)
 	mux.HandleFunc("GET /api/users/{user_id}/groups", config.endpGetGroupsByUserID)
+	mux.HandleFunc("GET /api/users/{user_id}/categories", config.endpGetCategoriesByUserID)
+	mux.HandleFunc("PUT /api/users/{user_id}/categories/{category_id}", config.endpAssignCategoryToGroup)
 	mux.HandleFunc("DELETE /api/users/{user_id}/groups/{group_id}", config.endpDeleteGroup)
+	mux.HandleFunc("DELETE /api/users/{user_id}/categories/{category_id}", config.endpDeleteCategory)
 
 	server := &http.Server{
 		Addr:		":" + port,
