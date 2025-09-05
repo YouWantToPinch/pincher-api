@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
-	"github.com/YouWantToPinch/pincher-api/internal/auth"
 )
 
 func(cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request){
@@ -27,14 +26,9 @@ func(cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request){
 		return
     }
 
-	tokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "No token found to validate", err)
-		return
-	}
-	validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
-	if err != nil || validatedUserID != pathUserID {
-		respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", err)
+	validatedUserID := getValidatedUserID(r.Context())
+	if validatedUserID != pathUserID {
+		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}
 
@@ -73,14 +67,9 @@ func(cfg *apiConfig) endpGetGroupsByUserID(w http.ResponseWriter, r *http.Reques
 	idString := r.PathValue("user_id")
 	pathUserID, err := uuid.Parse(idString)
 
-	tokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "No token found to validate", err)
-		return
-	}
-	validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
-	if err != nil || validatedUserID != pathUserID {
-		respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", err)
+	validatedUserID := getValidatedUserID(r.Context())
+	if validatedUserID != pathUserID {
+		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}
 
@@ -116,18 +105,14 @@ func(cfg *apiConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	tokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "No token found to validate", err)
-		return
-	}
+	validatedUserID := getValidatedUserID(r.Context())
+
 	dbGroup, err := cfg.db.GetGroupByID(r.Context(), pathGroupID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Couldn't find group with specified id", err)
 		return
 	}
-	validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
-	if err != nil || validatedUserID != pathUserID || validatedUserID != dbGroup.UserID {
+	if validatedUserID != dbGroup.UserID || validatedUserID != pathUserID {
 		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}

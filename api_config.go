@@ -1,9 +1,15 @@
 package main
 
 import (
+	"log"
+	"context"
+
 	"sync/atomic"
 	"net/http"
-	
+
+	"github.com/google/uuid"
+
+	"github.com/YouWantToPinch/pincher-api/internal/auth"
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
@@ -31,4 +37,35 @@ func (cfg *apiConfig) middlewareMetricsReset(next http.Handler) http.Handler {
 		cfg.fileserverHits.Store(0)
 		next.ServeHTTP(w, r)
 	})
+}
+
+type ctxKey struct{}
+var ctxUserID ctxKey
+
+func (cfg *apiConfig) middlewareAuthenticate(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tokenString, err := auth.GetBearerToken(r.Header)
+		if err != nil {
+			respondWithError(w, http.StatusUnauthorized, err.Error(), err)
+			return
+		}
+		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
+		if err != nil {
+			respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", nil)
+			return
+		}
+		ctx := context.WithValue(r.Context(), ctxUserID, validatedUserID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// ============== HELPERS =================
+
+func getValidatedUserID(ctx context.Context) (uuid.UUID) {
+    validatedUserID, ok := ctx.Value(ctxUserID).(uuid.UUID)
+	if !ok {
+		log.Println("Failed to retrieve validated user_id from context")
+		return uuid.Nil
+	}
+    return validatedUserID
 }

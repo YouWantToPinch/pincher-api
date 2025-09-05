@@ -26,43 +26,47 @@ func main() {
 		os.Exit(1)
 	}
 
-	config := apiConfig{}
+	cfg := apiConfig{}
 	dbQueries := database.New(db)
-	config.db = dbQueries
+	cfg.db = dbQueries
 
 	// Handle any API keys here for webhooks
 	/*
 	apiKeys := make(map[string]string)
-	config.apiKeys = &apiKeys
-	(*config.apiKeys)["api"] = os.Getenv("API_KEY_1")
+	cfg.apiKeys = &apiKeys
+	(*cfg.apiKeys)["api"] = os.Getenv("API_KEY_1")
 	*/
 
-	config.platform = os.Getenv("PLATFORM")
-	config.secret = os.Getenv("SECRET")
+	cfg.platform = os.Getenv("PLATFORM")
+	cfg.secret = os.Getenv("SECRET")
 
 	mux := http.NewServeMux()
-	handler := config.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
-	mux.Handle("/app/", handler)
-	
-	// REGISTER HANDLERS
+
+	// middleware
+	mdMetrics := cfg.middlewareMetricsInc
+	mdAuth := cfg.middlewareAuthenticate
+
+	mux.Handle("/app/", mdMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
+
+	// REGISTER API HANDLERS
 	mux.HandleFunc("GET /api/healthz", endpReadiness)
-	mux.HandleFunc("GET /admin/metrics", config.endpFileserverHitCountGet)
-	mux.HandleFunc("POST /admin/reset", config.endpDeleteAllUsers)
+	mux.HandleFunc("GET /admin/metrics", cfg.endpFileserverHitCountGet)
+	mux.HandleFunc("POST /admin/reset", cfg.endpDeleteAllUsers)
 	  // User authentication
-	mux.HandleFunc("POST /api/users", config.endpCreateUser)
-	mux.HandleFunc("DELETE /api/users/{user_id}", config.endpDeleteUser)
-	mux.HandleFunc("PUT /api/users", config.endpUpdateUserCredentials)
-	mux.HandleFunc("POST /api/login", config.endpLoginUser)
-	mux.HandleFunc("POST /api/refresh", config.endpCheckRefreshToken)
-	mux.HandleFunc("POST /api/revoke", config.endpRevokeRefreshToken)
+	mux.HandleFunc("POST /api/users", cfg.endpCreateUser)
+	mux.HandleFunc("DELETE /api/users/{user_id}", mdAuth(cfg.endpDeleteUser))
+	mux.HandleFunc("PUT /api/users", mdAuth(cfg.endpUpdateUserCredentials))
+	mux.HandleFunc("POST /api/login", cfg.endpLoginUser)
+	mux.HandleFunc("POST /api/refresh", cfg.endpCheckRefreshToken)
+	mux.HandleFunc("POST /api/revoke", cfg.endpRevokeRefreshToken)
 	  // Groups & Categories
-	mux.HandleFunc("POST /api/users/{user_id}/groups", config.endpCreateGroup)
-	mux.HandleFunc("POST /api/users/{user_id}/categories", config.endpCreateCategory)
-	mux.HandleFunc("GET /api/users/{user_id}/groups", config.endpGetGroupsByUserID)
-	mux.HandleFunc("GET /api/users/{user_id}/categories", config.endpGetCategoriesByUserID)
-	mux.HandleFunc("PUT /api/users/{user_id}/categories/{category_id}", config.endpAssignCategoryToGroup)
-	mux.HandleFunc("DELETE /api/users/{user_id}/groups/{group_id}", config.endpDeleteGroup)
-	mux.HandleFunc("DELETE /api/users/{user_id}/categories/{category_id}", config.endpDeleteCategory)
+	mux.HandleFunc("POST /api/users/{user_id}/groups", mdAuth(cfg.endpCreateGroup))
+	mux.HandleFunc("POST /api/users/{user_id}/categories", mdAuth(cfg.endpCreateCategory))
+	mux.HandleFunc("GET /api/users/{user_id}/groups", mdAuth(cfg.endpGetGroupsByUserID))
+	mux.HandleFunc("GET /api/users/{user_id}/categories", mdAuth(cfg.endpGetCategoriesByUserID))
+	mux.HandleFunc("PUT /api/users/{user_id}/categories/{category_id}", mdAuth(cfg.endpAssignCategoryToGroup))
+	mux.HandleFunc("DELETE /api/users/{user_id}/groups/{group_id}", mdAuth(cfg.endpDeleteGroup))
+	mux.HandleFunc("DELETE /api/users/{user_id}/categories/{category_id}", mdAuth(cfg.endpDeleteCategory))
 
 	server := &http.Server{
 		Addr:		":" + port,

@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
-	"github.com/YouWantToPinch/pincher-api/internal/auth"
 )
 
 func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
@@ -30,14 +29,9 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 		return
     }
 
-	tokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "No token found to validate", err)
-		return
-	}
-	validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
-	if err != nil || validatedUserID != pathUserID {
-		respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", err)
+	validatedUserID := getValidatedUserID(r.Context())
+	if validatedUserID != pathUserID {
+		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}
 
@@ -90,14 +84,9 @@ func(cfg *apiConfig) endpGetCategoriesByUserID(w http.ResponseWriter, r *http.Re
 	log.Printf("queryGroupID is: %s", queryGroupID)
 	log.Printf("URL: %s", r.URL.String())
 
-	tokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "No token found to validate", err)
-		return
-	}
-	validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
-	if err != nil || validatedUserID != pathUserID {
-		respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", err)
+	validatedUserID := getValidatedUserID(r.Context())
+	if validatedUserID != pathUserID {
+		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}
 
@@ -157,14 +146,9 @@ func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Re
 		return
     }
 
-	tokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "No token found to validate", err)
-		return
-	}
-	validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
-	if err != nil || validatedUserID != pathUserID {
-		respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", err)
+	validatedUserID := getValidatedUserID(r.Context())
+	if validatedUserID != pathUserID {
+		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}
 
@@ -222,18 +206,13 @@ func(cfg *apiConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	
-	tokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "No token found to validate", err)
-		return
-	}
 	dbCategory, err := cfg.db.GetCategoryByID(r.Context(), pathCategoryID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Couldn't find category with specified id", err)
 		return
 	}
-	validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
-	if err != nil || validatedUserID != pathUserID || validatedUserID != dbCategory.UserID {
+	validatedUserID := getValidatedUserID(r.Context())
+	if validatedUserID != pathUserID || validatedUserID != dbCategory.UserID {
 		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}

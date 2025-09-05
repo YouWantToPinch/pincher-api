@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"encoding/json"
 
@@ -78,21 +77,11 @@ func(cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	tokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
-		return
-	}
-
-	dbUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid or missing token", err)
-		return
-	}
+	validatedUserID := getValidatedUserID(r.Context())
 
 	dbUserUpdated, err := cfg.db.UpdateUserCredentials(r.Context(), database.UpdateUserCredentialsParams{
-		ID:					dbUserID,
-		Username:				params.Username,
+		ID:					validatedUserID,
+		Username:			params.Username,
 		HashedPassword:		hashedPass,
 	})
 
@@ -138,19 +127,9 @@ func(cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	tokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
-		return
-	}
+	validatedUserID := getValidatedUserID(r.Context())
 
-	dbUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid or missing token", err)
-		return
-	}
-
-	cfg.db.DeleteUserByID(r.Context(), dbUserID)
+	cfg.db.DeleteUserByID(r.Context(), validatedUserID)
 	respondWithText(w, http.StatusOK, "The user was deleted.")
 	return
 }
