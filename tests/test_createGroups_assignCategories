@@ -1,0 +1,40 @@
+#!/bin/bash
+#Should show two users created, logged in, and creating groups with various categories. Under user_2, one category is made without an assigned group, and later assigned to a group. After getting categories from under that group the 2nd time, this category should be seen under the group.
+source ./functions
+
+reset 
+heading "CREATING user_1 AND user_2...."
+USER1=$(create_user "user_1" "123456")
+USER2=$(create_user "user_2" "654321")
+heading "LOGGING IN user_1 AND user_2...."
+JWT_USER1=$(login "user_1" "123456")
+JWT_USER2=$(login "user_2" "654321")
+heading "CREATING GROUPS FOR user_1 AND user_2...."
+GROUP1=$(create_group "$JWT_USER1" "$USER1" "SAVINGS" "Holds categories related to saving money for one or more purposes.")
+GROUP2=$(create_group "$JWT_USER2" "$USER2" "SPENDING" "Holds categories related to elective monthly spending")
+GROUP3=$(create_group "$JWT_USER2" "$USER2" "SUBSCRIPTIONS" "For tracking subscription service fees")
+heading "CREATING CATEGORIES FOR user_1 AND user_2...."
+CATEGORY1=$(create_category "$JWT_USER1" "$USER1" "$GROUP1" "Tattoo Fund" "Saving up for new tattoos!")
+CATEGORY2=$(create_category "$JWT_USER1" "$USER1" "$GROUP1" "Main Savings" "A penny saved is a penny earned.")
+CATEGORY3=$(create_category "$JWT_USER1" "$USER1" "$GROUP1" "Investment Buffer" "Holds money to be invested later when it reaches Index Fund minimums, and/or when the market dips.")
+CATEGORY4=$(create_category "$JWT_USER2" "$USER2" "$GROUP2" "Dining Out" "For fine dining, fast food, and everything in-between!")
+CATEGORY5=$(create_category "$JWT_USER2" "$USER2" "$GROUP2" "Treats" "A budget category for tracking how much I spend on sweet treats.")
+CATEGORY6=$(create_category "$JWT_USER2" "$USER2" "$GROUP2" "Home Goods" "Shampoo, dish soap, paper towels...etc.")
+CATEGORY7=$(create_category "$JWT_USER2" "$USER2" "$GROUP3" "Bigstore Club Membership" "A budget dedicated to tracking annual fees for my membership with Bigstore, where I buy most of my groceries.")
+CATEGORY8=$(create_category "$JWT_USER2" "$USER2" "" "Sciencemail Subs." "Homelabbing email can be a pain; I prefer to pay a company somewhere else to host my email privately. This budget category tracks my membership spending for their service.")
+heading "GETTING USER GROUPS FOR user_1...."
+get_user_groups "$JWT_USER1" "$USER1" ""
+heading "GETTING USER GROUPS FOR user_2...."
+get_user_groups "$JWT_USER2" "$USER2" ""
+heading "GETTING CATEGORIES OF user_1...."
+get_user_categories "$JWT_USER1" "$USER1" ""
+heading "GETTING CATEGORIES OF user_2...."
+get_user_categories "$JWT_USER2" "$USER2" ""
+heading "GETTING CATEGORIES OF user_2 GROUP: 'SPENDING'"
+get_user_categories "$JWT_USER2" "$USER2" "?group_id=$GROUP2"
+heading "GETTING CATEGORIES FROM user_2 GROUP: 'SUBSCRIPTIONS'"
+get_user_categories "$JWT_USER2" "$USER2" "?group_id=$GROUP3"
+heading "ASSIGNING user_2 CATEGORY: 'Sciencemail Subs.' TO user_2 GROUP: 'SUBSCRIPTIONS'"
+assign_cat_to_grp "$JWT_USER2" "$USER2" "$CATEGORY8" "$GROUP3"
+heading "GETTING CATEGORIES FROM user_2 GROUP: 'SUBSCRIPTIONS' (AGAIN)"
+get_user_categories "$JWT_USER2" "$USER2" "?group_id=$GROUP3"
