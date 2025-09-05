@@ -10,8 +10,6 @@ import (
 )
 
 func(cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request){
-    idString := r.PathValue("user_id")
-	pathUserID, err := uuid.Parse(idString)
 
 	type parameters struct {
 		Name	string `json:"name"`
@@ -20,17 +18,13 @@ func(cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request){
 
     decoder := json.NewDecoder(r.Body)
     params := parameters{}
-    err = decoder.Decode(&params)
+    err := decoder.Decode(&params)
     if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
     }
 
 	validatedUserID := getValidatedUserID(r.Context())
-	if validatedUserID != pathUserID {
-		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
-		return
-	}
 
 	_, err = cfg.db.GetGroupByUserIDAndName(r.Context(), database.GetGroupByUserIDAndNameParams{
 		Name: params.Name,
@@ -63,17 +57,11 @@ func(cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request){
 	return
 }
 
-func(cfg *apiConfig) endpGetGroupsByUserID(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("user_id")
-	pathUserID, err := uuid.Parse(idString)
+func(cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 
 	validatedUserID := getValidatedUserID(r.Context())
-	if validatedUserID != pathUserID {
-		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
-		return
-	}
 
-	groups, err := cfg.db.GetGroupsByUserID(r.Context(), pathUserID)
+	groups, err := cfg.db.GetGroupsByUserID(r.Context(), validatedUserID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get user category groups", err)
 		return
@@ -97,9 +85,7 @@ func(cfg *apiConfig) endpGetGroupsByUserID(w http.ResponseWriter, r *http.Reques
 }
 
 func(cfg *apiConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("user_id")
-	pathUserID, err := uuid.Parse(idString)
-	idString = r.PathValue("group_id")
+	idString := r.PathValue("group_id")
 	pathGroupID, err := uuid.Parse(idString)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "invalid id", err)
@@ -113,7 +99,7 @@ func(cfg *apiConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusNotFound, "Couldn't find group with specified id", err)
 		return
 	}
-	if validatedUserID != dbGroup.UserID || validatedUserID != pathUserID {
+	if validatedUserID != dbGroup.UserID {
 		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}

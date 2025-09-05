@@ -54,19 +54,19 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", cfg.endpDeleteAllUsers)
 	  // User authentication
 	mux.HandleFunc("POST /api/users", cfg.endpCreateUser)
-	mux.HandleFunc("DELETE /api/users/{user_id}", mdAuth(cfg.endpDeleteUser))
+	mux.HandleFunc("DELETE /api/users", mdAuth(cfg.endpDeleteUser))
 	mux.HandleFunc("PUT /api/users", mdAuth(cfg.endpUpdateUserCredentials))
 	mux.HandleFunc("POST /api/login", cfg.endpLoginUser)
 	mux.HandleFunc("POST /api/refresh", cfg.endpCheckRefreshToken)
 	mux.HandleFunc("POST /api/revoke", cfg.endpRevokeRefreshToken)
 	  // Groups & Categories
-	mux.HandleFunc("POST /api/users/{user_id}/groups", mdAuth(cfg.endpCreateGroup))
-	mux.HandleFunc("POST /api/users/{user_id}/categories", mdAuth(cfg.endpCreateCategory))
-	mux.HandleFunc("GET /api/users/{user_id}/groups", mdAuth(cfg.endpGetGroupsByUserID))
-	mux.HandleFunc("GET /api/users/{user_id}/categories", mdAuth(cfg.endpGetCategoriesByUserID))
-	mux.HandleFunc("PUT /api/users/{user_id}/categories/{category_id}", mdAuth(cfg.endpAssignCategoryToGroup))
-	mux.HandleFunc("DELETE /api/users/{user_id}/groups/{group_id}", mdAuth(cfg.endpDeleteGroup))
-	mux.HandleFunc("DELETE /api/users/{user_id}/categories/{category_id}", mdAuth(cfg.endpDeleteCategory))
+	mux.HandleFunc("POST /api/users/groups", mdAuth(cfg.endpCreateGroup))
+	mux.HandleFunc("POST /api/users/categories", mdAuth(cfg.endpCreateCategory))
+	mux.HandleFunc("GET /api/users/groups", mdAuth(cfg.endpGetGroups))
+	mux.HandleFunc("GET /api/users/categories", mdAuth(cfg.endpGetCategories))
+	mux.HandleFunc("PUT /api/users/categories/{category_id}", mdAuth(cfg.endpAssignCategoryToGroup))
+	mux.HandleFunc("DELETE /api/users/groups/{group_id}", mdAuth(cfg.endpDeleteGroup))
+	mux.HandleFunc("DELETE /api/users/categories/{category_id}", mdAuth(cfg.endpDeleteCategory))
 
 	server := &http.Server{
 		Addr:		":" + port,

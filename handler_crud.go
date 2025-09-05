@@ -114,10 +114,16 @@ func(cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request){
 		respondWithError(w, http.StatusBadRequest, "Missing username or password", nil)
 		return
 	}
+
+	validatedUserID := getValidatedUserID(r.Context())
 	
 	dbUser, err := cfg.db.GetUserByUsername(r.Context(), params.Username)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		return
+	}
+	if validatedUserID != dbUser.ID {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
 		return
 	}
 
@@ -126,8 +132,6 @@ func(cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request){
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
 		return
 	}
-
-	validatedUserID := getValidatedUserID(r.Context())
 
 	cfg.db.DeleteUserByID(r.Context(), validatedUserID)
 	respondWithText(w, http.StatusOK, "The user was deleted.")

@@ -12,8 +12,6 @@ import (
 )
 
 func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
-    idString := r.PathValue("user_id")
-	pathUserID, err := uuid.Parse(idString)
 
 	type parameters struct {
 		Name	string	`json:"name"`
@@ -23,17 +21,13 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 
     decoder := json.NewDecoder(r.Body)
     params := parameters{}
-    err = decoder.Decode(&params)
+    err := decoder.Decode(&params)
     if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
     }
 
 	validatedUserID := getValidatedUserID(r.Context())
-	if validatedUserID != pathUserID {
-		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
-		return
-	}
 
 	var assignedGroup uuid.NullUUID
 	if params.GroupID != "" {
@@ -77,20 +71,15 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 	return
 }
 
-func(cfg *apiConfig) endpGetCategoriesByUserID(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("user_id")
-	pathUserID, err := uuid.Parse(idString)
+func(cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
+
 	queryGroupID := r.URL.Query().Get("group_id")
 	log.Printf("queryGroupID is: %s", queryGroupID)
 	log.Printf("URL: %s", r.URL.String())
 
 	validatedUserID := getValidatedUserID(r.Context())
-	if validatedUserID != pathUserID {
-		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
-		return
-	}
 
-	categories, err := cfg.db.GetCategoriesByUserID(r.Context(), pathUserID)
+	categories, err := cfg.db.GetCategoriesByUserID(r.Context(), validatedUserID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get user categories", err)
 		return
@@ -129,9 +118,7 @@ func(cfg *apiConfig) endpGetCategoriesByUserID(w http.ResponseWriter, r *http.Re
 }
 
 func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("user_id")
-	pathUserID, err := uuid.Parse(idString)
-	idString = r.PathValue("category_id")
+	idString := r.PathValue("category_id")
 	pathCategoryID, err := uuid.Parse(idString)
 
 	type parameters struct {
@@ -147,10 +134,6 @@ func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Re
     }
 
 	validatedUserID := getValidatedUserID(r.Context())
-	if validatedUserID != pathUserID {
-		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
-		return
-	}
 
 	if params.GroupID == "" {
 		respondWithError(w, http.StatusBadRequest, "Request provided no group_id for assignment", err)
@@ -164,7 +147,7 @@ func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Re
 		return
 	}
 	foundGroup, err := cfg.db.GetGroupByID(r.Context(), parsedGroupID)
-	if err != nil {
+	if err != nil || validatedUserID != foundGroup.UserID {
 		respondWithError(w, http.StatusBadRequest, "Found no group with provided group_id", err)
 		return
 	}
@@ -197,9 +180,7 @@ func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Re
 }
 
 func(cfg *apiConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("user_id")
-	pathUserID, err := uuid.Parse(idString)
-	idString = r.PathValue("category_id")
+	idString := r.PathValue("category_id")
 	pathCategoryID, err := uuid.Parse(idString)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "invalid id", err)
@@ -212,7 +193,7 @@ func(cfg *apiConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	validatedUserID := getValidatedUserID(r.Context())
-	if validatedUserID != pathUserID || validatedUserID != dbCategory.UserID {
+	if validatedUserID != dbCategory.UserID {
 		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}
