@@ -1,0 +1,22 @@
+#!/bin/bash
+#Should create two groups. Then those groups should both be deleted after all is said and done.
+source ./functions
+
+reset 
+heading "CREATING AND LOGGING IN user_1 AND user_2...."
+USER1=$(create_user "user_1" "123456")
+USER2=$(create_user "user_2" "654321")
+JWT_USER1=$(login "user_1" "123456")
+JWT_USER2=$(login "user_2" "654321")
+heading "CREATING GROUPS FOR user_1 AND user_2...."
+GROUP1=$(create_group "$JWT_USER1" "$USER1" "Home Goods" "I always use an after shave lotion with little or no alcohol, because alcohol dries your face out and makes you look older.")
+GROUP2=$(create_group "$JWT_USER2" "$USER2" "Living Expenses" "This is a free country...it's not a rent-free country.")
+heading "GETTING GROUPS FROM user_1 AND user_2...."
+get_user_groups "$JWT_USER1" "$USER1"
+get_user_groups "$JWT_USER2" "$USER2"
+heading "DELETING GROUPS from user_1 AND user_2...."
+delete_user_group "$JWT_USER1" "$USER1" "$GROUP1"
+delete_user_group "$JWT_USER2" "$USER2" "$GROUP2"
+heading "GETTING GROUPS FROM user_1 AND user_2 (AGAIN)...."
+get_user_groups "$JWT_USER1" "$USER1"
+get_user_groups "$JWT_USER2" "$USER2"

@@ -1,0 +1,15 @@
+#!/bin/bash
+#Should return a conflict status because it tries to make the same group twice. In the end, should respond with ONE group, as a result.
+source ./functions
+
+reset
+heading "CREATING user_1...."
+USER1=$(create_user "user_1" "123456")
+heading "LOGGING IN user_1...."
+JWT_USER1=$(login "user_1" "123456")
+heading "CREATING GROUP: Subscriptions FOR user_1...."
+GROUP1=$(create_group "$JWT_USER1" "$USER1" "Subscriptions" "For tracking how much I'm getting robbed because I've been made by one or more services to send certified mail to cancel my membership(s).")
+GROUP1=$(create_group "$JWT_USER1" "$USER1" "Subscriptions" "For tracking how much I'm getting robbed because I've been made by one or more services to send certified mail to cancel my membership(s).")
+
+heading "GETTING GROUPS FROM user_1...."
+get_user_groups "$JWT_USER1" "$USER1" ""

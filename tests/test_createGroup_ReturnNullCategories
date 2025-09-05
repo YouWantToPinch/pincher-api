@@ -1,0 +1,13 @@
+#!/bin/bash
+#Should return null, as no categories were assigned to the group.
+source ./functions
+
+reset 
+heading "CREATING user_1..."
+USER1=$(create_user "user_1" "123456")
+heading "LOGGING IN user_!...."
+JWT_USER1=$(login "user_1" "123456")
+heading "CREATING Subscriptions GROUP UNDER user_1...."
+GROUP1=$(create_group "$JWT_USER1" "$USER1" "Subscriptions" "For tracking subscription services and their associated fees.")
+heading "GETTING CATEGORIES UNDER user_1 Subscriptions GROUP...."
+get_user_categories "$JWT_USER1" "$USER1" "?group_id$GROUP1"

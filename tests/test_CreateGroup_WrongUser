@@ -1,0 +1,13 @@
+#!/bin/bash
+#Webserver should respond with a 401, as user_1 is unauthorized to create a resource on user_2's behalf
+source ./functions
+
+reset 
+heading "CREATING USER_1..."
+USER1=$(create_user "user_1" "123456")
+heading "LOGGING IN USER1..."
+JWT_USER1=$(login "user_1" "123456")
+heading "CREATING USER2..."
+USER2=$(create_user "user_2" "654321")
+heading "CREATING GROUP FOR USER2 WITH USER1'S JWT..."
+GROUP1=$(create_group "$JWT_USER1" "$USER2" "Dining Out" "For fine dining, fast food, and everything in-between!")

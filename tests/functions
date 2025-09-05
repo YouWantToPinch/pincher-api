@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# --- FUNCTIONS ---
+
+heading() {
+  local msg="$1"
+  echo ""
+  echo "$msg"
+  echo "----------------------------------------------------"
+}
+
+reset() {
+ curl -s -X POST "http://localhost:8080/admin/reset" \
+   -H "Content-Type: application/json"
+}
+
+create_user() {
+  local username="$1" password="$2"
+  curl -s -X POST "http://localhost:8080/api/users" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"$username\",\"password\":\"$password\"}" \
+  | jq -r '.id'
+}
+
+login() {
+  local username="$1" password="$2"
+  curl -s -X POST "http://localhost:8080/api/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"$username\",\"password\":\"$password\"}" \
+  | jq -r '.token'
+}
+
+delete_user() {
+  local token="$1" user_id="$2" password="$3"
+  curl -s -X DELETE "http://localhost:8080/api/users/$user_id" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+  | jq -r '.id'
+}
+
+create_group() {
+  local token="$1" user_id="$2" name="$3" notes="$4"
+  curl -s -X POST "http://localhost:8080/api/users/$user_id/groups" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"$name\",\"notes\":\"$notes\"}" \
+  | jq -r '.id'
+}
+
+create_category() {
+  local token="$1" user_id="$2" group_id="$3"  name="$4" notes="$5"
+  curl -s -X POST "http://localhost:8080/api/users/$user_id/categories" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"$name\",\"notes\":\"$notes\",\"group_id\":\"$group_id\"}" \
+  | jq -r '.id'
+}
+
+delete_user_category() {
+  local token="$1" user_id="$2" category_id="$3"
+  curl -s -X DELETE "http://localhost:8080/api/users/$user_id/categories" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+  | jq -r '.id'
+}
+
+get_user_groups() {
+  local token="$1" user_id="$2"
+  curl -s "http://localhost:8080/api/users/$user_id/groups" \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/json" \
+  | jq .
+}
+
+get_user_categories() {
+  local token="$1" user_id="$2" query="$3"
+  curl -s "http://localhost:8080/api/users/$user_id/categories$query" \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/json" \
+  | jq .
+}
+
+assign_cat_to_grp() {
+  local token="$1" user_id="$2" category_id="$3" group_id="$4"
+  curl -s -X PUT "http://localhost:8080/api/users/$user_id/categories/$category_id" \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/json" \
+    -d "{\"group_id\":\"$group_id\"}" \
+  | jq .
+}
+
+delete_user_group() {
+  local token="$1" user_id="$2" group_id="$3"
+  curl -s -X DELETE "http://localhost:8080/api/users/$user_id/groups/$group_id" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+  | jq .
+}
+
+# --- --- ---
