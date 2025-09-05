@@ -64,8 +64,7 @@ func(cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.Re
     params := parameters{}
     err := decoder.Decode(&params)
     if err != nil {
-        log.Printf("Error decoding parameters: %s", err)
-		w.WriteHeader(500)
+		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters", err)
 		return
     }
 
@@ -80,13 +79,13 @@ func(cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	rTokenString, err := auth.GetBearerToken(r.Header)
+	tokenString, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
 		return
 	}
 
-	dbUserID, err := auth.ValidateJWT(rTokenString, cfg.secret)
+	dbUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Invalid or missing token", err)
 		return
@@ -106,5 +105,53 @@ func(cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.Re
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
+	return
+}
+
+func(cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request){
+    type parameters struct {
+		Password	string	`json:"password"`
+        Username	string	`json:"username"`
+    }
+
+	decoder := json.NewDecoder(r.Body)
+    params := parameters{}
+    err := decoder.Decode(&params)
+    if err != nil {
+        respondWithError(w, http.StatusInternalServerError, "Error decoding parameters", err)
+		return
+    }
+
+	if params.Username == "" || params.Password == "" {
+		respondWithError(w, http.StatusBadRequest, "Missing username or password", nil)
+		return
+	}
+	
+	dbUser, err := cfg.db.GetUserByUsername(r.Context(), params.Username)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		return
+	}
+
+	err = auth.CheckPasswordHash(params.Password, dbUser.HashedPassword)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		return
+	}
+
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
+		return
+	}
+
+	dbUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid or missing token", err)
+		return
+	}
+
+	cfg.db.DeleteUserByID(r.Context(), dbUserID)
+	respondWithText(w, http.StatusOK, "The user was deleted.")
 	return
 }

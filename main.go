@@ -50,6 +50,7 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", config.endpDeleteAllUsers)
 	  // User authentication
 	mux.HandleFunc("POST /api/users", config.endpCreateUser)
+	mux.HandleFunc("DELETE /api/users/{user_id}", config.endpDeleteUser)
 	mux.HandleFunc("PUT /api/users", config.endpUpdateUserCredentials)
 	mux.HandleFunc("POST /api/login", config.endpLoginUser)
 	mux.HandleFunc("POST /api/refresh", config.endpCheckRefreshToken)
