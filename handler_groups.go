@@ -87,6 +87,7 @@ func(cfg *apiConfig) endpGetGroupsByUserID(w http.ResponseWriter, r *http.Reques
 			UpdatedAt:	group.UpdatedAt,
 			Name:     	group.Name,
 			UserID:		group.UserID,
+			Notes:		group.Notes,
 		}
 		respBody = append(respBody, addGroup)
 	}
