@@ -19,8 +19,7 @@ func(cfg *apiConfig) endpCreateUser(w http.ResponseWriter, r *http.Request){
     params := parameters{}
     err := decoder.Decode(&params)
     if err != nil {
-        log.Printf("Error decoding parameters: %s", err)
-		w.WriteHeader(500)
+        respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
     }
 
