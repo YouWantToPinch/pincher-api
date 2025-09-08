@@ -1,3 +1,5 @@
+/* USER CRUD */
+
 -- name: CreateUser :one
 INSERT INTO users (id, created_at, updated_at, username, hashed_password)
 VALUES (
@@ -8,6 +10,10 @@ VALUES (
     $2
 )
 RETURNING *;
+
+-- name: GetUserByUsername :one
+SELECT * FROM users
+WHERE users.username = $1;
 
 -- name: UpdateUserCredentials :one
 UPDATE users
@@ -22,7 +28,3 @@ DELETE FROM users;
 DELETE
 FROM users
 WHERE id = $1;
-
--- name: GetUserByUsername :one
-SELECT * FROM users
-WHERE users.username = $1;
