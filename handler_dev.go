@@ -11,7 +11,7 @@ func(cfg *apiConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request) 
 		respondWithText(w, 403, "403 Forbidden")
 	}
 
-	err := cfg.db.DelUsers(r.Context())
+	err := cfg.db.DeleteUsers(r.Context())
 	if err != nil {
 		log.Print(err)
 	}
