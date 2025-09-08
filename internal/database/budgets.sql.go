@@ -7,9 +7,44 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+const assignBudgetUserWithRole = `-- name: AssignBudgetUserWithRole :one
+INSERT INTO budgets_users (created_at, updated_at, budget_id, user_id, user_role)
+VALUES (
+    NOW(),
+    NOW(),
+    $1,
+    $2,
+    $3
+)
+ON CONFLICT (budget_id, user_id) DO UPDATE
+SET updated_at = EXCLUDED.updated_at, user_role = EXCLUDED.user_role
+RETURNING created_at, updated_at, budget_id, user_id, user_role
+`
+
+type AssignBudgetUserWithRoleParams struct {
+	BudgetID uuid.UUID
+	UserID   uuid.UUID
+	UserRole string
+}
+
+func (q *Queries) AssignBudgetUserWithRole(ctx context.Context, arg AssignBudgetUserWithRoleParams) (BudgetsUser, error) {
+	row := q.db.QueryRowContext(ctx, assignBudgetUserWithRole, arg.BudgetID, arg.UserID, arg.UserRole)
+	var i BudgetsUser
+	err := row.Scan(
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BudgetID,
+		&i.UserID,
+		&i.UserRole,
+	)
+	return i, err
+}
 
 const assignCategoryToGroup = `-- name: AssignCategoryToGroup :one
 UPDATE categories
@@ -38,7 +73,40 @@ func (q *Queries) AssignCategoryToGroup(ctx context.Context, arg AssignCategoryT
 	return i, err
 }
 
+const createBudget = `-- name: CreateBudget :one
+
+INSERT INTO budgets (id, created_at, updated_at, name, notes)
+VALUES (
+    gen_random_uuid(),
+    NOW(),
+    NOW(),
+    $1,
+    $2
+)
+RETURNING id, created_at, updated_at, name, notes
+`
+
+type CreateBudgetParams struct {
+	Name  string
+	Notes sql.NullString
+}
+
+// BUDGET CRUD
+func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Budget, error) {
+	row := q.db.QueryRowContext(ctx, createBudget, arg.Name, arg.Notes)
+	var i Budget
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+		&i.Notes,
+	)
+	return i, err
+}
+
 const createCategory = `-- name: CreateCategory :one
+
 INSERT INTO categories (id, created_at, updated_at, user_id, group_id, name, notes)
 VALUES (
     gen_random_uuid(),
@@ -59,6 +127,7 @@ type CreateCategoryParams struct {
 	Notes   string
 }
 
+// CATEGORY CRUD
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
 	row := q.db.QueryRowContext(ctx, createCategory,
 		arg.UserID,
@@ -80,6 +149,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 }
 
 const createGroup = `-- name: CreateGroup :one
+
 INSERT INTO groups (id, created_at, updated_at, user_id, name, notes)
 VALUES (
     gen_random_uuid(),
@@ -98,6 +168,7 @@ type CreateGroupParams struct {
 	Notes  string
 }
 
+// GROUP CRUD
 func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error) {
 	row := q.db.QueryRowContext(ctx, createGroup, arg.UserID, arg.Name, arg.Notes)
 	var i Group
@@ -110,6 +181,17 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		&i.Notes,
 	)
 	return i, err
+}
+
+const deleteBudget = `-- name: DeleteBudget :exec
+DELETE
+FROM budgets
+WHERE budgets.id = $1
+`
+
+func (q *Queries) DeleteBudget(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteBudget, id)
+	return err
 }
 
 const deleteCategoryByID = `-- name: DeleteCategoryByID :exec
@@ -132,6 +214,25 @@ WHERE groups.id = $1
 func (q *Queries) DeleteGroupByID(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteGroupByID, id)
 	return err
+}
+
+const getBudgetByID = `-- name: GetBudgetByID :one
+SELECT id, created_at, updated_at, name, notes
+FROM budgets
+WHERE budgets.id = $1
+`
+
+func (q *Queries) GetBudgetByID(ctx context.Context, id uuid.UUID) (Budget, error) {
+	row := q.db.QueryRowContext(ctx, getBudgetByID, id)
+	var i Budget
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+		&i.Notes,
+	)
+	return i, err
 }
 
 const getCategoriesByGroup = `-- name: GetCategoriesByGroup :many
@@ -296,6 +397,53 @@ func (q *Queries) GetGroupsByUserID(ctx context.Context, userID uuid.UUID) ([]Gr
 			&i.UserID,
 			&i.Name,
 			&i.Notes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserBudgets = `-- name: GetUserBudgets :many
+SELECT budgets.id, budgets.created_at, budgets.updated_at, budgets.name, budgets.notes, budgets_users.user_role
+FROM budgets
+JOIN budgets_users
+ON budgets.id = budgets_users.budget_id
+WHERE budgets_users.user_id = $1
+`
+
+type GetUserBudgetsRow struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+	Notes     sql.NullString
+	UserRole  string
+}
+
+func (q *Queries) GetUserBudgets(ctx context.Context, userID uuid.UUID) ([]GetUserBudgetsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUserBudgets, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUserBudgetsRow
+	for rows.Next() {
+		var i GetUserBudgetsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Name,
+			&i.Notes,
+			&i.UserRole,
 		); err != nil {
 			return nil, err
 		}

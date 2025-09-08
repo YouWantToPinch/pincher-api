@@ -21,6 +21,22 @@ type Account struct {
 	Description sql.NullString
 }
 
+type Budget struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+	Notes     sql.NullString
+}
+
+type BudgetsUser struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	BudgetID  uuid.UUID
+	UserID    uuid.UUID
+	UserRole  string
+}
+
 type Category struct {
 	ID        uuid.UUID
 	CreatedAt time.Time

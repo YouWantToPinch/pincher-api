@@ -12,6 +12,7 @@ import (
 )
 
 const createRefreshToken = `-- name: CreateRefreshToken :one
+
 INSERT INTO refresh_tokens (token, created_at, updated_at, user_id, expires_at, revoked_at)
 VALUES (
     $1,
@@ -29,6 +30,7 @@ type CreateRefreshTokenParams struct {
 	UserID uuid.UUID
 }
 
+// TOKEN CRUD
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
 	row := q.db.QueryRowContext(ctx, createRefreshToken, arg.Token, arg.UserID)
 	var i RefreshToken

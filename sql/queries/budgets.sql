@@ -1,3 +1,46 @@
+/* BUDGET CRUD */
+
+-- name: CreateBudget :one
+INSERT INTO budgets (id, created_at, updated_at, name, notes)
+VALUES (
+    gen_random_uuid(),
+    NOW(),
+    NOW(),
+    $1,
+    $2
+)
+RETURNING *;
+
+-- name: GetUserBudgets :many
+SELECT budgets.*, budgets_users.user_role
+FROM budgets
+JOIN budgets_users
+ON budgets.id = budgets_users.budget_id
+WHERE budgets_users.user_id = $1;
+
+-- name: GetBudgetByID :one
+SELECT *
+FROM budgets
+WHERE budgets.id = $1;
+
+-- name: AssignBudgetUserWithRole :one
+INSERT INTO budgets_users (created_at, updated_at, budget_id, user_id, user_role)
+VALUES (
+    NOW(),
+    NOW(),
+    $1,
+    $2,
+    $3
+)
+ON CONFLICT (budget_id, user_id) DO UPDATE
+SET updated_at = EXCLUDED.updated_at, user_role = EXCLUDED.user_role
+RETURNING *;
+
+-- name: DeleteBudget :exec
+DELETE
+FROM budgets
+WHERE budgets.id = $1;
+
 /* GROUP CRUD */
 
 -- name: CreateGroup :one

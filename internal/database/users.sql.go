@@ -12,6 +12,7 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
+
 INSERT INTO users (id, created_at, updated_at, username, hashed_password)
 VALUES (
     gen_random_uuid(),
@@ -28,6 +29,7 @@ type CreateUserParams struct {
 	HashedPassword string
 }
 
+// USER CRUD
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, createUser, arg.Username, arg.HashedPassword)
 	var i User
