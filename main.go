@@ -45,6 +45,7 @@ func main() {
 	// middleware
 	mdMetrics := cfg.middlewareMetricsInc
 	mdAuth := cfg.middlewareAuthenticate
+	mdClear := cfg.middlewareCheckClearance
 
 	mux.Handle("/app/", mdMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
 
@@ -59,14 +60,21 @@ func main() {
 	mux.HandleFunc("POST /api/login", cfg.endpLoginUser)
 	mux.HandleFunc("POST /api/refresh", cfg.endpCheckRefreshToken)
 	mux.HandleFunc("POST /api/revoke", cfg.endpRevokeRefreshToken)
+	  // Budget setup
+	mux.HandleFunc("POST /api/budgets", mdAuth(cfg.endpCreateBudget))
+	mux.HandleFunc("POST /api/budgets/{budget_id}/members", mdAuth(mdClear(MANAGER, cfg.endpAddBudgetMemberWithRole)))
+	mux.HandleFunc("DELETE /api/budgets/{budget_id}", mdAuth(mdClear(ADMIN, cfg.endpDeleteBudget)))
+	mux.HandleFunc("DELETE /api/budgets/{budget_id}/members/{user_id}", mdAuth(mdClear(MANAGER, cfg.endpRemoveBudgetMember)))
+	mux.HandleFunc("GET /api/budgets", mdAuth(cfg.endpGetUserBudgets))
+	mux.HandleFunc("GET /api/budgets/{budget_id}", mdAuth(mdClear(VIEWER, cfg.endpGetBudget)))
 	  // Groups & Categories
-	mux.HandleFunc("POST /api/users/groups", mdAuth(cfg.endpCreateGroup))
-	mux.HandleFunc("POST /api/users/categories", mdAuth(cfg.endpCreateCategory))
-	mux.HandleFunc("GET /api/users/groups", mdAuth(cfg.endpGetGroups))
-	mux.HandleFunc("GET /api/users/categories", mdAuth(cfg.endpGetCategories))
-	mux.HandleFunc("PUT /api/users/categories/{category_id}", mdAuth(cfg.endpAssignCategoryToGroup))
-	mux.HandleFunc("DELETE /api/users/groups/{group_id}", mdAuth(cfg.endpDeleteGroup))
-	mux.HandleFunc("DELETE /api/users/categories/{category_id}", mdAuth(cfg.endpDeleteCategory))
+	mux.HandleFunc("POST /api/budgets/{budget_id}/groups", mdAuth(mdClear(MANAGER, cfg.endpCreateGroup)))
+	mux.HandleFunc("POST /api/budgets/{budget_id}/categories", mdAuth(mdClear(MANAGER, cfg.endpCreateCategory)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/groups", mdAuth(mdClear(VIEWER, cfg.endpGetGroups)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/categories", mdAuth(mdClear(VIEWER, cfg.endpGetCategories)))
+	mux.HandleFunc("PUT /api/budgets/{budget_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.endpAssignCategoryToGroup)))
+	mux.HandleFunc("DELETE /api/budgets/{budget_id}/groups/{group_id}", mdAuth(mdClear(MANAGER, cfg.endpDeleteGroup)))
+	mux.HandleFunc("DELETE /api/budgets/{budget_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.endpDeleteCategory)))
 
 	server := &http.Server{
 		Addr:		":" + port,

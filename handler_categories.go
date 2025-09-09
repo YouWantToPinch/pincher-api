@@ -27,7 +27,7 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 		return
     }
 
-	validatedUserID := getValidatedUserID(r.Context())
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	var assignedGroup uuid.NullUUID
 	if params.GroupID != "" {
@@ -36,7 +36,10 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 			respondWithError(w, http.StatusBadRequest, "Provided group_id query parameter could not be parsed as UUID", err)
 			return
 		}
-		foundGroup, err := cfg.db.GetGroupByID(r.Context(), parsedGroupID)
+		foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
+			BudgetID: pathBudgetID,
+			ID: parsedGroupID,
+		})
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "Found no group with provided group_id", err)
 			return
@@ -46,7 +49,7 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 	}
 
 	dbCategory, err := cfg.db.CreateCategory(r.Context(), database.CreateCategoryParams{
-		UserID:		validatedUserID,
+		BudgetID:	pathBudgetID,
 		GroupID:	assignedGroup,
 		Name:		params.Name,
 		Notes:		params.Notes,
@@ -60,7 +63,7 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 		ID:			dbCategory.ID,
 		CreatedAt:	dbCategory.CreatedAt,
 		UpdatedAt:	dbCategory.UpdatedAt,
-		UserID:		dbCategory.UserID,
+		BudgetID:	dbCategory.BudgetID,
 		Name:     	dbCategory.Name,
 		GroupID:	dbCategory.GroupID,
 		Notes:		dbCategory.Notes,
@@ -77,9 +80,9 @@ func(cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
 	log.Printf("queryGroupID is: %s", queryGroupID)
 	log.Printf("URL: %s", r.URL.String())
 
-	validatedUserID := getValidatedUserID(r.Context())
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	categories, err := cfg.db.GetCategoriesByUserID(r.Context(), validatedUserID)
+	categories, err := cfg.db.GetCategoriesByBudgetID(r.Context(), pathBudgetID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get user categories", err)
 		return
@@ -104,7 +107,7 @@ func(cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
 				CreatedAt:	category.CreatedAt,
 				UpdatedAt:	category.UpdatedAt,
 				Name:     	category.Name,
-				UserID:		category.UserID,
+				BudgetID:	category.BudgetID,
 				GroupID:	category.GroupID,
 				Notes:		category.Notes,
 			}
@@ -133,7 +136,7 @@ func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Re
 		return
     }
 
-	validatedUserID := getValidatedUserID(r.Context())
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	if params.GroupID == "" {
 		respondWithError(w, http.StatusBadRequest, "Request provided no group_id for assignment", err)
@@ -146,8 +149,11 @@ func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Re
 		respondWithError(w, http.StatusBadRequest, "Provided group_id query parameter could not be parsed as UUID", err)
 		return
 	}
-	foundGroup, err := cfg.db.GetGroupByID(r.Context(), parsedGroupID)
-	if err != nil || validatedUserID != foundGroup.UserID {
+	foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
+		BudgetID: pathBudgetID,
+		ID: parsedGroupID,
+	})
+	if err != nil || pathBudgetID != foundGroup.BudgetID {
 		respondWithError(w, http.StatusBadRequest, "Found no group with provided group_id", err)
 		return
 	}
@@ -163,7 +169,7 @@ func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Re
 		ID:			dbCategory.ID,
 		CreatedAt:	dbCategory.CreatedAt,
 		UpdatedAt:	dbCategory.UpdatedAt,
-		UserID:		dbCategory.UserID,
+		BudgetID:	dbCategory.BudgetID,
 		Name:     	dbCategory.Name,
 		GroupID:	assignedGroup,
 		Notes:		dbCategory.Notes,
@@ -192,8 +198,8 @@ func(cfg *apiConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusNotFound, "Couldn't find category with specified id", err)
 		return
 	}
-	validatedUserID := getValidatedUserID(r.Context())
-	if validatedUserID != dbCategory.UserID {
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	if pathBudgetID != dbCategory.BudgetID {
 		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}

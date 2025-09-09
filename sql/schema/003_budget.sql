@@ -3,8 +3,11 @@ CREATE TABLE budgets (
     id UUID PRIMARY KEY,
     created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
-    name VARCHAR(12) NOT NULL,
-    notes TEXT
+    admin_id UUID NOT NULL,
+    name VARCHAR(30) NOT NULL,
+    notes TEXT,
+    FOREIGN KEY (admin_id) REFERENCES users(id)
+        ON DELETE CASCADE
 );
 
 CREATE TABLE budgets_users (
@@ -12,7 +15,7 @@ CREATE TABLE budgets_users (
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     budget_id UUID NOT NULL,
     user_id UUID NOT NULL,
-    user_role VARCHAR(21) NOT NULL,
+    member_role VARCHAR(12) NOT NULL,
     FOREIGN KEY (budget_id) REFERENCES budgets(id)
         ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id)

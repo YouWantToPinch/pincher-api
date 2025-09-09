@@ -41,17 +41,25 @@ func (cfg *apiConfig) middlewareMetricsReset(next http.Handler) http.Handler {
 
 type ctxKey struct{}
 var ctxUserID ctxKey
+var ctxBudgetID ctxKey
+
+var ctxKeyring = map[string]ctxKey{
+	"user_id": ctxUserID,
+	"budget_id": ctxBudgetID,
+}
 
 func (cfg *apiConfig) middlewareAuthenticate(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenString, err := auth.GetBearerToken(r.Header)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error(), err)
+			log.Println("DEBUG: couldn't get bearer token")
 			return
 		}
 		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", nil)
+			log.Println("DEBUG: failed JWT validation")
 			return
 		}
 		ctx := context.WithValue(r.Context(), ctxUserID, validatedUserID)
@@ -59,13 +67,49 @@ func (cfg *apiConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 	})
 }
 
+func (cfg *apiConfig) middlewareCheckClearance(required BudgetMemberRole, next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		validatedUserID := getContextKeyValue(r.Context(), "user_id")
+		
+		idString := r.PathValue("budget_id")
+		pathBudgetID, err := uuid.Parse(idString)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
+			log.Println("Could not parse budget_id")
+			return
+		}
+
+		callerRole, err := cfg.db.GetBudgetMemberRole(r.Context(), database.GetBudgetMemberRoleParams{
+			BudgetID: pathBudgetID,
+			UserID: validatedUserID,
+		})
+		if err != nil {
+			respondWithError(w, http.StatusNotFound, "User not listed as budget member", err)
+			return
+		}
+
+		callerBudgetMemberRole, err := BMRFromString(callerRole)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error(), err)
+			return
+		}
+
+		if callerBudgetMemberRole > required {
+			respondWithError(w, http.StatusUnauthorized, "Member does not have clearance for action", err)
+			return
+		}
+		ctx := context.WithValue(r.Context(), ctxBudgetID, pathBudgetID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 // ============== HELPERS =================
 
-func getValidatedUserID(ctx context.Context) (uuid.UUID) {
-    validatedUserID, ok := ctx.Value(ctxUserID).(uuid.UUID)
+func getContextKeyValue(ctx context.Context, key string) (uuid.UUID) {
+    contextKeyValue, ok := ctx.Value(ctxKeyring[key]).(uuid.UUID)
 	if !ok {
-		log.Println("Failed to retrieve validated user_id from context")
+		log.Printf("Failed to retrieve key from context")
 		return uuid.Nil
 	}
-    return validatedUserID
+    return contextKeyValue
 }

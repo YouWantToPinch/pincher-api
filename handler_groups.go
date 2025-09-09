@@ -24,11 +24,11 @@ func(cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request){
 		return
     }
 
-	validatedUserID := getValidatedUserID(r.Context())
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	_, err = cfg.db.GetGroupByUserIDAndName(r.Context(), database.GetGroupByUserIDAndNameParams{
-		Name: params.Name,
-		UserID: validatedUserID,
+	_, err = cfg.db.GetGroupByBudgetIDAndName(r.Context(), database.GetGroupByBudgetIDAndNameParams{
+		Name: 		params.Name,
+		BudgetID:	pathBudgetID,
 	})
 	if err == nil {
 		respondWithError(w, http.StatusConflict, "Group already exists for user", err)
@@ -36,9 +36,9 @@ func(cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request){
 	}
 
 	dbGroup, err := cfg.db.CreateGroup(r.Context(), database.CreateGroupParams{
-		UserID:	validatedUserID,
-		Name:	params.Name,
-		Notes:	params.Notes,
+		BudgetID:	pathBudgetID,
+		Name:		params.Name,
+		Notes:		params.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create group", err)
@@ -48,7 +48,7 @@ func(cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request){
 		ID:			dbGroup.ID,
 		CreatedAt:	dbGroup.CreatedAt,
 		UpdatedAt:	dbGroup.UpdatedAt,
-		UserID:		dbGroup.UserID,
+		BudgetID:	dbGroup.BudgetID,
 		Name:     	dbGroup.Name,
 		Notes:		dbGroup.Notes,
 	}
@@ -59,22 +59,22 @@ func(cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request){
 
 func(cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 
-	validatedUserID := getValidatedUserID(r.Context())
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	groups, err := cfg.db.GetGroupsByUserID(r.Context(), validatedUserID)
+	dbGroups, err := cfg.db.GetGroupsByBudgetID(r.Context(), pathBudgetID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get user category groups", err)
 		return
 	}
 
 	var respBody []Group
-	for _, group := range groups {
+	for _, group := range dbGroups {
 		addGroup := Group{
 			ID:			group.ID,
 			CreatedAt:	group.CreatedAt,
 			UpdatedAt:	group.UpdatedAt,
 			Name:     	group.Name,
-			UserID:		group.UserID,
+			BudgetID:	group.BudgetID,
 			Notes:		group.Notes,
 		}
 		respBody = append(respBody, addGroup)
@@ -92,14 +92,17 @@ func(cfg *apiConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	validatedUserID := getValidatedUserID(r.Context())
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	dbGroup, err := cfg.db.GetGroupByID(r.Context(), pathGroupID)
+	dbGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
+		BudgetID: pathBudgetID,
+		ID: pathGroupID,
+	})
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Couldn't find group with specified id", err)
 		return
 	}
-	if validatedUserID != dbGroup.UserID {
+	if pathBudgetID != dbGroup.BudgetID {
 		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
 		return
 	}

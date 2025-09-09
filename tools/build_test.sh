@@ -13,9 +13,11 @@
 #  defined within a file in the same directory entitled 'functions'.
 
 declare -r COMMANDS=("Add" "Page" "Finish" "Cancel" "Undo")
-declare -r ENTITIES=("*DEBUG" "+HEADING" "categories" "groups" "users")
+declare -r ENTITIES=("*DEBUG" "+HEADING" "budgets" "categories" "groups" "users")
 # declare -r ENTITIES=("users" "groups" "categories" "accounts" "transactions")
 declare -r USER_ACTIONS=("create get delete login reset") # TODO: add logout...
+declare -r BUDGET_ACTIONS=("assign revoke create get delete")
+declare -r MEMBER_ACTIONS=("add get remove")
 declare -r GROUP_ACTIONS=("create get delete")
 declare -r CATEGORY_ACTIONS=("create get delete assign")
 # declare -r ACCOUNT_ACTIONS=("create" "get" "delete")
@@ -23,6 +25,7 @@ declare -r CATEGORY_ACTIONS=("create get delete assign")
 
 declare -A action_map
 action_map["users"]="USER_ACTIONS"
+action_map["budgets"]="BUDGET_ACTIONS"
 action_map["groups"]="GROUP_ACTIONS"
 action_map["categories"]="CATEGORY_ACTIONS"
 #action_map["accounts"]="ACCOUNT_ACTIONS"
@@ -33,12 +36,60 @@ declare -A TEST_ENTITY_LISTS
 
 GLO_SAVED_ENTITY_VAR=""
 
+UNDO_STACK=()
+
 # ----- FUNCTIONS -----
+
+US_pop() {
+    if [ ${#UNDO_STACK[@]} -eq 0 ]; then
+        echo 0
+        return 1
+    fi
+
+    US_last_index=$((${#UNDO_STACK[@]} - 1))
+    US_top="${UNDO_STACK[$US_last_index]}"
+    unset stack[$last_index]
+    echo "$US_top"
+}
 
 parse_en_ls() {
     type="$1"
     ARRAY_NAME="${TEST_ENTITY_LISTS[$type]}"
     ACTION=$(gum choose --ordered ${!ARRAY_NAME})
+}
+
+budgets_assign() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    local user_id=$(gum choose ${TEST_ENTITY_LISTS["USER"]})
+    local member_role=$(gum choose "ADMIN" "MANAGER" "CONTRIBUTOR" "VIEWER")
+    add_bash_line "EXEC" "BUDGET" "assign_member_to_budget" ""\$$token"" "\$$budget_id" "\$$user_id" "$member_role"
+}
+
+budgets_revoke() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    local user_id=$(gum choose ${TEST_ENTITY_LISTS["USER"]})
+    add_bash_line "EXEC" "BUDGET" "revoke_budget_membership" ""\$$token"" "\$$budget_id" "\$$user_id"
+}
+
+budgets_create() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local name=$(gum input --placeholder "Name for new budget...")
+    local notes=$(gum write --placeholder "Describe the purpose of this budget...")
+    add_bash_line "SAVE" "BUDGET" "create_budget" "\$$token" "$name" "$notes"
+}
+
+budgets_get() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local query=$(gum input --placeholder "Optional query param (?key=value)...")
+    add_bash_line "GET" "BUDGET" "get_user_budgets" "\$$token" "$query"
+}
+
+budgets_delete() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    add_bash_line "EXEC" "BUDGET" "delete_user_budget" "\$$token" "\$$budget_id"
 }
 
 users_login() {
@@ -66,55 +117,55 @@ users_delete() {
 
 groups_create() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
-    local user_id=$(gum choose ${TEST_ENTITY_LISTS["USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
     local name=$(gum input --placeholder "Name for new group...")
     local notes=$(gum write --placeholder "Write note(s) about group...")
-    add_bash_line "SAVE" "GROUP" "create_group" "\$$token" "\$$user_id" "$name" "$notes"
+    add_bash_line "SAVE" "GROUP" "create_group" "\$$token" "\$$budget_id" "$name" "$notes"
 }
 
 groups_get() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
-    local user_id=$(gum choose ${TEST_ENTITY_LISTS["USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
     #local query=$(gum input --placeholder "Optional query param (?key=value)...")
-    add_bash_line "GET" "GROUP" "get_user_groups" "\$$token" "\$$user_id" "$query"
+    add_bash_line "GET" "GROUP" "get_user_groups" "\$$token" "\$$budget_id" "$query"
 }
 
 groups_delete() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
-    local user_id=$(gum choose ${TEST_ENTITY_LISTS["USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
     local group_id=$(gum choose ${TEST_ENTITY_LISTS["GROUP"]})
-    add_bash_line "EXEC" "GROUP" "delete_user_group" "\$$token" "\$$user_id" "\$$group_id"
+    add_bash_line "EXEC" "GROUP" "delete_user_group" "\$$token" "\$$budget_id" "\$$group_id"
 }
 
 categories_create() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
-    local user_id=$(gum choose ${TEST_ENTITY_LISTS["USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
     local group_id=$(gum choose ${TEST_ENTITY_LISTS["GROUP"]})
     local name=$(gum input --placeholder "Name for new category...")
     local notes=$(gum write --placeholder "Note(s) for new category...")
-    add_bash_line "SAVE" "CATEGORY" "create_category" "\$$token" "\$$user_id" "\$$group_id" "$name" "$notes"
+    add_bash_line "SAVE" "CATEGORY" "create_category" "\$$token" "\$$budget_id" "\$$group_id" "$name" "$notes"
 }
 
 categories_get() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
-    local user_id=$(gum choose ${TEST_ENTITY_LISTS["USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
     local query=$(gum input --placeholder "Optional query param (?key=value)...")
-    add_bash_line "GET" "CATEGORY" "get_user_categories" "\$$token" "\$$user_id" "$query"
+    add_bash_line "GET" "CATEGORY" "get_user_categories" "\$$token" "\$$budget_id" "$query"
 }
 
 categories_delete() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
-    local user_id=$(gum choose ${TEST_ENTITY_LISTS["USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
     local category_id=$(gum choose ${TEST_ENTITY_LISTS["CATEGORY"]})
-    add_bash_line "SAVE" "CATEGORY" "delete_user_category" "\$$token" "\$$user_id" "\$$category_id"
+    add_bash_line "SAVE" "CATEGORY" "delete_user_category" "\$$token" "\$$budget_id" "\$$category_id"
 }
 
 categories_assign() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
-    local user_id=$(gum choose ${TEST_ENTITY_LISTS["USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
     local category_id=$(gum choose ${TEST_ENTITY_LISTS["CATEGORY"]})
     local group_id=$(gum choose ${TEST_ENTITY_LISTS["GROUP"]})
-    add_bash_line "EXEC" "CATEGORY" "assign_cat_to_grp" "\$$token" "\$$user_id" "\$$category_id" "\$$group_id"
+    add_bash_line "EXEC" "CATEGORY" "assign_cat_to_grp" "\$$token" "\$$budget_id" "\$$category_id" "\$$group_id"
 }
 
 clean_unused_entities() {
@@ -122,17 +173,17 @@ clean_unused_entities() {
     local new_list
 
     for type in "${!TEST_ENTITY_LISTS[@]}"; do
-        new_list=""
-        # Read entities into array
         IFS=' ' read -ra entities <<< "${TEST_ENTITY_LISTS[$type]}"
+        TEST_ENTITY_LISTS["$type"]=""
+        TEST_ENTITY_COUNTER[$type]=0
         for entity in "${entities[@]}"; do
-            # Check if this entity name appears in the file
-            if grep -q "\b$entity\b" "$file"; then
-                new_list+="$entity "
+            if grep -q "$entity" "$file"; then
+                (( TEST_ENTITY_COUNTER[$type]++ ))
+                #local index="${TEST_ENTITY_COUNTER[$type]}"
+                #local varname="${type^^}${index}"
+                TEST_ENTITY_LISTS["$type"]+="${entity} "
             fi
         done
-        # Trim trailing space and update
-        TEST_ENTITY_LISTS[$type]="${new_list% }"
     done
 }
 
@@ -171,8 +222,11 @@ add_bash_line() {
     if [[ $should_save == "SAVE" ]]; then
         save_entity "$type"
         echo "$GLO_SAVED_ENTITY_VAR=\$($cmd ${quoted_args[*]})"
+        echo "echo \$$GLO_SAVED_ENTITY_VAR"
+        UNDO_STACK+=(2)
     else
         echo "$cmd ${quoted_args[*]}"
+        UNDO_STACK+=(1)
     fi
 }
 
@@ -203,10 +257,12 @@ gum style \
 while true; do
     CHOICE=$(gum choose --ordered ${COMMANDS[@]})
     if [[ "$CHOICE" == "Undo" ]]; then
-        if [[ $(grep -c "^" temp_test_script) -gt 1 ]]; then
+        undo_iterations=$(US_pop)
+        gum log --structured --level debug "Undoing $undo_iterations lines."
+        for ((i = 1; i <= undo_iterations; i++)); do
             sed -i '$d' "temp_test_script"
-            clean_unused_entities
-        fi
+        done
+        clean_unused_entities
     elif [[ "$CHOICE" == "Cancel" ]]; then
         gum confirm && rm -f temp_test_script && exit 0
     elif [[ "$CHOICE" == "Page" ]]; then
@@ -222,10 +278,14 @@ while true; do
             if [[ "$ENTITY" == "+HEADING" ]]; then
                 HEADING=$(gum input --placeholder "Test log output for endpoint call...")
                 echo "heading \"$HEADING\"" >> "temp_test_script"
+                UNDO_STACK+=(1)
                 continue
             elif [[ "$ENTITY" == "*DEBUG" ]]; then
                 gum log --structured --level debug "T_EN_LS[USR]: ${TEST_ENTITY_LISTS["USER"]}"
                 gum log --structured --level debug "T_EN_LS[JWT]: ${TEST_ENTITY_LISTS["JWT_USER"]}"
+                gum log --structured --level debug "T_EN_LS[BGT]: ${TEST_ENTITY_LISTS["BUDGET"]}"
+                gum log --structured --level debug "T_EN_LS[GRP]: ${TEST_ENTITY_LISTS["GROUP"]}"
+                gum log --structured --level debug "T_EN_LS[CAT]: ${TEST_ENTITY_LISTS["CATEGORY"]}"
             else
                 ARRAY_NAME="${action_map[$ENTITY]}"
                 ACTION=$(gum choose --ordered ${!ARRAY_NAME})
@@ -238,10 +298,25 @@ while true; do
     fi
 done
 
-test_script=$(gum input --placeholder "Name of your test script...")
-test_description=$(gum write --placeholder "Description of your test script...")
+while true; do
+    test_script=$(gum input --placeholder "Name of your test script...")
+    if [[ -z "${test_script}" ]]; then
+        gum log --structured --level error "Name not provided for script."
+    else
+        break
+    fi
+done
 
-gum spin --spinner dot --title "Finalizing $test_script..." -- sleep 5
+while true; do
+    test_description=$(gum write --placeholder "Description of your test script...")
+    if [[ -z "${test_description}" ]]; then
+        gum log --structured --level error "No description provided for test script."
+    else
+        break
+    fi
+done
+
+gum spin --spinner dot --title "Generating $test_script..." -- sleep 5
 
 echo "#!/bin/bash" > "$test_script"
 echo "#$test_description"  >> "$test_script"
@@ -249,10 +324,13 @@ echo "source ./functions" >> "$test_script"
 echo "" >> "$test_script"
 
 cat temp_test_script >> "$test_script"
-rm temp_test_script
-
-chmod +x "$test_script"
-
-mv "$test_script" ../tests/
-
-echo "Test script '$test_script' built successfully!"
+if [ -f "${test_script}"]; then
+    rm temp_test_script
+    chmod +x "$test_script"
+    echo "Test script '$test_script' built successfully!"
+    mv "$test_script" ../tests/
+    exit 0
+else
+    gum log --structured --level error "Failed to build new test script."
+    exit 1
+fi

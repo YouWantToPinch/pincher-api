@@ -11,10 +11,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
-const assignBudgetUserWithRole = `-- name: AssignBudgetUserWithRole :one
-INSERT INTO budgets_users (created_at, updated_at, budget_id, user_id, user_role)
+const assignBudgetMemberWithRole = `-- name: AssignBudgetMemberWithRole :one
+INSERT INTO budgets_users (created_at, updated_at, budget_id, user_id, member_role)
 VALUES (
     NOW(),
     NOW(),
@@ -23,25 +24,25 @@ VALUES (
     $3
 )
 ON CONFLICT (budget_id, user_id) DO UPDATE
-SET updated_at = EXCLUDED.updated_at, user_role = EXCLUDED.user_role
-RETURNING created_at, updated_at, budget_id, user_id, user_role
+SET updated_at = EXCLUDED.updated_at, member_role = EXCLUDED.member_role
+RETURNING created_at, updated_at, budget_id, user_id, member_role
 `
 
-type AssignBudgetUserWithRoleParams struct {
-	BudgetID uuid.UUID
-	UserID   uuid.UUID
-	UserRole string
+type AssignBudgetMemberWithRoleParams struct {
+	BudgetID   uuid.UUID
+	UserID     uuid.UUID
+	MemberRole string
 }
 
-func (q *Queries) AssignBudgetUserWithRole(ctx context.Context, arg AssignBudgetUserWithRoleParams) (BudgetsUser, error) {
-	row := q.db.QueryRowContext(ctx, assignBudgetUserWithRole, arg.BudgetID, arg.UserID, arg.UserRole)
+func (q *Queries) AssignBudgetMemberWithRole(ctx context.Context, arg AssignBudgetMemberWithRoleParams) (BudgetsUser, error) {
+	row := q.db.QueryRowContext(ctx, assignBudgetMemberWithRole, arg.BudgetID, arg.UserID, arg.MemberRole)
 	var i BudgetsUser
 	err := row.Scan(
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BudgetID,
 		&i.UserID,
-		&i.UserRole,
+		&i.MemberRole,
 	)
 	return i, err
 }
@@ -50,7 +51,7 @@ const assignCategoryToGroup = `-- name: AssignCategoryToGroup :one
 UPDATE categories
 SET updated_at = NOW(), group_id = $2
 WHERE id = $1
-RETURNING id, created_at, updated_at, user_id, name, group_id, notes
+RETURNING id, created_at, updated_at, budget_id, name, group_id, notes
 `
 
 type AssignCategoryToGroupParams struct {
@@ -65,7 +66,7 @@ func (q *Queries) AssignCategoryToGroup(ctx context.Context, arg AssignCategoryT
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.UserID,
+		&i.BudgetID,
 		&i.Name,
 		&i.GroupID,
 		&i.Notes,
@@ -75,30 +76,33 @@ func (q *Queries) AssignCategoryToGroup(ctx context.Context, arg AssignCategoryT
 
 const createBudget = `-- name: CreateBudget :one
 
-INSERT INTO budgets (id, created_at, updated_at, name, notes)
+INSERT INTO budgets (id, created_at, updated_at, admin_id, name, notes)
 VALUES (
     gen_random_uuid(),
     NOW(),
     NOW(),
     $1,
-    $2
+    $2,
+    $3
 )
-RETURNING id, created_at, updated_at, name, notes
+RETURNING id, created_at, updated_at, admin_id, name, notes
 `
 
 type CreateBudgetParams struct {
-	Name  string
-	Notes sql.NullString
+	AdminID uuid.UUID
+	Name    string
+	Notes   sql.NullString
 }
 
 // BUDGET CRUD
 func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Budget, error) {
-	row := q.db.QueryRowContext(ctx, createBudget, arg.Name, arg.Notes)
+	row := q.db.QueryRowContext(ctx, createBudget, arg.AdminID, arg.Name, arg.Notes)
 	var i Budget
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AdminID,
 		&i.Name,
 		&i.Notes,
 	)
@@ -107,7 +111,7 @@ func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Bud
 
 const createCategory = `-- name: CreateCategory :one
 
-INSERT INTO categories (id, created_at, updated_at, user_id, group_id, name, notes)
+INSERT INTO categories (id, created_at, updated_at, budget_id, group_id, name, notes)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -117,20 +121,20 @@ VALUES (
     $3,
     $4
 )
-RETURNING id, created_at, updated_at, user_id, name, group_id, notes
+RETURNING id, created_at, updated_at, budget_id, name, group_id, notes
 `
 
 type CreateCategoryParams struct {
-	UserID  uuid.UUID
-	GroupID uuid.NullUUID
-	Name    string
-	Notes   string
+	BudgetID uuid.UUID
+	GroupID  uuid.NullUUID
+	Name     string
+	Notes    string
 }
 
 // CATEGORY CRUD
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
 	row := q.db.QueryRowContext(ctx, createCategory,
-		arg.UserID,
+		arg.BudgetID,
 		arg.GroupID,
 		arg.Name,
 		arg.Notes,
@@ -140,7 +144,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.UserID,
+		&i.BudgetID,
 		&i.Name,
 		&i.GroupID,
 		&i.Notes,
@@ -150,7 +154,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 
 const createGroup = `-- name: CreateGroup :one
 
-INSERT INTO groups (id, created_at, updated_at, user_id, name, notes)
+INSERT INTO groups (id, created_at, updated_at, budget_id, name, notes)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -159,24 +163,24 @@ VALUES (
     $2,
     $3
 )
-RETURNING id, created_at, updated_at, user_id, name, notes
+RETURNING id, created_at, updated_at, budget_id, name, notes
 `
 
 type CreateGroupParams struct {
-	UserID uuid.UUID
-	Name   string
-	Notes  string
+	BudgetID uuid.UUID
+	Name     string
+	Notes    string
 }
 
 // GROUP CRUD
 func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error) {
-	row := q.db.QueryRowContext(ctx, createGroup, arg.UserID, arg.Name, arg.Notes)
+	row := q.db.QueryRowContext(ctx, createGroup, arg.BudgetID, arg.Name, arg.Notes)
 	var i Group
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.UserID,
+		&i.BudgetID,
 		&i.Name,
 		&i.Notes,
 	)
@@ -217,7 +221,7 @@ func (q *Queries) DeleteGroupByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getBudgetByID = `-- name: GetBudgetByID :one
-SELECT id, created_at, updated_at, name, notes
+SELECT id, created_at, updated_at, admin_id, name, notes
 FROM budgets
 WHERE budgets.id = $1
 `
@@ -229,20 +233,39 @@ func (q *Queries) GetBudgetByID(ctx context.Context, id uuid.UUID) (Budget, erro
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AdminID,
 		&i.Name,
 		&i.Notes,
 	)
 	return i, err
 }
 
-const getCategoriesByGroup = `-- name: GetCategoriesByGroup :many
-SELECT id, created_at, updated_at, user_id, name, group_id, notes
-FROM categories
-WHERE categories.group_id = $1
+const getBudgetMemberRole = `-- name: GetBudgetMemberRole :one
+SELECT member_role
+FROM budgets_users
+WHERE budgets_users.budget_id = $1 AND budgets_users.user_id = $2
 `
 
-func (q *Queries) GetCategoriesByGroup(ctx context.Context, groupID uuid.NullUUID) ([]Category, error) {
-	rows, err := q.db.QueryContext(ctx, getCategoriesByGroup, groupID)
+type GetBudgetMemberRoleParams struct {
+	BudgetID uuid.UUID
+	UserID   uuid.UUID
+}
+
+func (q *Queries) GetBudgetMemberRole(ctx context.Context, arg GetBudgetMemberRoleParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getBudgetMemberRole, arg.BudgetID, arg.UserID)
+	var member_role string
+	err := row.Scan(&member_role)
+	return member_role, err
+}
+
+const getCategoriesByBudgetID = `-- name: GetCategoriesByBudgetID :many
+SELECT id, created_at, updated_at, budget_id, name, group_id, notes
+FROM categories
+WHERE categories.budget_id = $1
+`
+
+func (q *Queries) GetCategoriesByBudgetID(ctx context.Context, budgetID uuid.UUID) ([]Category, error) {
+	rows, err := q.db.QueryContext(ctx, getCategoriesByBudgetID, budgetID)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +277,7 @@ func (q *Queries) GetCategoriesByGroup(ctx context.Context, groupID uuid.NullUUI
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.UserID,
+			&i.BudgetID,
 			&i.Name,
 			&i.GroupID,
 			&i.Notes,
@@ -272,14 +295,14 @@ func (q *Queries) GetCategoriesByGroup(ctx context.Context, groupID uuid.NullUUI
 	return items, nil
 }
 
-const getCategoriesByUserID = `-- name: GetCategoriesByUserID :many
-SELECT id, created_at, updated_at, user_id, name, group_id, notes
+const getCategoriesByGroup = `-- name: GetCategoriesByGroup :many
+SELECT id, created_at, updated_at, budget_id, name, group_id, notes
 FROM categories
-WHERE categories.user_id = $1
+WHERE categories.group_id = $1
 `
 
-func (q *Queries) GetCategoriesByUserID(ctx context.Context, userID uuid.UUID) ([]Category, error) {
-	rows, err := q.db.QueryContext(ctx, getCategoriesByUserID, userID)
+func (q *Queries) GetCategoriesByGroup(ctx context.Context, groupID uuid.NullUUID) ([]Category, error) {
+	rows, err := q.db.QueryContext(ctx, getCategoriesByGroup, groupID)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +314,7 @@ func (q *Queries) GetCategoriesByUserID(ctx context.Context, userID uuid.UUID) (
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.UserID,
+			&i.BudgetID,
 			&i.Name,
 			&i.GroupID,
 			&i.Notes,
@@ -310,7 +333,7 @@ func (q *Queries) GetCategoriesByUserID(ctx context.Context, userID uuid.UUID) (
 }
 
 const getCategoryByID = `-- name: GetCategoryByID :one
-SELECT id, created_at, updated_at, user_id, name, group_id, notes
+SELECT id, created_at, updated_at, budget_id, name, group_id, notes
 FROM categories
 WHERE categories.id = $1
 `
@@ -322,7 +345,7 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, 
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.UserID,
+		&i.BudgetID,
 		&i.Name,
 		&i.GroupID,
 		&i.Notes,
@@ -330,59 +353,65 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, 
 	return i, err
 }
 
+const getGroupByBudgetIDAndName = `-- name: GetGroupByBudgetIDAndName :one
+SELECT id, created_at, updated_at, budget_id, name, notes
+FROM groups
+WHERE groups.name = $1 AND groups.budget_id = $2
+`
+
+type GetGroupByBudgetIDAndNameParams struct {
+	Name     string
+	BudgetID uuid.UUID
+}
+
+func (q *Queries) GetGroupByBudgetIDAndName(ctx context.Context, arg GetGroupByBudgetIDAndNameParams) (Group, error) {
+	row := q.db.QueryRowContext(ctx, getGroupByBudgetIDAndName, arg.Name, arg.BudgetID)
+	var i Group
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BudgetID,
+		&i.Name,
+		&i.Notes,
+	)
+	return i, err
+}
+
 const getGroupByID = `-- name: GetGroupByID :one
-SELECT id, created_at, updated_at, user_id, name, notes
+SELECT id, created_at, updated_at, budget_id, name, notes
 FROM groups
-WHERE groups.id = $1
+WHERE groups.budget_id = $1
+    AND groups.id = $2
 `
 
-func (q *Queries) GetGroupByID(ctx context.Context, id uuid.UUID) (Group, error) {
-	row := q.db.QueryRowContext(ctx, getGroupByID, id)
+type GetGroupByIDParams struct {
+	BudgetID uuid.UUID
+	ID       uuid.UUID
+}
+
+func (q *Queries) GetGroupByID(ctx context.Context, arg GetGroupByIDParams) (Group, error) {
+	row := q.db.QueryRowContext(ctx, getGroupByID, arg.BudgetID, arg.ID)
 	var i Group
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.UserID,
+		&i.BudgetID,
 		&i.Name,
 		&i.Notes,
 	)
 	return i, err
 }
 
-const getGroupByUserIDAndName = `-- name: GetGroupByUserIDAndName :one
-SELECT id, created_at, updated_at, user_id, name, notes
+const getGroupsByBudgetID = `-- name: GetGroupsByBudgetID :many
+SELECT id, created_at, updated_at, budget_id, name, notes
 FROM groups
-WHERE groups.name = $1 AND groups.user_id = $2
+WHERE groups.budget_id = $1
 `
 
-type GetGroupByUserIDAndNameParams struct {
-	Name   string
-	UserID uuid.UUID
-}
-
-func (q *Queries) GetGroupByUserIDAndName(ctx context.Context, arg GetGroupByUserIDAndNameParams) (Group, error) {
-	row := q.db.QueryRowContext(ctx, getGroupByUserIDAndName, arg.Name, arg.UserID)
-	var i Group
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.UserID,
-		&i.Name,
-		&i.Notes,
-	)
-	return i, err
-}
-
-const getGroupsByUserID = `-- name: GetGroupsByUserID :many
-SELECT id, created_at, updated_at, user_id, name, notes
-FROM groups
-WHERE groups.user_id = $1
-`
-
-func (q *Queries) GetGroupsByUserID(ctx context.Context, userID uuid.UUID) ([]Group, error) {
-	rows, err := q.db.QueryContext(ctx, getGroupsByUserID, userID)
+func (q *Queries) GetGroupsByBudgetID(ctx context.Context, budgetID uuid.UUID) ([]Group, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupsByBudgetID, budgetID)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +423,7 @@ func (q *Queries) GetGroupsByUserID(ctx context.Context, userID uuid.UUID) ([]Gr
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.UserID,
+			&i.BudgetID,
 			&i.Name,
 			&i.Notes,
 		); err != nil {
@@ -412,38 +441,43 @@ func (q *Queries) GetGroupsByUserID(ctx context.Context, userID uuid.UUID) ([]Gr
 }
 
 const getUserBudgets = `-- name: GetUserBudgets :many
-SELECT budgets.id, budgets.created_at, budgets.updated_at, budgets.name, budgets.notes, budgets_users.user_role
-FROM budgets
-JOIN budgets_users
-ON budgets.id = budgets_users.budget_id
-WHERE budgets_users.user_id = $1
+(
+  SELECT budgets.id, budgets.created_at, budgets.updated_at, budgets.admin_id, budgets.name, budgets.notes
+  FROM budgets
+  JOIN budgets_users
+    ON budgets.id = budgets_users.budget_id
+  WHERE budgets_users.user_id = $1
+    AND ($2::text[] IS NULL OR budgets_users.member_role = ANY($2::text[]))
+)
+UNION
+(
+  SELECT budgets.id, budgets.created_at, budgets.updated_at, budgets.admin_id, budgets.name, budgets.notes
+  FROM budgets
+  WHERE budgets.admin_id = $1
+)
 `
 
-type GetUserBudgetsRow struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Name      string
-	Notes     sql.NullString
-	UserRole  string
+type GetUserBudgetsParams struct {
+	UserID  uuid.UUID
+	Column2 []string
 }
 
-func (q *Queries) GetUserBudgets(ctx context.Context, userID uuid.UUID) ([]GetUserBudgetsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getUserBudgets, userID)
+func (q *Queries) GetUserBudgets(ctx context.Context, arg GetUserBudgetsParams) ([]Budget, error) {
+	rows, err := q.db.QueryContext(ctx, getUserBudgets, arg.UserID, pq.Array(arg.Column2))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetUserBudgetsRow
+	var items []Budget
 	for rows.Next() {
-		var i GetUserBudgetsRow
+		var i Budget
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AdminID,
 			&i.Name,
 			&i.Notes,
-			&i.UserRole,
 		); err != nil {
 			return nil, err
 		}
@@ -456,4 +490,89 @@ func (q *Queries) GetUserBudgets(ctx context.Context, userID uuid.UUID) ([]GetUs
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUserBudgetsBackup = `-- name: GetUserBudgetsBackup :many
+SELECT id, budgets.created_at, budgets.updated_at, admin_id, name, notes, budgets_users.created_at, budgets_users.updated_at, budget_id, user_id, member_role
+FROM budgets
+JOIN budgets_users
+ON budgets.id = budgets_users.budget_id
+WHERE   (
+        budgets_users.user_id = $1
+        AND ($2::text[] IS NULL
+            OR budgets_users.member_role = ANY($2::text[])
+        )
+        )
+    OR budgets.admin_id = $1
+`
+
+type GetUserBudgetsBackupParams struct {
+	UserID  uuid.UUID
+	Column2 []string
+}
+
+type GetUserBudgetsBackupRow struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	AdminID     uuid.UUID
+	Name        string
+	Notes       sql.NullString
+	CreatedAt_2 time.Time
+	UpdatedAt_2 time.Time
+	BudgetID    uuid.UUID
+	UserID      uuid.UUID
+	MemberRole  string
+}
+
+func (q *Queries) GetUserBudgetsBackup(ctx context.Context, arg GetUserBudgetsBackupParams) ([]GetUserBudgetsBackupRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUserBudgetsBackup, arg.UserID, pq.Array(arg.Column2))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUserBudgetsBackupRow
+	for rows.Next() {
+		var i GetUserBudgetsBackupRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AdminID,
+			&i.Name,
+			&i.Notes,
+			&i.CreatedAt_2,
+			&i.UpdatedAt_2,
+			&i.BudgetID,
+			&i.UserID,
+			&i.MemberRole,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const revokeBudgetMembership = `-- name: RevokeBudgetMembership :exec
+DELETE
+FROM budgets_users
+WHERE budget_id = $1
+    AND user_id = $2
+`
+
+type RevokeBudgetMembershipParams struct {
+	BudgetID uuid.UUID
+	UserID   uuid.UUID
+}
+
+func (q *Queries) RevokeBudgetMembership(ctx context.Context, arg RevokeBudgetMembershipParams) error {
+	_, err := q.db.ExecContext(ctx, revokeBudgetMembership, arg.BudgetID, arg.UserID)
+	return err
 }

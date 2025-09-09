@@ -15,7 +15,7 @@ type Account struct {
 	ID          uuid.UUID
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	UserID      uuid.UUID
+	BudgetID    uuid.UUID
 	AccountType string
 	Name        string
 	Description sql.NullString
@@ -25,23 +25,24 @@ type Budget struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	AdminID   uuid.UUID
 	Name      string
 	Notes     sql.NullString
 }
 
 type BudgetsUser struct {
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	BudgetID  uuid.UUID
-	UserID    uuid.UUID
-	UserRole  string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	BudgetID   uuid.UUID
+	UserID     uuid.UUID
+	MemberRole string
 }
 
 type Category struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	UserID    uuid.UUID
+	BudgetID  uuid.UUID
 	Name      string
 	GroupID   uuid.NullUUID
 	Notes     string
@@ -51,7 +52,7 @@ type Group struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	UserID    uuid.UUID
+	BudgetID  uuid.UUID
 	Name      string
 	Notes     string
 }
@@ -70,7 +71,8 @@ type Transaction struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	UserID      uuid.UUID
-	Account     uuid.UUID
+	BudgetID    uuid.UUID
+	AccountID   uuid.UUID
 	Datetime    time.Time
 	Payees      string
 	Notes       string
