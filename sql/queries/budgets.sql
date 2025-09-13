@@ -19,7 +19,7 @@ RETURNING *;
   JOIN budgets_users
     ON budgets.id = budgets_users.budget_id
   WHERE budgets_users.user_id = $1
-    AND ($2::text[] IS NULL OR budgets_users.member_role = ANY($2::text[]))
+    AND (sqlc.arg('roles')::text[] IS NULL OR budgets_users.member_role = ANY(sqlc.arg('roles')::text[]))
 )
 UNION
 (
@@ -27,19 +27,6 @@ UNION
   FROM budgets
   WHERE budgets.admin_id = $1
 );
-
--- name: GetUserBudgetsBackup :many
-SELECT *
-FROM budgets
-JOIN budgets_users
-ON budgets.id = budgets_users.budget_id
-WHERE   (
-        budgets_users.user_id = $1
-        AND ($2::text[] IS NULL
-            OR budgets_users.member_role = ANY($2::text[])
-        )
-        )
-    OR budgets.admin_id = $1;
 
 -- name: GetBudgetByID :one
 SELECT *

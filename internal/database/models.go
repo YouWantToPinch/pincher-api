@@ -18,7 +18,8 @@ type Account struct {
 	BudgetID    uuid.UUID
 	AccountType string
 	Name        string
-	Description sql.NullString
+	Notes       sql.NullString
+	IsDeleted   bool
 }
 
 type Budget struct {
@@ -57,6 +58,14 @@ type Group struct {
 	Notes     string
 }
 
+type Payee struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	BudgetID  uuid.UUID
+	Name      string
+}
+
 type RefreshToken struct {
 	Token     string
 	CreatedAt time.Time
@@ -67,23 +76,35 @@ type RefreshToken struct {
 }
 
 type Transaction struct {
-	ID          uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	UserID      uuid.UUID
-	BudgetID    uuid.UUID
-	AccountID   uuid.UUID
-	Datetime    time.Time
-	Payees      string
-	Notes       string
-	Amount      sql.NullInt32
-	SplitAmount string
-	Cleared     bool
+	ID              uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	BudgetID        uuid.UUID
+	LoggerID        uuid.UUID
+	AccountID       uuid.UUID
+	TransactionDate time.Time
+	PayeeID         uuid.UUID
+	Notes           string
+	Cleared         bool
 }
 
-type TransactionCategory struct {
-	TransactionID uuid.UUID
-	CategoryID    uuid.UUID
+type TransactionSplit struct {
+	ID            uuid.UUID
+	TransactionID uuid.NullUUID
+	CategoryID    uuid.NullUUID
+	Amount        int32
+}
+
+type TransactionView struct {
+	ID              uuid.UUID
+	TransactionDate time.Time
+	Payee           string
+	Notes           string
+	BudgetID        uuid.UUID
+	AccountID       uuid.UUID
+	LoggerID        uuid.UUID
+	TotalAmount     int64
+	Categories      []byte
 }
 
 type User struct {

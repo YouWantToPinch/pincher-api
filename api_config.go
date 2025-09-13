@@ -39,14 +39,7 @@ func (cfg *apiConfig) middlewareMetricsReset(next http.Handler) http.Handler {
 	})
 }
 
-type ctxKey struct{}
-var ctxUserID ctxKey
-var ctxBudgetID ctxKey
-
-var ctxKeyring = map[string]ctxKey{
-	"user_id": ctxUserID,
-	"budget_id": ctxBudgetID,
-}
+type ctxKey string
 
 func (cfg *apiConfig) middlewareAuthenticate(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +55,7 @@ func (cfg *apiConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 			log.Println("DEBUG: failed JWT validation")
 			return
 		}
+		ctxUserID := ctxKey("user_id")
 		ctx := context.WithValue(r.Context(), ctxUserID, validatedUserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -98,6 +92,7 @@ func (cfg *apiConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 			respondWithError(w, http.StatusUnauthorized, "Member does not have clearance for action", err)
 			return
 		}
+		ctxBudgetID := ctxKey("budget_id")
 		ctx := context.WithValue(r.Context(), ctxBudgetID, pathBudgetID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -105,10 +100,10 @@ func (cfg *apiConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 
 // ============== HELPERS =================
 
-func getContextKeyValue(ctx context.Context, key string) (uuid.UUID) {
-    contextKeyValue, ok := ctx.Value(ctxKeyring[key]).(uuid.UUID)
+func getContextKeyValue(ctx context.Context, key string) uuid.UUID {
+    contextKeyValue, ok := ctx.Value(ctxKey(key)).(uuid.UUID)
 	if !ok {
-		log.Printf("Failed to retrieve key from context")
+		log.Printf("Failed to retrieve key %s from context", key)
 		return uuid.Nil
 	}
     return contextKeyValue

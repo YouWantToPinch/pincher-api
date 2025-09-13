@@ -23,15 +23,6 @@ CREATE TABLE categories (
     FOREIGN KEY (group_id) REFERENCES groups(id)
 );
 
-CREATE TABLE transaction_categories (
-  transaction_id UUID,
-  category_id UUID,
-  PRIMARY KEY (transaction_id, category_id),
-  FOREIGN KEY (transaction_id) REFERENCES transactions(id),
-  FOREIGN KEY (category_id) REFERENCES categories(id)
-);
-
 -- +goose Down
-DROP TABLE transaction_categories;
 DROP TABLE categories;
 DROP TABLE groups;

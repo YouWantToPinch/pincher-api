@@ -97,3 +97,35 @@ type Category struct {
 	GroupID			uuid.NullUUID	`json:"group_id"`
 	Notes			string			`json:"notes"`
 }
+
+type Account struct {
+		ID 				uuid.UUID	`json:"id"`
+		CreatedAt		time.Time	`json:"created_at"`
+		UpdatedAt		time.Time	`json:"updated_at"`
+		BudgetID		uuid.UUID	`json:"budget_id"`
+		AccountType		string		`json:"account_type"`
+		Name			string		`json:"name"`
+		Notes			string		`json:"notes"`
+		IsDeleted		bool		`json:"is_deleted"`
+	}
+
+type Transaction struct {
+		ID 				uuid.UUID	`json:"id"`
+		CreatedAt		time.Time	`json:"created_at"`
+		UpdatedAt		time.Time	`json:"updated_at"`
+		BudgetID		uuid.UUID	`json:"budget_id"`
+		LoggerID		uuid.UUID	`json:"logger_id"`
+		AccountID		uuid.UUID	`json:"account_id"`
+		TransactionDate time.Time	`json:"transaction_date"`
+		PayeeID			uuid.UUID	`json:"payee_id"`
+		Notes			string		`json:"notes"`
+		Cleared			bool		`json:"is_cleared"`
+	}
+
+type Payee struct {
+		ID 				uuid.UUID	`json:"id"`
+		CreatedAt		time.Time	`json:"created_at"`
+		UpdatedAt		time.Time	`json:"updated_at"`
+		BudgetID		uuid.UUID	`json:"budget_id"`
+		Name			string		`json:"name"`
+	}

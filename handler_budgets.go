@@ -122,7 +122,7 @@ func(cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request){
 	} else {
 		dbBudgets, err = cfg.db.GetUserBudgets(r.Context(), database.GetUserBudgetsParams{
 			UserID: validatedUserID,
-			Column2: roleFilters,
+			Roles: roleFilters,
 		})
 		if err != nil {
 			respondWithError(w, http.StatusNotFound, "No budgets found with specified membership role", err)

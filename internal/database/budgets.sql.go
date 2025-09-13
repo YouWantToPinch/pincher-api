@@ -8,7 +8,6 @@ package database
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -458,12 +457,12 @@ UNION
 `
 
 type GetUserBudgetsParams struct {
-	UserID  uuid.UUID
-	Column2 []string
+	UserID uuid.UUID
+	Roles  []string
 }
 
 func (q *Queries) GetUserBudgets(ctx context.Context, arg GetUserBudgetsParams) ([]Budget, error) {
-	rows, err := q.db.QueryContext(ctx, getUserBudgets, arg.UserID, pq.Array(arg.Column2))
+	rows, err := q.db.QueryContext(ctx, getUserBudgets, arg.UserID, pq.Array(arg.Roles))
 	if err != nil {
 		return nil, err
 	}
@@ -478,74 +477,6 @@ func (q *Queries) GetUserBudgets(ctx context.Context, arg GetUserBudgetsParams) 
 			&i.AdminID,
 			&i.Name,
 			&i.Notes,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getUserBudgetsBackup = `-- name: GetUserBudgetsBackup :many
-SELECT id, budgets.created_at, budgets.updated_at, admin_id, name, notes, budgets_users.created_at, budgets_users.updated_at, budget_id, user_id, member_role
-FROM budgets
-JOIN budgets_users
-ON budgets.id = budgets_users.budget_id
-WHERE   (
-        budgets_users.user_id = $1
-        AND ($2::text[] IS NULL
-            OR budgets_users.member_role = ANY($2::text[])
-        )
-        )
-    OR budgets.admin_id = $1
-`
-
-type GetUserBudgetsBackupParams struct {
-	UserID  uuid.UUID
-	Column2 []string
-}
-
-type GetUserBudgetsBackupRow struct {
-	ID          uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	AdminID     uuid.UUID
-	Name        string
-	Notes       sql.NullString
-	CreatedAt_2 time.Time
-	UpdatedAt_2 time.Time
-	BudgetID    uuid.UUID
-	UserID      uuid.UUID
-	MemberRole  string
-}
-
-func (q *Queries) GetUserBudgetsBackup(ctx context.Context, arg GetUserBudgetsBackupParams) ([]GetUserBudgetsBackupRow, error) {
-	rows, err := q.db.QueryContext(ctx, getUserBudgetsBackup, arg.UserID, pq.Array(arg.Column2))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetUserBudgetsBackupRow
-	for rows.Next() {
-		var i GetUserBudgetsBackupRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.AdminID,
-			&i.Name,
-			&i.Notes,
-			&i.CreatedAt_2,
-			&i.UpdatedAt_2,
-			&i.BudgetID,
-			&i.UserID,
-			&i.MemberRole,
 		); err != nil {
 			return nil, err
 		}

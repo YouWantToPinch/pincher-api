@@ -33,7 +33,7 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 	if params.GroupID != "" {
 		parsedGroupID, err := uuid.Parse(params.GroupID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Provided group_id query parameter could not be parsed as UUID", err)
+			respondWithError(w, http.StatusBadRequest, "Provided group_id string could not be parsed as UUID", err)
 			return
 		}
 		foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
@@ -84,7 +84,7 @@ func(cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
 
 	categories, err := cfg.db.GetCategoriesByBudgetID(r.Context(), pathBudgetID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get user categories", err)
+		respondWithError(w, http.StatusNotFound, "Couldn't find categories in group specified", err)
 		return
 	}
 

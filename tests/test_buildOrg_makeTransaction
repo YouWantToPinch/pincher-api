@@ -1,0 +1,47 @@
+#!/bin/bash
+#Creates an organizational budget with an ADMIN. Sets up the budget resources and members with a MANAGER. A CONTRIBUTOR adds a transaction. A VIEWER reads all transactions.
+source ./functions
+
+heading "DELETING EXISTING USERS FROM THE DATABASE...."
+reset
+heading "CREATING & LOGGING IN 4 USERS...."
+USER1=$(create_user "u1" "pass1")
+echo $USER1
+JWT_USER1=$(login "u1" "pass1")
+echo $JWT_USER1
+USER2=$(create_user "u2" "pass2")
+echo $USER2
+JWT_USER2=$(login "u2" "pass2")
+echo $JWT_USER2
+USER3=$(create_user "u3" "pass3")
+echo $USER3
+JWT_USER3=$(login "u3" "pass3")
+echo $JWT_USER3
+USER4=$(create_user "u4" "pass4")
+echo $USER4
+JWT_USER4=$(login "u4" "pass4")
+echo $JWT_USER4
+heading "u1 ADMIN: Creating Webflyx Org budget & assigning u2, u3, u4 as MANAGER, CONTRIBUTOR, VIEWER."
+BUDGET1=$(create_budget "$JWT_USER1" "Webflyx Org" "For budgeting Webflyx Org financial resources and tracking expenses.")
+echo $BUDGET1
+assign_member_to_budget "$JWT_USER1" "$BUDGET1" "$USER2" "MANAGER"
+assign_member_to_budget "$JWT_USER1" "$BUDGET1" "$USER3" "CONTRIBUTOR"
+assign_member_to_budget "$JWT_USER1" "$BUDGET1" "$USER4" "VIEWER"
+heading "u2 MANAGER: Adding account, groups, categories."
+ACCOUNT1=$(create_budget_account "$JWT_USER2" "$BUDGET1" "savings" "Saved Org Funds" "Represents a bank account holding business capital.")
+echo $ACCOUNT1
+ACCOUNT2=$(create_budget_account "$JWT_USER2" "$BUDGET1" "credit" "Employee Business Credit Account" "Employees use cards that pull from this account to pay for business expenses.")
+echo $ACCOUNT2
+GROUP1=$(create_group "$JWT_USER2" "$BUDGET1" "Business Capital" "")
+echo $GROUP1
+CATEGORY1=$(create_category "$JWT_USER2" "$BUDGET1" "$GROUP1" "Surplus" "Category representing surplus funding to be spent on elective improvements to organization headquarters.")
+echo $CATEGORY1
+CATEGORY2=$(create_category "$JWT_USER2" "$BUDGET1" "$GROUP1" "Gas" "Funds available for covering gas employees may need to fuel up company vehicles.")
+echo $CATEGORY2
+heading "u3 CONTRIBUTOR: Driving a company vehicle; needs to fuel up."
+PAYEE1=$(create_budget_payee "$JWT_USER3" "$BUDGET1" "Smash & Dash" "")
+echo $PAYEE1
+TRANSACTION1=$(log_transaction "$JWT_USER3" "$BUDGET1" "$ACCOUNT2" "2025-09-15T23:17:00Z" "$PAYEE1" "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station." "true")
+echo $TRANSACTION1
+heading "u4 VIEWER: Works for accounting; reading transactions from employees."
+get_transactions "$JWT_USER4" "$BUDGET1" "" "" ""

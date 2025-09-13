@@ -20,7 +20,7 @@ CREATE TABLE budgets_users (
         ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE,
-    UNIQUE(budget_id, user_id)
+    PRIMARY KEY (budget_id, user_id)
 );
 
 -- +goose Down

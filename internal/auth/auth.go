@@ -2,7 +2,7 @@ package auth
 
 import (
 	"time"
-	"log"
+	//"log"
 	"errors"
 	"strings"
 
@@ -56,7 +56,7 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.Nil, err
 	} else if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok {
-		log.Printf("Returning ID: %s", claims.Subject)
+		//log.Printf("Returning ID: %s", claims.Subject)
 		id, err := uuid.Parse(claims.Subject)
 		if err != nil {
 			return uuid.Nil, err

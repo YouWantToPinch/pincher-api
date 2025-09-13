@@ -13,26 +13,28 @@
 #  defined within a file in the same directory entitled 'functions'.
 
 declare -r COMMANDS=("Add" "Page" "Finish" "Cancel" "Undo")
-declare -r ENTITIES=("*DEBUG" "+HEADING" "budgets" "categories" "groups" "users")
-# declare -r ENTITIES=("users" "groups" "categories" "accounts" "transactions")
+declare -r ENTITIES=("*DEBUG" "+HEADING" "budgets" "transactions" "payees" "categories" "groups" "users" "accounts")
 declare -r USER_ACTIONS=("create get delete login reset") # TODO: add logout...
+declare -r PAYEE_ACTIONS=("create get delete")
 declare -r BUDGET_ACTIONS=("assign revoke create get delete")
 declare -r MEMBER_ACTIONS=("add get remove")
 declare -r GROUP_ACTIONS=("create get delete")
 declare -r CATEGORY_ACTIONS=("create get delete assign")
-# declare -r ACCOUNT_ACTIONS=("create" "get" "delete")
-# declare -r TRANSACTION_ACTIONS=("create" "get" "delete")
+declare -r ACCOUNT_ACTIONS=("create get delete")
+declare -r TRANSACTION_ACTIONS=("log get delete")
 
 declare -A action_map
 action_map["users"]="USER_ACTIONS"
 action_map["budgets"]="BUDGET_ACTIONS"
 action_map["groups"]="GROUP_ACTIONS"
 action_map["categories"]="CATEGORY_ACTIONS"
-#action_map["accounts"]="ACCOUNT_ACTIONS"
-#action_map["transactions"]="TRANSACTION_ACTIONS"
+action_map["accounts"]="ACCOUNT_ACTIONS"
+action_map["transactions"]="TRANSACTION_ACTIONS"
+action_map["payees"]="PAYEE_ACTIONS"
 
 declare -A TEST_ENTITY_COUNTER
 declare -A TEST_ENTITY_LISTS
+TEST_ENTITY_LISTS=( [USER]="" [JWT_USER]="" [BUDGET]="" [CATEGORY]="" [GROUP]="" [TRANSACTION]="" [PAYEE]="" [ACCOUNT]="" )
 
 GLO_SAVED_ENTITY_VAR=""
 
@@ -115,6 +117,92 @@ users_delete() {
     add_bash_line "EXEC" "USER" "delete_user" ""\$$token"" "$username" "$password"
 }
 
+transactions_log() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    local payee_id=$(gum choose ${TEST_ENTITY_LISTS["PAYEE"]})
+    local account_id=$(gum choose ${TEST_ENTITY_LISTS["ACCOUNT"]})
+    local time_input=$(gum input --placeholder "Transaction Date format: +%Y-%m-%dT%H:%M:%S.%NZ ; OR type 'NOW'")
+    if [[ "$time_input" == "NOW" ]]; then
+        local transaction_date=$(date --utc +%Y-%m-%dT%H:%M:%SZ)
+    else
+        local transaction_date="$time_input"
+    fi
+    local notes=$(gum input --placeholder "Notes about new transaction...")
+    gum log --structured --level debug "Transaction cleared?" 
+    local cleared=$(gum choose "true" "false")
+    add_bash_line "SAVE" "TRANSACTION" "log_transaction" "\$$token" "\$$budget_id" "\$$account_id" "$transaction_date" "\$$payee_id" "$notes" "$cleared"
+}
+
+transactions_get() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    local account_id=$(gum choose ${TEST_ENTITY_LISTS["ACCOUNT"]})
+    local time_input=$(gum input --placeholder "Start Date format: +%Y-%m-%dT%H:%M:%S.%NZ ; OR type 'NOW'")
+    if [[ "$time_input" == "NOW" ]]; then
+        local start_date=$(date --utc +%Y-%m-%dT%H:%M:%SZ)
+    else
+        local start_date="$time_input"
+    fi
+    local time_input=$(gum input --placeholder "End Date format: +%Y-%m-%dT%H:%M:%S.%NZ ; OR type 'NOW'")
+    if [[ "$time_input" == "NOW" ]]; then
+        local end_date=$(date --utc +%Y-%m-%dT%H:%M:%SZ)
+    else
+        local end_date="$time_input"
+    fi
+
+    #local query=$(gum input --placeholder "Optional query param (?key=value)...")
+    add_bash_line "GET" "TRANSACTION" "get_transactions" "\$$token" "\$$budget_id" "\$$account_id" "$start_date" "$end_date" #"$query"
+}
+
+transactions_delete() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    add_bash_line "EXEC" "TRANSACTION" "delete_transactions" "\$$token" "\$$budget_id" "\$$group_id"
+}
+
+accounts_create() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    local account_type=$(gum choose "checking" "savings" "credit")
+    local name=$(gum input --placeholder "Name for new account...")
+    local notes=$(gum input --placeholder "Notes about new account...")
+    add_bash_line "SAVE" "ACCOUNT" "create_budget_account" "\$$token" "\$$budget_id" "$account_type" "$name" "$notes"
+}
+
+accounts_get() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    #local query=$(gum input --placeholder "Optional query param (?key=value)...")
+    add_bash_line "GET" "ACCOUNT" "get_budget_accounts" "\$$token" "\$$budget_id" #"$query"
+}
+
+accounts_delete() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    add_bash_line "EXEC" "ACCOUNT" "delete_budget_account" "\$$token" "\$$budget_id"
+}
+
+payees_create() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    local name=$(gum input --placeholder "Name for new payee...")
+    add_bash_line "SAVE" "PAYEE" "create_budget_payee" "\$$token" "\$$budget_id" "$name" "$notes"
+}
+
+payees_get() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    #local query=$(gum input --placeholder "Optional query param (?key=value)...")
+    add_bash_line "GET" "PAYEE" "get_budget_payees" "\$$token" "\$$budget_id" #"$query"
+}
+
+payees_delete() {
+    local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
+    local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
+    add_bash_line "EXEC" "PAYEE" "delete_budget_payee" "\$$token" "\$$budget_id"
+}
+
 groups_create() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
     local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
@@ -127,14 +215,14 @@ groups_get() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
     local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
     #local query=$(gum input --placeholder "Optional query param (?key=value)...")
-    add_bash_line "GET" "GROUP" "get_user_groups" "\$$token" "\$$budget_id" "$query"
+    add_bash_line "GET" "GROUP" "get_budget_groups" "\$$token" "\$$budget_id" "$query"
 }
 
 groups_delete() {
     local token=$(gum choose ${TEST_ENTITY_LISTS["JWT_USER"]})
     local budget_id=$(gum choose ${TEST_ENTITY_LISTS["BUDGET"]})
     local group_id=$(gum choose ${TEST_ENTITY_LISTS["GROUP"]})
-    add_bash_line "EXEC" "GROUP" "delete_user_group" "\$$token" "\$$budget_id" "\$$group_id"
+    add_bash_line "EXEC" "GROUP" "delete_budget_group" "\$$token" "\$$budget_id" "\$$group_id"
 }
 
 categories_create() {
@@ -184,6 +272,34 @@ clean_unused_entities() {
                 TEST_ENTITY_LISTS["$type"]+="${entity} "
             fi
         done
+    done
+}
+
+load_entities_from_file() {
+    local file="temp_test_script"
+
+    for type in "${!TEST_ENTITY_LISTS[@]}"; do
+        TEST_ENTITY_LISTS["$type"]=""
+        TEST_ENTITY_COUNTER["$type"]=0
+        local index=1
+
+        while true; do
+            local entity="${type}${index}"
+            if grep -q "\b${entity}\b" "$file"; then
+                TEST_ENTITY_LISTS["$type"]+="${entity} "
+                ((TEST_ENTITY_COUNTER["$type"]++))
+                ((index++))
+            else
+                # Stop if we find a gap (i.e., entity with this index does not exist)
+                break
+            fi
+        done
+    done
+}
+
+print_entity_strings() {
+    for type in "${!TEST_ENTITY_LISTS[@]}"; do
+        gum log --structured --level debug "[$type]: ${TEST_ENTITY_LISTS[$type]}"
     done
 }
 
@@ -251,7 +367,7 @@ gum style \
     'Read through your progress with PAGE.' \
     'Save your script with FINISH.' \
     'Cancel writing your script with CANCEL.' \
-    'Remove the last line with UNDO.' \
+    'Remove the last line with UNDO.'
 
 # Loop to gather user input
 while true; do
@@ -281,11 +397,8 @@ while true; do
                 UNDO_STACK+=(1)
                 continue
             elif [[ "$ENTITY" == "*DEBUG" ]]; then
-                gum log --structured --level debug "T_EN_LS[USR]: ${TEST_ENTITY_LISTS["USER"]}"
-                gum log --structured --level debug "T_EN_LS[JWT]: ${TEST_ENTITY_LISTS["JWT_USER"]}"
-                gum log --structured --level debug "T_EN_LS[BGT]: ${TEST_ENTITY_LISTS["BUDGET"]}"
-                gum log --structured --level debug "T_EN_LS[GRP]: ${TEST_ENTITY_LISTS["GROUP"]}"
-                gum log --structured --level debug "T_EN_LS[CAT]: ${TEST_ENTITY_LISTS["CATEGORY"]}"
+                load_entities_from_file
+                print_entity_strings
             else
                 ARRAY_NAME="${action_map[$ENTITY]}"
                 ACTION=$(gum choose --ordered ${!ARRAY_NAME})
@@ -324,7 +437,7 @@ echo "source ./functions" >> "$test_script"
 echo "" >> "$test_script"
 
 cat temp_test_script >> "$test_script"
-if [ -f "${test_script}"]; then
+if [ -f "${test_script}" ]; then
     rm temp_test_script
     chmod +x "$test_script"
     echo "Test script '$test_script' built successfully!"
