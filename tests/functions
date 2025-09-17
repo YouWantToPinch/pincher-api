@@ -1,6 +1,5 @@
 #!/bin/bash
-
-# --- FUNCTIONS ---
+# These functions are necessary for all tests built with the build_test.sh tool.
 
 heading() {
   local msg="$1"
@@ -9,10 +8,7 @@ heading() {
   echo "----------------------------------------------------"
 }
 
-reset() {
- curl -s -X POST "http://localhost:8080/admin/reset" \
-   -H "Content-Type: application/json"
-}
+# USER CRUD
 
 create_user() {
   local username="$1" password="$2"
@@ -20,14 +16,6 @@ create_user() {
     -H "Content-Type: application/json" \
     -d "{\"username\":\"$username\",\"password\":\"$password\"}" \
   | jq -r '.id'
-}
-
-login() {
-  local username="$1" password="$2"
-  curl -s -X POST "http://localhost:8080/api/login" \
-    -H "Content-Type: application/json" \
-    -d "{\"username\":\"$username\",\"password\":\"$password\"}" \
-  | jq -r '.token'
 }
 
 delete_user() {
@@ -38,65 +26,29 @@ delete_user() {
   | jq -r '.id'
 }
 
+reset() {
+ curl -s -X POST "http://localhost:8080/admin/reset" \
+   -H "Content-Type: application/json"
+}
+
+# USER AUTH
+
+login() {
+  local username="$1" password="$2"
+  curl -s -X POST "http://localhost:8080/api/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"$username\",\"password\":\"$password\"}" \
+  | jq -r '.token'
+}
+
+# USER->BUDGET CRUD
+
 create_budget() {
   local token="$1" name="$2" notes="$3"
   curl -s -X POST "http://localhost:8080/api/budgets" \
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
     -d "{\"name\":\"$name\",\"notes\":\"$notes\"}" \
-  | jq -r '.id'
-}
-
-log_transaction() {
-  local token="$1" budget_id="$2" account_id="$3" transaction_date="$4" payee_id="$5" notes="$6" is_cleared="$7"
-  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/transactions" \
-    -H "Authorization: Bearer $token" \
-    -H "Content-Type: application/json" \
-    -d "{\"account_id\":\"$account_id\",\"transaction_date\":\"$transaction_date\",\"payee_id\":\"$payee_id\",\"notes\":\"$notes\",\"is_cleared\":\"$is_cleared\"}" \
-  | jq -r '.id'
-}
-
-create_budget_account() {
-  local token="$1" budget_id="$2" account_type="$3" name="$4" notes="$5"
-  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/accounts" \
-    -H "Authorization: Bearer $token" \
-    -H "Content-Type: application/json" \
-    -d "{\"account_type\":\"$account_type\",\"name\":\"$name\",\"notes\":\"$notes\"}" \
-  | jq -r '.id'
-}
-
-create_budget_payee() {
-  local token="$1" budget_id="$2" name="$3"
-  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/payees" \
-    -H "Authorization: Bearer $token" \
-    -H "Content-Type: application/json" \
-    -d "{\"name\":\"$name\",\"notes\":\"$notes\"}" \
-  | jq -r '.id'
-}
-
-create_group() {
-  local token="$1" budget_id="$2" name="$3" notes="$4"
-  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/groups" \
-    -H "Authorization: Bearer $token" \
-    -H "Content-Type: application/json" \
-    -d "{\"name\":\"$name\",\"notes\":\"$notes\"}" \
-  | jq -r '.id'
-}
-
-create_category() {
-  local token="$1" budget_id="$2" group_id="$3"  name="$4" notes="$5"
-  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/categories" \
-    -H "Authorization: Bearer $token" \
-    -H "Content-Type: application/json" \
-    -d "{\"name\":\"$name\",\"notes\":\"$notes\",\"group_id\":\"$group_id\"}" \
-  | jq -r '.id'
-}
-
-delete_budget_category() {
-  local token="$1" budget_id="$2" category_id="$3"
-  curl -s -X DELETE "http://localhost:8080/api/budgets/$budget_id/categories" \
-    -H "Authorization: Bearer $token" \
-    -H "Content-Type: application/json" \
   | jq -r '.id'
 }
 
@@ -108,20 +60,23 @@ get_user_budgets() {
   | jq .
 }
 
-get_budget_payees() {
+delete_user_budget() {
   local token="$1" budget_id="$2"
-  curl -s "http://localhost:8080/api/budgets/$budget_id/payees" \
+  curl -s -X DELETE "http://localhost:8080/api/budgets/$budget_id" \
     -H "Authorization: Bearer $token" \
-    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
   | jq .
 }
 
-get_transactions() {
-  local token="$1" budget_id="$2" account_id="$3" start_date="$4" end_date="$5"
-  curl -s "http://localhost:8080/api/budgets/$budget_id/transactions?account_id=$account_id&start_date=$start_date&end_date=$end_date" \
+# BUDGET->ACCOUNT CRUD
+
+create_budget_account() {
+  local token="$1" budget_id="$2" account_type="$3" name="$4" notes="$5"
+  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/accounts" \
     -H "Authorization: Bearer $token" \
-    -H "Accept: application/json" \
-  | jq .
+    -H "Content-Type: application/json" \
+    -d "{\"account_type\":\"$account_type\",\"name\":\"$name\",\"notes\":\"$notes\"}" \
+  | jq -r '.id'
 }
 
 get_budget_accounts() {
@@ -129,31 +84,6 @@ get_budget_accounts() {
   curl -s "http://localhost:8080/api/budgets/$budget_id/accounts" \
     -H "Authorization: Bearer $token" \
     -H "Accept: application/json" \
-  | jq .
-}
-
-get_budget_groups() {
-  local token="$1" budget_id="$2"
-  curl -s "http://localhost:8080/api/budgets/$budget_id/groups" \
-    -H "Authorization: Bearer $token" \
-    -H "Accept: application/json" \
-  | jq .
-}
-
-get_budget_categories() {
-  local token="$1" budget_id="$2" query="$3"
-  curl -s "http://localhost:8080/api/budgets/$budget_id/categories$query" \
-    -H "Authorization: Bearer $token" \
-    -H "Accept: application/json" \
-  | jq .
-}
-
-assign_cat_to_grp() {
-  local token="$1" budget_id="$2" category_id="$3" group_id="$4"
-  curl -s -X PUT "http://localhost:8080/api/budgets/$budget_id/categories/$category_id" \
-    -H "Authorization: Bearer $token" \
-    -H "Accept: application/json" \
-    -d "{\"group_id\":\"$group_id\"}" \
   | jq .
 }
 
@@ -174,12 +104,22 @@ revoke_budget_membership() {
   | jq .
 }
 
-delete_budget_account() {
-  local token="$1" budget_id="$2" account_id="$3" name="$4" delete_hard="$5"
-  curl -s -X DELETE "http://localhost:8080/api/budgets/$budget_id/groups/$group_id" \
+# BUDGET->PAYEE CRUD
+
+create_budget_payee() {
+  local token="$1" budget_id="$2" name="$3"
+  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/payees" \
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
-    -d "{\"name\":\"$name\",\"delete_hard\":\"$delete_hard\"}" \
+    -d "{\"name\":\"$name\",\"notes\":\"$notes\"}" \
+  | jq -r '.id'
+}
+
+get_budget_payees() {
+  local token="$1" budget_id="$2"
+  curl -s "http://localhost:8080/api/budgets/$budget_id/payees" \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/json" \
   | jq .
 }
 
@@ -191,6 +131,70 @@ delete_budget_payee() {
   | jq .
 }
 
+# BUDGET->CATEGORY CRUD
+
+create_category() {
+  local token="$1" budget_id="$2" group_id="$3"  name="$4" notes="$5"
+  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/categories" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"$name\",\"notes\":\"$notes\",\"group_id\":\"$group_id\"}" \
+  | jq -r '.id'
+}
+
+get_budget_categories() {
+  local token="$1" budget_id="$2" query="$3"
+  curl -s "http://localhost:8080/api/budgets/$budget_id/categories$query" \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/json" \
+  | jq .
+}
+
+assign_cat_to_grp() {
+  local token="$1" budget_id="$2" category_id="$3" group_id="$4"
+  curl -s -X PUT "http://localhost:8080/api/budgets/$budget_id/categories/$category_id" \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/json" \
+    -d "{\"group_id\":\"$group_id\"}" \
+  | jq .
+}
+
+delete_budget_category() {
+  local token="$1" budget_id="$2" category_id="$3"
+  curl -s -X DELETE "http://localhost:8080/api/budgets/$budget_id/categories" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+  | jq -r '.id'
+}
+
+# BUDGET->GROUP CRUD
+
+create_group() {
+  local token="$1" budget_id="$2" name="$3" notes="$4"
+  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/groups" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"$name\",\"notes\":\"$notes\"}" \
+  | jq -r '.id'
+}
+
+get_budget_groups() {
+  local token="$1" budget_id="$2"
+  curl -s "http://localhost:8080/api/budgets/$budget_id/groups" \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/json" \
+  | jq .
+}
+
+delete_budget_account() {
+  local token="$1" budget_id="$2" account_id="$3" name="$4" delete_hard="$5"
+  curl -s -X DELETE "http://localhost:8080/api/budgets/$budget_id/groups/$group_id" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"$name\",\"delete_hard\":\"$delete_hard\"}" \
+  | jq .
+}
+
 delete_budget_group() {
   local token="$1" budget_id="$2" group_id="$3"
   curl -s -X DELETE "http://localhost:8080/api/budgets/$budget_id/groups/$group_id" \
@@ -199,17 +203,28 @@ delete_budget_group() {
   | jq .
 }
 
-delete_transaction() {
-  local token="$1" budget_id="$2" transaction_id="$3"
-  curl -s -X DELETE "http://localhost:8080/api/budgets/$budget_id/transactions/$transaction_id" \
+# TRANSACTION CRUD
+
+log_transaction() {
+  local token="$1" budget_id="$2" account_id="$3" transaction_date="$4" payee_id="$5" notes="$6" is_cleared="$7"
+  curl -s -X POST "http://localhost:8080/api/budgets/$budget_id/transactions" \
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
+    -d "{\"account_id\":\"$account_id\",\"transaction_date\":\"$transaction_date\",\"payee_id\":\"$payee_id\",\"notes\":\"$notes\",\"is_cleared\":\"$is_cleared\"}" \
+  | jq -r '.id'
+}
+
+get_transactions() {
+  local token="$1" budget_id="$2" account_id="$3" start_date="$4" end_date="$5"
+  curl -s "http://localhost:8080/api/budgets/$budget_id/transactions?account_id=$account_id&start_date=$start_date&end_date=$end_date" \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/json" \
   | jq .
 }
 
-delete_user_budget() {
-  local token="$1" budget_id="$2"
-  curl -s -X DELETE "http://localhost:8080/api/budgets/$budget_id" \
+delete_transaction() {
+  local token="$1" budget_id="$2" transaction_id="$3"
+  curl -s -X DELETE "http://localhost:8080/api/budgets/$budget_id/transactions/$transaction_id" \
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
   | jq .
