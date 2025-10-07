@@ -28,6 +28,8 @@ func SetupMux(cfg apiConfig) *http.ServeMux {
 	mux.HandleFunc("GET /api/healthz", endpReadiness)
 	mux.HandleFunc("GET /admin/metrics", cfg.endpFileserverHitCountGet)
 	mux.HandleFunc("POST /admin/reset", cfg.endpDeleteAllUsers)
+	mux.HandleFunc("GET /admin/users", cfg.endpGetAllUsers)
+	mux.HandleFunc("GET /admin/users/count", cfg.endpGetTotalUserCount)
 	  // User authentication
 	mux.HandleFunc("POST /api/users", cfg.endpCreateUser)
 	mux.HandleFunc("DELETE /api/users", mdAuth(cfg.endpDeleteUser))
@@ -69,8 +71,8 @@ func SetupMux(cfg apiConfig) *http.ServeMux {
 	return mux
 }
 
-func LoadEnvConfig() apiConfig {
-	godotenv.Load()
+func LoadEnvConfig(path string) apiConfig {
+	_ = godotenv.Load(path)
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {

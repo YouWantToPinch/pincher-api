@@ -110,7 +110,7 @@ func(cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request)
 	} else {
 		parsedAccountID = uuid.Nil
 	}
-	if queryEndDate != "" || queryEndDate != "" {
+	if queryStartDate != "" || queryEndDate != "" {
 		const timeLayout = time.RFC3339
 		parsedStartDate, err = time.Parse(timeLayout, queryStartDate)
 			if err != nil {

@@ -54,15 +54,6 @@ func (q *Queries) DeleteUserByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const deleteUsers = `-- name: DeleteUsers :exec
-DELETE FROM users
-`
-
-func (q *Queries) DeleteUsers(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, deleteUsers)
-	return err
-}
-
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT id, created_at, updated_at, username, hashed_password FROM users
 WHERE users.username = $1

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"context"
 
@@ -52,7 +53,7 @@ func (cfg *apiConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", nil)
-			log.Println("DEBUG: failed JWT validation")
+			log.Println(fmt.Sprintf("DEBUG: failed JWT validation for JWT: %s", tokenString))
 			return
 		}
 		ctxUserID := ctxKey("user_id")

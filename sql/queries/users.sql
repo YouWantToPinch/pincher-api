@@ -21,9 +21,6 @@ SET updated_at = NOW(), username = $2, hashed_password = $3
 WHERE id = $1
 RETURNING *;
 
--- name: DeleteUsers :exec
-DELETE FROM users;
-
 -- name: DeleteUserByID :exec
 DELETE
 FROM users

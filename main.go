@@ -13,7 +13,7 @@ func main() {
 	const filepathRoot = "."
 	const port = "8080"
 
-	cfg := server.LoadEnvConfig()
+	cfg := server.LoadEnvConfig(".env")
 
 	pincher := &http.Server{
 		Addr:		":" + port,
