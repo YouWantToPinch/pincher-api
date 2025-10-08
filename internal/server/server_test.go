@@ -1,13 +1,13 @@
 package server
 
 import (
-    "net/http"
 	"encoding/json"
-    "net/http/httptest"
-    "testing"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
-	"github.com/stretchr/testify/assert"
 	pt "github.com/YouWantToPinch/pincher-api/internal/pinchertest"
+	"github.com/stretchr/testify/assert"
 )
 
 // ---------------
@@ -23,10 +23,10 @@ func Test_MakeAndResetUsers(t *testing.T) {
 	const port = "8080"
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{
-		Addr:		":" + port,
-		Handler:	SetupMux(cfg),
+		Addr:    ":" + port,
+		Handler: SetupMux(cfg),
 	}
-    mux := pincher.Handler
+	mux := pincher.Handler
 	// REQUESTS
 
 	// Delete all users
@@ -38,7 +38,7 @@ func Test_MakeAndResetUsers(t *testing.T) {
 	assert.Equal(t, w.Code, 201)
 	w = pt.Call(mux, pt.CreateUser("user2", "pwd2"))
 	assert.Equal(t, w.Code, 201)
-	
+
 	// User count should now be 2
 	w = pt.Call(mux, pt.GetUserCount())
 	var count int64
@@ -75,10 +75,10 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 	const port = "8080"
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{
-		Addr:		":" + port,
-		Handler:	SetupMux(cfg),
+		Addr:    ":" + port,
+		Handler: SetupMux(cfg),
 	}
-    mux := pincher.Handler
+	mux := pincher.Handler
 	// REQUESTS
 
 	// Delete all users
@@ -102,7 +102,7 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 
 	// delete user 1 as user 1
 	w = pt.Call(mux, pt.DeleteUser(jwt1.(string), "user1", "pwd1"))
-	
+
 	// User count should now be 1
 	w = pt.Call(mux, pt.GetUserCount())
 	var count int64
@@ -139,10 +139,10 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	const port = "8080"
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{
-		Addr:		":" + port,
-		Handler:	SetupMux(cfg),
+		Addr:    ":" + port,
+		Handler: SetupMux(cfg),
 	}
-    mux := pincher.Handler
+	mux := pincher.Handler
 	// REQUESTS
 
 	// Delete all users
@@ -184,7 +184,7 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	account1, _ := pt.GetJSONField(w, "id")
 	w = pt.Call(mux, pt.CreateBudgetAccount(jwt2.(string), budget1.(string), "credit", "Employee Business Credit Account", "Employees use cards that pull from this account to pay for business expenses."))
 	account2, _ := pt.GetJSONField(w, "id")
-	w = pt.Call(mux, pt.CreateGroup(jwt2.(string), budget1.(string), "Business Capital", "Categories related to company capital"))	
+	w = pt.Call(mux, pt.CreateGroup(jwt2.(string), budget1.(string), "Business Capital", "Categories related to company capital"))
 	group1, _ := pt.GetJSONField(w, "id")
 	w = pt.Call(mux, pt.CreateCategory(jwt2.(string), budget1.(string), group1.(string), "Surplus", "Category representing surplus funding to be spent on elective improvements to organization headquarters."))
 	w = pt.Call(mux, pt.CreateCategory(jwt2.(string), budget1.(string), group1.(string), "Surplus", "Category representing surplus funding to be spent on elective improvements to organization headquarters."))
@@ -206,10 +206,10 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 }
 
 /*
- Creates two budgets with an admin user, and adds other users to the first.
- Along the way, various roles attempt various actions that 
- they should or should not be able to do; authorizations that 
- should be verified.
+Creates two budgets with an admin user, and adds other users to the first.
+Along the way, various roles attempt various actions that
+they should or should not be able to do; authorizations that
+should be verified.
 */
 func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	// TEST SETUP
@@ -219,10 +219,10 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	const port = "8080"
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{
-		Addr:		":" + port,
-		Handler:	SetupMux(cfg),
+		Addr:    ":" + port,
+		Handler: SetupMux(cfg),
 	}
-    mux := pincher.Handler
+	mux := pincher.Handler
 	// REQUESTS
 
 	// Delete all users
@@ -259,10 +259,10 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	// Try adding user2 as ADMIN using user4 (not in budget), then as MANAGER. Both should fail.
 	w = pt.Call(mux, pt.AssignMemberToBudget(jwt4.(string), budget1.(string), user2.(string), "ADMIN"))
 	w = pt.Call(mux, pt.AssignMemberToBudget(jwt4.(string), budget1.(string), user2.(string), "MANAGER"))
-	
+
 	// Add user4 to Webflyx Org as user1 ADMIN, with role: VIEWER
 	w = pt.Call(mux, pt.AssignMemberToBudget(jwt1.(string), budget1.(string), user4.(string), "VIEWER"))
-	
+
 	// user4 should be assigned to only 1 budget
 	w = pt.Call(mux, pt.GetUserBudgets(jwt4.(string)))
 	var gotBudgets []Budget

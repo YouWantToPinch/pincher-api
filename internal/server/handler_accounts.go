@@ -2,40 +2,40 @@ package server
 
 import (
 	//"log"
-	"net/http"
 	"database/sql"
 	"encoding/json"
+	"net/http"
 
 	"github.com/google/uuid"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func(cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request){
-	
+func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
+
 	type parameters struct {
-		AccountType		string		`json:"account_type"`
-		Name			string		`json:"name"`
-		Notes			string		`json:"notes"`
+		AccountType string `json:"account_type"`
+		Name        string `json:"name"`
+		Notes       string `json:"notes"`
 	}
 
-    decoder := json.NewDecoder(r.Body)
-    params := parameters{}
-    err := decoder.Decode(&params)
-    if err != nil {
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
-    }
+	}
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	dbAccount, err := cfg.db.AddAccount(r.Context(), database.AddAccountParams{
-		BudgetID:		pathBudgetID,
-		AccountType: 	params.AccountType,
-		Name: 			params.Name,
+		BudgetID:    pathBudgetID,
+		AccountType: params.AccountType,
+		Name:        params.Name,
 		Notes: sql.NullString{
 			String: params.Notes,
-			Valid: true,
+			Valid:  true,
 		},
 	})
 	if err != nil {
@@ -44,20 +44,20 @@ func(cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request){
 	}
 
 	respBody := Account{
-		ID:					dbAccount.ID,
-		CreatedAt:			dbAccount.CreatedAt,
-		UpdatedAt:			dbAccount.UpdatedAt,
-		AccountType:		dbAccount.AccountType,
-		Name:				dbAccount.Name,
-		Notes:				dbAccount.Notes.String,
-		IsDeleted:			dbAccount.IsDeleted,
+		ID:          dbAccount.ID,
+		CreatedAt:   dbAccount.CreatedAt,
+		UpdatedAt:   dbAccount.UpdatedAt,
+		AccountType: dbAccount.AccountType,
+		Name:        dbAccount.Name,
+		Notes:       dbAccount.Notes.String,
+		IsDeleted:   dbAccount.IsDeleted,
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
 	return
 }
 
-func(cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	accounts, err := cfg.db.GetAccountsFromBudget(r.Context(), pathBudgetID)
@@ -74,23 +74,22 @@ func(cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		addAccount := Account{
-		ID:					account.ID,
-		CreatedAt:			account.CreatedAt,
-		UpdatedAt:			account.UpdatedAt,
-		AccountType:		account.AccountType,
-		Name:				account.Name,
-		Notes:				account.Notes.String,
-		IsDeleted:			account.IsDeleted,
-	}
+			ID:          account.ID,
+			CreatedAt:   account.CreatedAt,
+			UpdatedAt:   account.UpdatedAt,
+			AccountType: account.AccountType,
+			Name:        account.Name,
+			Notes:       account.Notes.String,
+			IsDeleted:   account.IsDeleted,
+		}
 		respBody = append(respBody, addAccount)
 	}
-	
 
 	respondWithJSON(w, http.StatusOK, respBody)
 	return
 }
 
-func(cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 
 	idString := r.PathValue("account_id")
 	pathAccountID, err := uuid.Parse(idString)
@@ -106,34 +105,34 @@ func(cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respBody := Account{
-		ID:					dbAccount.ID,
-		CreatedAt:			dbAccount.CreatedAt,
-		UpdatedAt:			dbAccount.UpdatedAt,
-		AccountType:		dbAccount.AccountType,
-		Name:				dbAccount.Name,
-		Notes:				dbAccount.Notes.String,
-		IsDeleted:			dbAccount.IsDeleted,
+		ID:          dbAccount.ID,
+		CreatedAt:   dbAccount.CreatedAt,
+		UpdatedAt:   dbAccount.UpdatedAt,
+		AccountType: dbAccount.AccountType,
+		Name:        dbAccount.Name,
+		Notes:       dbAccount.Notes.String,
+		IsDeleted:   dbAccount.IsDeleted,
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
 	return
 }
 
-func(cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
-	
+func (cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
+
 	type parameters struct {
-		Name			string		`json:"name"`
-		DeleteHard		bool		`json:"delete_hard"`
+		Name       string `json:"name"`
+		DeleteHard bool   `json:"delete_hard"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
-    params := parameters{}
-    err := decoder.Decode(&params)
-    if err != nil {
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
-    }
-	
+	}
+
 	idString := r.PathValue("account_id")
 	pathAccountID, err := uuid.Parse(idString)
 	if err != nil {

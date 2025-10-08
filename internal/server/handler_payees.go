@@ -1,33 +1,33 @@
 package server
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 
 	"github.com/google/uuid"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func(cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request){
+func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
-		Name			string		`json:"payee_id"`
+		Name string `json:"payee_id"`
 	}
 
-    decoder := json.NewDecoder(r.Body)
-    params := parameters{}
-    err := decoder.Decode(&params)
-    if err != nil {
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
-    }
+	}
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	dbPayee, err := cfg.db.CreatePayee(r.Context(), database.CreatePayeeParams{
-		BudgetID: 	pathBudgetID,
-		Name:		params.Name,
+		BudgetID: pathBudgetID,
+		Name:     params.Name,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create payee", err)
@@ -35,18 +35,18 @@ func(cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request){
 	}
 
 	respBody := Payee{
-		ID:					dbPayee.ID,
-		CreatedAt:			dbPayee.CreatedAt,
-		UpdatedAt:			dbPayee.UpdatedAt,
-		BudgetID:			dbPayee.BudgetID,
-		Name:				dbPayee.Name,
+		ID:        dbPayee.ID,
+		CreatedAt: dbPayee.CreatedAt,
+		UpdatedAt: dbPayee.UpdatedAt,
+		BudgetID:  dbPayee.BudgetID,
+		Name:      dbPayee.Name,
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
 	return
 }
 
-func(cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	payees, err := cfg.db.GetBudgetPayees(r.Context(), pathBudgetID)
@@ -58,21 +58,20 @@ func(cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 	var respBody []Payee
 	for _, payee := range payees {
 		addPayee := Payee{
-		ID:					payee.ID,
-		CreatedAt:			payee.CreatedAt,
-		UpdatedAt:			payee.UpdatedAt,
-		BudgetID:			payee.BudgetID,
-		Name:				payee.Name,
+			ID:        payee.ID,
+			CreatedAt: payee.CreatedAt,
+			UpdatedAt: payee.UpdatedAt,
+			BudgetID:  payee.BudgetID,
+			Name:      payee.Name,
 		}
 		respBody = append(respBody, addPayee)
 	}
-	
 
 	respondWithJSON(w, http.StatusOK, respBody)
 	return
 }
 
-func(cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 
 	idString := r.PathValue("payee_id")
 	pathPayeeID, err := uuid.Parse(idString)
@@ -88,20 +87,19 @@ func(cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respBody := Payee{
-		ID:					dbPayee.ID,
-		CreatedAt:			dbPayee.CreatedAt,
-		UpdatedAt:			dbPayee.UpdatedAt,
-		BudgetID:			dbPayee.BudgetID,
-		Name:				dbPayee.Name,
+		ID:        dbPayee.ID,
+		CreatedAt: dbPayee.CreatedAt,
+		UpdatedAt: dbPayee.UpdatedAt,
+		BudgetID:  dbPayee.BudgetID,
+		Name:      dbPayee.Name,
 	}
-
 
 	respondWithJSON(w, http.StatusCreated, respBody)
 	return
 }
 
-func(cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
-	
+func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
+
 	idString := r.PathValue("payee_id")
 	pathPayeeID, err := uuid.Parse(idString)
 	if err != nil {
@@ -126,7 +124,6 @@ func(cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Failed to delete payee from budget", err)
 		return
 	}
-
 
 	respondWithText(w, http.StatusNoContent, "The payee was deleted.")
 	return

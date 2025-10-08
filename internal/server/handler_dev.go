@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func(cfg *apiConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if cfg.platform != "dev" {
 		respondWithText(w, 403, "403 Forbidden")
@@ -19,7 +19,7 @@ func(cfg *apiConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request) 
 	respondWithText(w, 200, "Successfully deleted all users.")
 }
 
-func(cfg *apiConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if cfg.platform != "dev" {
 		respondWithText(w, 403, "403 Forbidden")
@@ -34,11 +34,11 @@ func(cfg *apiConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	var respBody []User
 	for _, user := range users {
 		respBody = append(respBody, User{
-			ID:				user.ID,
-			CreatedAt:		user.CreatedAt,
-			UpdatedAt:		user.UpdatedAt,
-			Username:		user.Username,
-			HashedPassword:	user.HashedPassword,
+			ID:             user.ID,
+			CreatedAt:      user.CreatedAt,
+			UpdatedAt:      user.UpdatedAt,
+			Username:       user.Username,
+			HashedPassword: user.HashedPassword,
 		})
 	}
 
@@ -46,7 +46,7 @@ func(cfg *apiConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func(cfg *apiConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if cfg.platform != "dev" {
 		respondWithText(w, 403, "403 Forbidden")

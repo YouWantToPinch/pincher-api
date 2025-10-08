@@ -3,13 +3,13 @@ package server
 import (
 	_ "github.com/lib/pq"
 
-	"os"
-	"fmt"
 	"database/sql"
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/joho/godotenv"
-	
+
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
@@ -30,21 +30,21 @@ func SetupMux(cfg apiConfig) *http.ServeMux {
 	mux.HandleFunc("POST /admin/reset", cfg.endpDeleteAllUsers)
 	mux.HandleFunc("GET /admin/users", cfg.endpGetAllUsers)
 	mux.HandleFunc("GET /admin/users/count", cfg.endpGetTotalUserCount)
-	  // User authentication
+	// User authentication
 	mux.HandleFunc("POST /api/users", cfg.endpCreateUser)
 	mux.HandleFunc("DELETE /api/users", mdAuth(cfg.endpDeleteUser))
 	mux.HandleFunc("PUT /api/users", mdAuth(cfg.endpUpdateUserCredentials))
 	mux.HandleFunc("POST /api/login", cfg.endpLoginUser)
 	mux.HandleFunc("POST /api/refresh", cfg.endpCheckRefreshToken)
 	mux.HandleFunc("POST /api/revoke", cfg.endpRevokeRefreshToken)
-	  // Budget setup
+	// Budget setup
 	mux.HandleFunc("POST /api/budgets", mdAuth(cfg.endpCreateBudget))
 	mux.HandleFunc("POST /api/budgets/{budget_id}/members", mdAuth(mdClear(MANAGER, cfg.endpAddBudgetMemberWithRole)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}", mdAuth(mdClear(ADMIN, cfg.endpDeleteBudget)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/members/{user_id}", mdAuth(mdClear(MANAGER, cfg.endpRemoveBudgetMember)))
 	mux.HandleFunc("GET /api/budgets", mdAuth(cfg.endpGetUserBudgets))
 	mux.HandleFunc("GET /api/budgets/{budget_id}", mdAuth(mdClear(VIEWER, cfg.endpGetBudget)))
-	  // Groups & Categories
+	// Groups & Categories
 	mux.HandleFunc("POST /api/budgets/{budget_id}/groups", mdAuth(mdClear(MANAGER, cfg.endpCreateGroup)))
 	mux.HandleFunc("POST /api/budgets/{budget_id}/categories", mdAuth(mdClear(MANAGER, cfg.endpCreateCategory)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/groups", mdAuth(mdClear(VIEWER, cfg.endpGetGroups)))
@@ -52,17 +52,17 @@ func SetupMux(cfg apiConfig) *http.ServeMux {
 	mux.HandleFunc("PUT /api/budgets/{budget_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.endpAssignCategoryToGroup)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/groups/{group_id}", mdAuth(mdClear(MANAGER, cfg.endpDeleteGroup)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.endpDeleteCategory)))
-		// Payees
+	// Payees
 	mux.HandleFunc("POST /api/budgets/{budget_id}/payees", mdAuth(mdClear(CONTRIBUTOR, cfg.endpCreatePayee)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/payees", mdAuth(mdClear(VIEWER, cfg.endpGetPayees)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/payees/{payee_id}", mdAuth(mdClear(VIEWER, cfg.endpGetPayee)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/payees/{payee_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.endpDeletePayee)))
-		// Accounts
+	// Accounts
 	mux.HandleFunc("POST /api/budgets/{budget_id}/accounts", mdAuth(mdClear(MANAGER, cfg.endpAddAccount)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts", mdAuth(mdClear(VIEWER, cfg.endpGetAccounts)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/account/{account_id}", mdAuth(mdClear(VIEWER, cfg.endpGetAccount)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.endpDeleteAccount)))
-		// Transactions
+	// Transactions
 	mux.HandleFunc("POST /api/budgets/{budget_id}/transactions", mdAuth(mdClear(CONTRIBUTOR, cfg.endpLogTransaction)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions", mdAuth(mdClear(VIEWER, cfg.endpGetTransactions)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(VIEWER, cfg.endpGetTransaction)))

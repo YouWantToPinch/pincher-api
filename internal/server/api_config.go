@@ -1,12 +1,12 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"context"
 
-	"sync/atomic"
 	"net/http"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 
@@ -15,14 +15,14 @@ import (
 )
 
 type apiConfig struct {
-	// atomic.Int32 is a //standard-library type that allows us to 
-	// safely increment and read an integer value across multiple 
+	// atomic.Int32 is a //standard-library type that allows us to
+	// safely increment and read an integer value across multiple
 	// goroutines (HTTP requests)
-	fileserverHits	atomic.Int32
-	db				*database.Queries
-	platform		string
-	secret			string
-	apiKeys			*map[string]string
+	fileserverHits atomic.Int32
+	db             *database.Queries
+	platform       string
+	secret         string
+	apiKeys        *map[string]string
 }
 
 // ================= MIDDLEWARE ================= //
@@ -65,7 +65,7 @@ func (cfg *apiConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 func (cfg *apiConfig) middlewareCheckClearance(required BudgetMemberRole, next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		validatedUserID := getContextKeyValue(r.Context(), "user_id")
-		
+
 		idString := r.PathValue("budget_id")
 		pathBudgetID, err := uuid.Parse(idString)
 		if err != nil {
@@ -76,7 +76,7 @@ func (cfg *apiConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 
 		callerRole, err := cfg.db.GetBudgetMemberRole(r.Context(), database.GetBudgetMemberRoleParams{
 			BudgetID: pathBudgetID,
-			UserID: validatedUserID,
+			UserID:   validatedUserID,
 		})
 		if err != nil {
 			respondWithError(w, http.StatusNotFound, "User not listed as budget member", err)
@@ -102,10 +102,10 @@ func (cfg *apiConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 // ============== HELPERS =================
 
 func getContextKeyValue(ctx context.Context, key string) uuid.UUID {
-    contextKeyValue, ok := ctx.Value(ctxKey(key)).(uuid.UUID)
+	contextKeyValue, ok := ctx.Value(ctxKey(key)).(uuid.UUID)
 	if !ok {
 		log.Printf("Failed to retrieve key %s from context", key)
 		return uuid.Nil
 	}
-    return contextKeyValue
+	return contextKeyValue
 }

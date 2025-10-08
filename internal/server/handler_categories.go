@@ -1,31 +1,31 @@
 package server
 
 import (
-	"log"
-	"strings"
-	"net/http"
 	"encoding/json"
+	"log"
+	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
+func (cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
-		Name	string	`json:"name"`
-		Notes	string	`json:"notes"`
-		GroupID	string	`json:"group_id"`
+		Name    string `json:"name"`
+		Notes   string `json:"notes"`
+		GroupID string `json:"group_id"`
 	}
 
-    decoder := json.NewDecoder(r.Body)
-    params := parameters{}
-    err := decoder.Decode(&params)
-    if err != nil {
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
-    }
+	}
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
@@ -38,7 +38,7 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 		}
 		foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
 			BudgetID: pathBudgetID,
-			ID: parsedGroupID,
+			ID:       parsedGroupID,
 		})
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "Found no group with provided group_id", err)
@@ -49,10 +49,10 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 	}
 
 	dbCategory, err := cfg.db.CreateCategory(r.Context(), database.CreateCategoryParams{
-		BudgetID:	pathBudgetID,
-		GroupID:	assignedGroup,
-		Name:		params.Name,
-		Notes:		params.Notes,
+		BudgetID: pathBudgetID,
+		GroupID:  assignedGroup,
+		Name:     params.Name,
+		Notes:    params.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create category", err)
@@ -60,21 +60,20 @@ func(cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request){
 	}
 
 	respBody := Category{
-		ID:			dbCategory.ID,
-		CreatedAt:	dbCategory.CreatedAt,
-		UpdatedAt:	dbCategory.UpdatedAt,
-		BudgetID:	dbCategory.BudgetID,
-		Name:     	dbCategory.Name,
-		GroupID:	dbCategory.GroupID,
-		Notes:		dbCategory.Notes,
+		ID:        dbCategory.ID,
+		CreatedAt: dbCategory.CreatedAt,
+		UpdatedAt: dbCategory.UpdatedAt,
+		BudgetID:  dbCategory.BudgetID,
+		Name:      dbCategory.Name,
+		GroupID:   dbCategory.GroupID,
+		Notes:     dbCategory.Notes,
 	}
-
 
 	respondWithJSON(w, http.StatusCreated, respBody)
 	return
 }
 
-func(cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
 
 	queryGroupID := r.URL.Query().Get("group_id")
 	log.Printf("queryGroupID is: %s", queryGroupID)
@@ -103,38 +102,37 @@ func(cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			addCategory := Category{
-				ID:			category.ID,
-				CreatedAt:	category.CreatedAt,
-				UpdatedAt:	category.UpdatedAt,
-				Name:     	category.Name,
-				BudgetID:	category.BudgetID,
-				GroupID:	category.GroupID,
-				Notes:		category.Notes,
+				ID:        category.ID,
+				CreatedAt: category.CreatedAt,
+				UpdatedAt: category.UpdatedAt,
+				Name:      category.Name,
+				BudgetID:  category.BudgetID,
+				GroupID:   category.GroupID,
+				Notes:     category.Notes,
 			}
 			respBody = append(respBody, addCategory)
 		}
 	}
-	
 
 	respondWithJSON(w, http.StatusOK, respBody)
 	return
 }
 
-func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("category_id")
 	pathCategoryID, err := uuid.Parse(idString)
 
 	type parameters struct {
-		GroupID	string	`json:"group_id"`
+		GroupID string `json:"group_id"`
 	}
 
-    decoder := json.NewDecoder(r.Body)
-    params := parameters{}
-    err = decoder.Decode(&params)
-    if err != nil {
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err = decoder.Decode(&params)
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
-    }
+	}
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
@@ -151,7 +149,7 @@ func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Re
 	}
 	foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
 		BudgetID: pathBudgetID,
-		ID: parsedGroupID,
+		ID:       parsedGroupID,
 	})
 	if err != nil || pathBudgetID != foundGroup.BudgetID {
 		respondWithError(w, http.StatusBadRequest, "Found no group with provided group_id", err)
@@ -166,33 +164,32 @@ func(cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Re
 		return
 	}
 	respBody := Category{
-		ID:			dbCategory.ID,
-		CreatedAt:	dbCategory.CreatedAt,
-		UpdatedAt:	dbCategory.UpdatedAt,
-		BudgetID:	dbCategory.BudgetID,
-		Name:     	dbCategory.Name,
-		GroupID:	assignedGroup,
-		Notes:		dbCategory.Notes,
+		ID:        dbCategory.ID,
+		CreatedAt: dbCategory.CreatedAt,
+		UpdatedAt: dbCategory.UpdatedAt,
+		BudgetID:  dbCategory.BudgetID,
+		Name:      dbCategory.Name,
+		GroupID:   assignedGroup,
+		Notes:     dbCategory.Notes,
 	}
 
 	cfg.db.AssignCategoryToGroup(r.Context(), database.AssignCategoryToGroupParams{
-		ID: 		pathCategoryID,
-		GroupID:	assignedGroup,
+		ID:      pathCategoryID,
+		GroupID: assignedGroup,
 	})
-
 
 	respondWithJSON(w, http.StatusCreated, respBody)
 	return
 }
 
-func(cfg *apiConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("category_id")
 	pathCategoryID, err := uuid.Parse(idString)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "invalid id", err)
 		return
 	}
-	
+
 	dbCategory, err := cfg.db.GetCategoryByID(r.Context(), pathCategoryID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Couldn't find category with specified id", err)

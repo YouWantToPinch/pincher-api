@@ -2,9 +2,9 @@ package pinchertest
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
-    "net/http"
-    "net/http/httptest"
 )
 
 func Call(mux http.Handler, req *http.Request) *httptest.ResponseRecorder {
@@ -149,8 +149,8 @@ func GetBudgetCategories(token, budgetID, query string) *http.Request {
 }
 
 func AssignCategoryToGroup(token, budgetID, categoryID, groupID string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"group_id":"%v"}`, groupID))	
-	req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/budgets/%v/categories/%v", budgetID, categoryID), payload)	
+	payload := strings.NewReader(fmt.Sprintf(`{"group_id":"%v"}`, groupID))
+	req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/budgets/%v/categories/%v", budgetID, categoryID), payload)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
 	req.Header.Set("Content-Type", "application/json")
 	return req

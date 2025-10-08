@@ -1,9 +1,9 @@
 package auth
 
 import (
+	"net/http"
 	"testing"
 	"time"
-	"net/http"
 
 	"github.com/google/uuid"
 )
@@ -175,66 +175,66 @@ func TestGetBearerToken(t *testing.T) {
 	const tokenWant = "thisIsATokenString"
 
 	type testCases struct {
-		name			string
-		headers			http.Header
-		expectedToken	string
-		expectErr		bool
+		name          string
+		headers       http.Header
+		expectedToken string
+		expectErr     bool
 	}
 
 	cases := []testCases{
 		{
-			name:			"valid header",
-			headers:		http.Header{"Authorization": []string{"Bearer " + tokenWant}},
-			expectedToken:	tokenWant,
-			expectErr:		false,
+			name:          "valid header",
+			headers:       http.Header{"Authorization": []string{"Bearer " + tokenWant}},
+			expectedToken: tokenWant,
+			expectErr:     false,
 		},
 		{
-			name:			"missing header",
-			headers:		http.Header{},
-			expectedToken:	"",
-			expectErr:		true,
+			name:          "missing header",
+			headers:       http.Header{},
+			expectedToken: "",
+			expectErr:     true,
 		},
 		{
-			name:			"header present but empty",
-			headers:		http.Header{"Authorization": []string{}},
-			expectedToken:	"",
-			expectErr:		true,
+			name:          "header present but empty",
+			headers:       http.Header{"Authorization": []string{}},
+			expectedToken: "",
+			expectErr:     true,
 		},
 		{
-			name:			"Bearer without token",
-			headers:		http.Header{"Authorization": []string{"Bearer "}},
-			expectedToken:	"",
-			expectErr:		true,
+			name:          "Bearer without token",
+			headers:       http.Header{"Authorization": []string{"Bearer "}},
+			expectedToken: "",
+			expectErr:     true,
 		},
 		{
-			name:			"incorrect scheme",
-			headers:		http.Header{"Authorization": []string{"Token " + tokenWant}},
-			expectedToken:	"",
-			expectErr:		true,
+			name:          "incorrect scheme",
+			headers:       http.Header{"Authorization": []string{"Token " + tokenWant}},
+			expectedToken: "",
+			expectErr:     true,
 		},
 		{
-			name:			"no space after scheme",
-			headers:		http.Header{"Authorization": []string{"Bearer" + tokenWant}},
-			expectedToken:	"",
-			expectErr:		true,
+			name:          "no space after scheme",
+			headers:       http.Header{"Authorization": []string{"Bearer" + tokenWant}},
+			expectedToken: "",
+			expectErr:     true,
 		},
 		{
-			name:			"Different case Bearer",
-			headers:		http.Header{"Authorization": []string{"bEaReR " + tokenWant}},
-			expectedToken:	tokenWant,
-			expectErr:		false,
+			name:          "Different case Bearer",
+			headers:       http.Header{"Authorization": []string{"bEaReR " + tokenWant}},
+			expectedToken: tokenWant,
+			expectErr:     false,
 		},
 	}
 
-    for _, c := range cases {
-        t.Run(c.name, func(t *testing.T) {
-            token, err := GetBearerToken(c.headers)
-            if (err != nil) != c.expectErr {
-                t.Errorf("expected error: %v, got: %v", c.expectErr, err)
-            }
-            if token != c.expectedToken {
-                t.Errorf("expected token: %v, got: %v", c.expectedToken, token)
-            }
-        })
-    }
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			token, err := GetBearerToken(c.headers)
+			if (err != nil) != c.expectErr {
+				t.Errorf("expected error: %v, got: %v", c.expectErr, err)
+			}
+			if token != c.expectedToken {
+				t.Errorf("expected token: %v, got: %v", c.expectedToken, token)
+			}
+		})
+	}
 }

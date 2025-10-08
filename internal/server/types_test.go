@@ -6,16 +6,16 @@ import (
 
 func Test_ToString(t *testing.T) {
 	cases := []struct {
-	input		Cent
-	expected	string
+		input    Cent
+		expected string
 	}{
 		{
-			input:		20000,
-			expected:	"200.00",
+			input:    20000,
+			expected: "200.00",
 		},
 		{
-			input:		50000 + 139,
-			expected:	"501.39",
+			input:    50000 + 139,
+			expected: "501.39",
 		},
 	}
 

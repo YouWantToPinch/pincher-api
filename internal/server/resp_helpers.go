@@ -1,14 +1,14 @@
 package server
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
-	"encoding/json"
 )
 
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 
-    if err != nil {
+	if err != nil {
 		log.Println(err)
 	}
 
@@ -23,11 +23,11 @@ func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-    dat, err := json.Marshal(payload)
+	dat, err := json.Marshal(payload)
 	if err != nil {
-			log.Printf("Error marshalling JSON for response: %s", err)
-			w.WriteHeader(500)
-			return
+		log.Printf("Error marshalling JSON for response: %s", err)
+		w.WriteHeader(500)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)

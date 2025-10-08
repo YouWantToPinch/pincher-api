@@ -1,8 +1,8 @@
 package server
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -10,7 +10,7 @@ func endpReadiness(w http.ResponseWriter, r *http.Request) {
 	respondWithText(w, http.StatusOK, "OK")
 }
 
-func(cfg *apiConfig) endpFileserverHitCountGet(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpFileserverHitCountGet(w http.ResponseWriter, r *http.Request) {
 	output := fmt.Sprintf(`<html>
   <body>
     <h1>Welcome, Pincher Admin</h1>
@@ -21,7 +21,7 @@ func(cfg *apiConfig) endpFileserverHitCountGet(w http.ResponseWriter, r *http.Re
 	respondWithHTML(w, http.StatusOK, output)
 }
 
-func(cfg *apiConfig) endpFileserverHitCountReset(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpFileserverHitCountReset(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte(fmt.Sprintf("Reset hits to: %d", cfg.fileserverHits.Load()))); err != nil {

@@ -5,7 +5,7 @@ import (
 
 	"log"
 	"net/http"
-	
+
 	"github.com/YouWantToPinch/pincher-api/internal/server"
 )
 
@@ -16,10 +16,10 @@ func main() {
 	cfg := server.LoadEnvConfig(".env")
 
 	pincher := &http.Server{
-		Addr:		":" + port,
-		Handler:	server.SetupMux(cfg),
+		Addr:    ":" + port,
+		Handler: server.SetupMux(cfg),
 	}
-	
+
 	// start server
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(pincher.ListenAndServe())

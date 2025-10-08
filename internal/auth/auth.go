@@ -6,13 +6,13 @@ import (
 	"errors"
 	"strings"
 
-	"net/http"
 	"crypto/rand"
 	"encoding/hex"
+	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func HashPassword(password string) (string, error) {
@@ -33,10 +33,10 @@ func CheckPasswordHash(password, hash string) error {
 
 func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
 	claims := jwt.RegisteredClaims{
-		Issuer:		"pincher",
-		IssuedAt:	jwt.NewNumericDate(time.Now().UTC()),
-		ExpiresAt:	jwt.NewNumericDate(time.Now().Add(expiresIn).UTC()),
-		Subject:	userID.String(),
+		Issuer:    "pincher",
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn).UTC()),
+		Subject:   userID.String(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -67,7 +67,6 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 }
 
-
 func GetBearerToken(headers http.Header) (tokenString string, returnErr error) {
 	authSlice, ok := headers["Authorization"]
 	if !ok || len(authSlice) == 0 {
@@ -91,7 +90,7 @@ func MakeRefreshToken() (string, error) {
 		return "", err
 	}
 	hexString := hex.EncodeToString(rBytes)
-	
+
 	return hexString, nil
 }
 
