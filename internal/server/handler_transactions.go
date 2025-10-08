@@ -1,10 +1,9 @@
 package server
 
 import (
-	//"io"
-	//"fmt"
 	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -127,16 +126,16 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 		parsedEndDate = time.Time{}
 	}
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
-	log.Printf("pathBudgetID: %v", pathBudgetID)
+	slog.Debug("pathBudgetID: " + pathBudgetID.String())
 
-	log.Printf("Params: budget_id=%s, account_id=%v (nil=%v), start_date=%v (zero=%v), end_date=%v (zero=%v)",
-		pathBudgetID,
+	slog.Debug(fmt.Sprintf("Transaction paramaters: budget_id=%s, account_id=%v (nil=%v), start_date=%v (zero=%v), end_date=%v (zero=%v)",
+		pathBudgetID.String(),
 		parsedAccountID,
 		parsedAccountID == uuid.Nil,
 		parsedStartDate,
 		parsedStartDate.IsZero(),
 		parsedEndDate,
-		parsedEndDate.IsZero(),
+		parsedEndDate.IsZero()),
 	)
 
 	transactions, err := cfg.db.GetTransactions(r.Context(), database.GetTransactionsParams{
@@ -167,7 +166,7 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 		respBody = append(respBody, addTransaction)
 	}
 
-	log.Printf("TRANSACTIONS FOUND: %d", len(respBody))
+	slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody)))
 
 	respondWithJSON(w, http.StatusOK, respBody)
 	return

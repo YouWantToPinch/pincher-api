@@ -3,8 +3,7 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -14,10 +13,10 @@ import (
 
 func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 
-	log.Println("DEBUG: Gonna try creating a budget")
+	slog.Debug("CreateBudget endpoint HIT")
 
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
-	log.Println(fmt.Sprintf("DEBUG: user_id is %s", validatedUserID))
+	slog.Debug("user_id is " + validatedUserID.String())
 
 	type parameters struct {
 		Name  string `json:"name"`
@@ -29,11 +28,10 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
-		log.Println("DEBUG: Failure decoding parameters")
 		return
 	}
 
-	log.Println("DEBUG: decoded name & notes")
+	slog.Debug("Decoded name & notes within CreateBudget endpoint")
 
 	dbBudget, err := cfg.db.CreateBudget(r.Context(), database.CreateBudgetParams{
 		AdminID: validatedUserID,
@@ -48,7 +46,7 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("DEBUG: Created budget")
+	slog.Debug("Created budget successfully within the CreateBudget endpoint.")
 
 	_, err = cfg.db.AssignBudgetMemberWithRole(r.Context(), database.AssignBudgetMemberWithRoleParams{
 		BudgetID:   dbBudget.ID,
@@ -57,13 +55,13 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to assign ADMIN to new budget", err)
-		log.Println("Attempting deletion of new budget, as no admin could be assigned.")
+		slog.Debug("Attempting deletion of new budget, as no admin could be assigned.")
 		err := cfg.db.DeleteBudget(r.Context(), dbBudget.ID)
 		if err != nil {
-			log.Println("NOTICE: Attempted deletion of newly initialized budget, but FAILED.")
+			slog.Warn("Attempted deletion of newly initialized budget, but FAILED.")
 			return
 		}
-		log.Println("Initialized budget was deleted successfully.")
+		slog.Debug("Initialized budget was deleted successfully.")
 		return
 	}
 
@@ -168,7 +166,7 @@ func (cfg *apiConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
-		log.Println("Could not parse user_id")
+		slog.Error("Could not parse user_id")
 		return
 	}
 
@@ -211,7 +209,7 @@ func (cfg *apiConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 	pathUserID, err := uuid.Parse(idString)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
-		log.Println("Could not parse user_id")
+		slog.Error("Could not parse user_id")
 		return
 	}
 

@@ -1,7 +1,6 @@
 package server
 
 import (
-	//"log"
 	"database/sql"
 	"encoding/json"
 	"net/http"

@@ -5,6 +5,7 @@ import (
 
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -86,6 +87,19 @@ func LoadEnvConfig(path string) apiConfig {
 
 	cfg.platform = os.Getenv("PLATFORM")
 	cfg.secret = os.Getenv("SECRET")
+	{
+		slogLevel := os.Getenv("SLOG_LEVEL")
+		switch slogLevel {
+		case "DEBUG":
+			cfg.Init(slog.LevelDebug)
+		case "WARN":
+			cfg.Init(slog.LevelWarn)
+		case "ERROR":
+			cfg.Init(slog.LevelError)
+		default:
+			cfg.Init(slog.LevelInfo)
+		}
+	}
 
 	return cfg
 }

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 )
 
@@ -13,7 +13,7 @@ func (cfg *apiConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request)
 
 	err := cfg.db.DeleteUsers(r.Context())
 	if err != nil {
-		log.Print(err)
+		slog.Error(err.Error())
 	}
 
 	respondWithText(w, 200, "Successfully deleted all users.")

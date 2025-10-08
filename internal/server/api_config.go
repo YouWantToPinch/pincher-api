@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"log/slog"
+	"os"
 
 	"net/http"
 	"sync/atomic"
@@ -22,7 +22,14 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	secret         string
+	logger         *slog.Logger
 	apiKeys        *map[string]string
+}
+
+func (cfg *apiConfig) Init(level slog.Level) {
+	cfg.logger = slog.New(slog.NewJSONHandler(os.Stdout,
+		&slog.HandlerOptions{Level: level}))
+	slog.SetDefault(cfg.logger)
 }
 
 // ================= MIDDLEWARE ================= //
@@ -47,13 +54,13 @@ func (cfg *apiConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 		tokenString, err := auth.GetBearerToken(r.Header)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error(), err)
-			log.Println("DEBUG: couldn't get bearer token")
+			slog.Error("Couldn't get bearer token")
 			return
 		}
 		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", nil)
-			log.Println(fmt.Sprintf("DEBUG: failed JWT validation for JWT: %s", tokenString))
+			slog.Error("Failed validation for JWT: " + tokenString)
 			return
 		}
 		ctxUserID := ctxKey("user_id")
@@ -70,7 +77,7 @@ func (cfg *apiConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 		pathBudgetID, err := uuid.Parse(idString)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
-			log.Println("Could not parse budget_id")
+			slog.Debug("Could not parse budget_id")
 			return
 		}
 
@@ -104,7 +111,7 @@ func (cfg *apiConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 func getContextKeyValue(ctx context.Context, key string) uuid.UUID {
 	contextKeyValue, ok := ctx.Value(ctxKey(key)).(uuid.UUID)
 	if !ok {
-		log.Printf("Failed to retrieve key %s from context", key)
+		slog.Info("Failed to retrieve key from context")
 		return uuid.Nil
 	}
 	return contextKeyValue

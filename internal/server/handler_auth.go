@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -125,7 +124,7 @@ func (cfg *apiConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Requ
 
 	cfg.db.RevokeUserRefreshToken(r.Context(), dbUser.ID)
 
-	respMsg := fmt.Sprintf("Revoked refresh token for user: %s", dbUser.Username)
+	respMsg := "Revoked refresh token for user: " + dbUser.Username
 	respondWithText(w, http.StatusNoContent, respMsg)
 	return
 }

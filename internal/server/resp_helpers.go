@@ -2,20 +2,20 @@ package server
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 )
 
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 
 	if err != nil {
-		log.Println(err)
+		slog.Error(err.Error())
 	}
 
 	type errorResponse struct {
 		Error string `json:"error"`
 	}
-	log.Printf("ERROR: %s", msg)
+	slog.Error(msg)
 	respondWithJSON(w, code, errorResponse{
 		Error: msg,
 	})
@@ -25,7 +25,7 @@ func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	dat, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Error marshalling JSON for response: %s", err)
+		slog.Error("Could not marshal JSON for response: " + err.Error())
 		w.WriteHeader(500)
 		return
 	}
@@ -39,7 +39,7 @@ func respondWithHTML(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(code)
 	if _, err := w.Write([]byte(msg)); err != nil {
-		log.Print(err)
+		slog.Error(err.Error())
 	}
 	return
 }
@@ -48,7 +48,7 @@ func respondWithText(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(code)
 	if _, err := w.Write([]byte(msg)); err != nil {
-		log.Print(err)
+		slog.Error(err.Error())
 	}
 	return
 }

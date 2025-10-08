@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 )
 
@@ -25,6 +25,6 @@ func (cfg *apiConfig) endpFileserverHitCountReset(w http.ResponseWriter, r *http
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte(fmt.Sprintf("Reset hits to: %d", cfg.fileserverHits.Load()))); err != nil {
-		log.Print(err)
+		slog.Error(err.Error())
 	}
 }
