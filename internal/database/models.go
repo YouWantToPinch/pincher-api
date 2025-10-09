@@ -6,6 +6,7 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -90,12 +91,12 @@ type Transaction struct {
 
 type TransactionSplit struct {
 	ID            uuid.UUID
-	TransactionID uuid.NullUUID
+	TransactionID uuid.UUID
 	CategoryID    uuid.NullUUID
-	Amount        int32
+	Amount        int64
 }
 
-type TransactionView struct {
+type TransactionsView struct {
 	ID              uuid.UUID
 	TransactionDate time.Time
 	Payee           string
@@ -104,7 +105,8 @@ type TransactionView struct {
 	AccountID       uuid.UUID
 	LoggerID        uuid.UUID
 	TotalAmount     int64
-	Categories      []byte
+	Splits          json.RawMessage
+	Cleared         bool
 }
 
 type User struct {

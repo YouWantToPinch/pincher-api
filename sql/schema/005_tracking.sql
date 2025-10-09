@@ -34,21 +34,23 @@ CREATE TABLE payees (
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     budget_id UUID NOT NULL,
     name VARCHAR(32) NOT NULL,
-    UNIQUE(budget_id, name)
+    UNIQUE(budget_id, name),
+    FOREIGN KEY (budget_id) REFERENCES budgets(id)
+      ON DELETE CASCADE,
 );
 
 CREATE TABLE transaction_splits (
   id UUID PRIMARY KEY,
-  transaction_id UUID,
+  transaction_id UUID NOT NULL,
   category_id UUID,
-  amount INTEGER NOT NULL,
-  
+  amount BIGINT NOT NULL,
+  UNIQUE (transaction_id, category_id),
   FOREIGN KEY (transaction_id) REFERENCES transactions(id)
-    ON DELETE CASCADE,
-  FOREIGN KEY (category_id) REFERENCES categories(id)
+    ON DELETE CASCADE
+  -- FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
-CREATE VIEW transaction_view AS
+CREATE VIEW transactions_view AS
 SELECT 
   t.id,
   t.transaction_date,
@@ -57,8 +59,9 @@ SELECT
   t.budget_id,
   t.account_id,
   t.logger_id,
-  SUM(ts.amount) AS total_amount,
-  STRING_AGG(c.name, ', ') AS categories
+  SUM(ts.amount)::bigint AS total_amount,
+  jsonb_object_agg(c.name, ts.amount) AS splits,
+  t.cleared
 FROM transactions t
 JOIN transaction_splits ts ON t.id = ts.transaction_id
 JOIN categories c ON ts.category_id = c.id
@@ -69,10 +72,11 @@ GROUP BY
     p.name,
     t.notes,
     t.account_id,
-    t.logger_id;
+    t.logger_id,
+    t.cleared;
 
 -- +goose Down
-DROP VIEW transaction_view;
+DROP VIEW transactions_view;
 DROP TABLE transaction_splits;
 DROP TABLE payees;
 DROP TABLE transactions;

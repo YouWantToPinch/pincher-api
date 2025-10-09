@@ -187,10 +187,12 @@ func DeleteBudgetGroup(token, budgetID, groupID string) *http.Request {
 	return req
 }
 
-// TRANSACTION CRUD
+// BUDGET -> TRANSACTION CRUD
 
-func LogTransaction(token, budgetID, accountID, transactionDate, payeeID, notes, isCleared string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"account_id":"%v","transaction_date":"%v","payee_id":"%v","notes":"%v","is_cleared":"%v"}`, accountID, transactionDate, payeeID, notes, isCleared))
+func LogTransaction(token, budgetID, accountID, transactionDate, payeeID, notes, amounts, isCleared string) *http.Request {
+	payloadString := fmt.Sprintf(`{"account_id":"%v","transaction_date":"%v","payee_id":"%v","notes":"%v","amounts":%v,"is_cleared":"%v"}`, accountID, transactionDate, payeeID, notes, amounts, isCleared)
+	//slog.Info(fmt.Sprintf("Payload string for new log transaction: %v", payloadString))
+	payload := strings.NewReader(payloadString)
 	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/transactions", budgetID), payload)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
 	req.Header.Set("Content-Type", "application/json")
@@ -199,6 +201,13 @@ func LogTransaction(token, budgetID, accountID, transactionDate, payeeID, notes,
 
 func GetTransactions(token, budgetID, accountID, startDate, endDate string) *http.Request {
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/transactions?account_id=%v&start_date=%v&end_date=%v", budgetID, accountID, startDate, endDate), nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func GetTransaction(token, budgetID, transactionID string) *http.Request {
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/transactions/%v", budgetID, transactionID), nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
 	req.Header.Set("Content-Type", "application/json")
 	return req

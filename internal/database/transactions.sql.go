@@ -23,8 +23,42 @@ func (q *Queries) DeleteTransaction(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getSplitsByTransactionID = `-- name: GetSplitsByTransactionID :many
+SELECT id, transaction_id, category_id, amount
+FROM transaction_splits
+WHERE transaction_splits.id = $1
+`
+
+func (q *Queries) GetSplitsByTransactionID(ctx context.Context, id uuid.UUID) ([]TransactionSplit, error) {
+	rows, err := q.db.QueryContext(ctx, getSplitsByTransactionID, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TransactionSplit
+	for rows.Next() {
+		var i TransactionSplit
+		if err := rows.Scan(
+			&i.ID,
+			&i.TransactionID,
+			&i.CategoryID,
+			&i.Amount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTransactionByID = `-- name: GetTransactionByID :one
-Select id, created_at, updated_at, budget_id, logger_id, account_id, transaction_date, payee_id, notes, cleared
+SELECT id, created_at, updated_at, budget_id, logger_id, account_id, transaction_date, payee_id, notes, cleared
 FROM transactions
 WHERE id = $1
 `
@@ -42,6 +76,30 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 		&i.TransactionDate,
 		&i.PayeeID,
 		&i.Notes,
+		&i.Cleared,
+	)
+	return i, err
+}
+
+const getTransactionFromViewByID = `-- name: GetTransactionFromViewByID :one
+SELECT id, transaction_date, payee, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
+FROM transactions_view
+WHERE id = $1
+`
+
+func (q *Queries) GetTransactionFromViewByID(ctx context.Context, id uuid.UUID) (TransactionsView, error) {
+	row := q.db.QueryRowContext(ctx, getTransactionFromViewByID, id)
+	var i TransactionsView
+	err := row.Scan(
+		&i.ID,
+		&i.TransactionDate,
+		&i.Payee,
+		&i.Notes,
+		&i.BudgetID,
+		&i.AccountID,
+		&i.LoggerID,
+		&i.TotalAmount,
+		&i.Splits,
 		&i.Cleared,
 	)
 	return i, err
@@ -108,13 +166,16 @@ func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams
 }
 
 const getTransactionsFromView = `-- name: GetTransactionsFromView :many
-SELECT id, transaction_date, payee, notes, budget_id, account_id, logger_id, total_amount, categories
-FROM transaction_view
+SELECT id, transaction_date, payee, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
+FROM transactions_view
 WHERE
     budget_id = $1
-    AND ($2::uuid IS NULL OR account_id = $2::uuid)
-    AND ($3::date IS NULL OR transaction_date >= $3)
-    AND ($4::date IS NULL OR transaction_date <= $4)
+    AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR account_id = $2::uuid)
+    AND (
+        ($3::date = '0001-01-01' AND $4::date = '0001-01-01')
+        OR
+        (transaction_date >= $3::date AND transaction_date <= $4::date)
+    )
 ORDER BY transaction_date DESC
 `
 
@@ -125,7 +186,7 @@ type GetTransactionsFromViewParams struct {
 	EndDate   time.Time
 }
 
-func (q *Queries) GetTransactionsFromView(ctx context.Context, arg GetTransactionsFromViewParams) ([]TransactionView, error) {
+func (q *Queries) GetTransactionsFromView(ctx context.Context, arg GetTransactionsFromViewParams) ([]TransactionsView, error) {
 	rows, err := q.db.QueryContext(ctx, getTransactionsFromView,
 		arg.BudgetID,
 		arg.AccountID,
@@ -136,9 +197,9 @@ func (q *Queries) GetTransactionsFromView(ctx context.Context, arg GetTransactio
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TransactionView
+	var items []TransactionsView
 	for rows.Next() {
-		var i TransactionView
+		var i TransactionsView
 		if err := rows.Scan(
 			&i.ID,
 			&i.TransactionDate,
@@ -148,7 +209,8 @@ func (q *Queries) GetTransactionsFromView(ctx context.Context, arg GetTransactio
 			&i.AccountID,
 			&i.LoggerID,
 			&i.TotalAmount,
-			&i.Categories,
+			&i.Splits,
+			&i.Cleared,
 		); err != nil {
 			return nil, err
 		}
@@ -212,6 +274,35 @@ func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) 
 		&i.PayeeID,
 		&i.Notes,
 		&i.Cleared,
+	)
+	return i, err
+}
+
+const logTransactionSplit = `-- name: LogTransactionSplit :one
+INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
+VALUES (
+    gen_random_uuid(),
+    $1,
+    $2,
+    $3
+)
+RETURNING id, transaction_id, category_id, amount
+`
+
+type LogTransactionSplitParams struct {
+	TransactionID uuid.UUID
+	CategoryID    uuid.NullUUID
+	Amount        int64
+}
+
+func (q *Queries) LogTransactionSplit(ctx context.Context, arg LogTransactionSplitParams) (TransactionSplit, error) {
+	row := q.db.QueryRowContext(ctx, logTransactionSplit, arg.TransactionID, arg.CategoryID, arg.Amount)
+	var i TransactionSplit
+	err := row.Scan(
+		&i.ID,
+		&i.TransactionID,
+		&i.CategoryID,
+		&i.Amount,
 	)
 	return i, err
 }

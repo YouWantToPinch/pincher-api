@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -129,82 +130,6 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 	}
 }
 
-// Build a small organizational budget system.
-// make four users, each with a unique role,
-// and let them each perform authorized actions.
-func Test_BuildOrgLogTransaction(t *testing.T) {
-	// TEST SETUP
-	var w *httptest.ResponseRecorder
-	// SERVER SETUP
-	const port = "8080"
-	cfg := LoadEnvConfig("../../.env")
-	pincher := &http.Server{
-		Addr:    ":" + port,
-		Handler: SetupMux(cfg),
-	}
-	mux := pincher.Handler
-	// REQUESTS
-
-	// Delete all users
-	w = pt.Call(mux, pt.DeleteAllUsers())
-	assert.Equal(t, w.Code, 200)
-
-	// Create four users
-	w = pt.Call(mux, pt.CreateUser("user1", "pwd1"))
-	assert.Equal(t, w.Code, http.StatusCreated)
-	w = pt.Call(mux, pt.CreateUser("user2", "pwd2"))
-	assert.Equal(t, w.Code, http.StatusCreated)
-	user2, _ := pt.GetJSONField(w, "id")
-	w = pt.Call(mux, pt.CreateUser("user3", "pwd3"))
-	assert.Equal(t, w.Code, http.StatusCreated)
-	user3, _ := pt.GetJSONField(w, "id")
-	w = pt.Call(mux, pt.CreateUser("user4", "pwd4"))
-	assert.Equal(t, w.Code, http.StatusCreated)
-	user4, _ := pt.GetJSONField(w, "id")
-
-	// Log in four users
-	w = pt.Call(mux, pt.LoginUser("user1", "pwd1"))
-	jwt1, _ := pt.GetJSONField(w, "token")
-	w = pt.Call(mux, pt.LoginUser("user2", "pwd2"))
-	jwt2, _ := pt.GetJSONField(w, "token")
-	w = pt.Call(mux, pt.LoginUser("user3", "pwd3"))
-	jwt3, _ := pt.GetJSONField(w, "token")
-	w = pt.Call(mux, pt.LoginUser("user4", "pwd4"))
-	jwt4, _ := pt.GetJSONField(w, "token")
-
-	// user1 ADMIN: Creating Webflyx Org budget & assigning u2, u3, u4 as MANAGER, CONTRIBUTOR, VIEWER.
-	w = pt.Call(mux, pt.CreateBudget(jwt1.(string), "Webflyx Org", "For budgeting Webflyx Org financial resources and tracking expenses."))
-	budget1, _ := pt.GetJSONField(w, "id")
-	w = pt.Call(mux, pt.AssignMemberToBudget(jwt1.(string), budget1.(string), user2.(string), "MANAGER"))
-	w = pt.Call(mux, pt.AssignMemberToBudget(jwt1.(string), budget1.(string), user3.(string), "CONTRIBUTOR"))
-	w = pt.Call(mux, pt.AssignMemberToBudget(jwt1.(string), budget1.(string), user4.(string), "VIEWER"))
-
-	// user2 MANAGER: Adding account, groups, & categories.
-	w = pt.Call(mux, pt.CreateBudgetAccount(jwt2.(string), budget1.(string), "savings", "Saved Org Funds", "Represents a bank account holding business capital."))
-	account1, _ := pt.GetJSONField(w, "id")
-	w = pt.Call(mux, pt.CreateBudgetAccount(jwt2.(string), budget1.(string), "credit", "Employee Business Credit Account", "Employees use cards that pull from this account to pay for business expenses."))
-	account2, _ := pt.GetJSONField(w, "id")
-	w = pt.Call(mux, pt.CreateGroup(jwt2.(string), budget1.(string), "Business Capital", "Categories related to company capital"))
-	group1, _ := pt.GetJSONField(w, "id")
-	w = pt.Call(mux, pt.CreateCategory(jwt2.(string), budget1.(string), group1.(string), "Surplus", "Category representing surplus funding to be spent on elective improvements to organization headquarters."))
-	w = pt.Call(mux, pt.CreateCategory(jwt2.(string), budget1.(string), group1.(string), "Surplus", "Category representing surplus funding to be spent on elective improvements to organization headquarters."))
-
-	// user3 CONTRIBUTOR: Driving a company vehicle; needs to fuel up.
-	w = pt.Call(mux, pt.CreateBudgetPayee(jwt3.(string), budget1.(string), "Smash & Dash", "A gas & convenience store"))
-	payee1, _ := pt.GetJSONField(w, "id")
-	w = pt.Call(mux, pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "2025-09-15T23:17:00Z", payee1.(string), "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station.", "true"))
-
-	// user4 VIEWER: Works for accounting; reading transactions from employees.
-	w = pt.Call(mux, pt.GetTransactions(jwt4.(string), budget1.(string), account1.(string), "", ""))
-	assert.Equal(t, w.Code, http.StatusOK)
-	w = pt.Call(mux, pt.GetTransactions(jwt4.(string), budget1.(string), account2.(string), "", ""))
-	assert.Equal(t, w.Code, http.StatusOK)
-
-	// Delete all users
-	w = pt.Call(mux, pt.DeleteAllUsers())
-	assert.Equal(t, w.Code, 200)
-}
-
 /*
 Creates two budgets with an admin user, and adds other users to the first.
 Along the way, various roles attempt various actions that
@@ -318,4 +243,87 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 		t.Fatalf("failed to decode response body as slice of budgets: %v", err)
 	}
 	assert.Equal(t, len(gotBudgets), 0)
+}
+
+// Build a small organizational budget system.
+// make four users, each with a unique role,
+// and let them each perform authorized actions.
+func Test_BuildOrgLogTransaction(t *testing.T) {
+	// TEST SETUP
+	var w *httptest.ResponseRecorder
+	// SERVER SETUP
+	const port = "8080"
+	cfg := LoadEnvConfig("../../.env")
+	pincher := &http.Server{
+		Addr:    ":" + port,
+		Handler: SetupMux(cfg),
+	}
+	mux := pincher.Handler
+	// REQUESTS
+
+	// Delete all users
+	w = pt.Call(mux, pt.DeleteAllUsers())
+	assert.Equal(t, w.Code, 200)
+
+	// Create four users
+	w = pt.Call(mux, pt.CreateUser("user1", "pwd1"))
+	assert.Equal(t, w.Code, http.StatusCreated)
+	w = pt.Call(mux, pt.CreateUser("user2", "pwd2"))
+	assert.Equal(t, w.Code, http.StatusCreated)
+	user2, _ := pt.GetJSONField(w, "id")
+	w = pt.Call(mux, pt.CreateUser("user3", "pwd3"))
+	assert.Equal(t, w.Code, http.StatusCreated)
+	user3, _ := pt.GetJSONField(w, "id")
+	w = pt.Call(mux, pt.CreateUser("user4", "pwd4"))
+	assert.Equal(t, w.Code, http.StatusCreated)
+	user4, _ := pt.GetJSONField(w, "id")
+
+	// Log in four users
+	w = pt.Call(mux, pt.LoginUser("user1", "pwd1"))
+	jwt1, _ := pt.GetJSONField(w, "token")
+	w = pt.Call(mux, pt.LoginUser("user2", "pwd2"))
+	jwt2, _ := pt.GetJSONField(w, "token")
+	w = pt.Call(mux, pt.LoginUser("user3", "pwd3"))
+	jwt3, _ := pt.GetJSONField(w, "token")
+	w = pt.Call(mux, pt.LoginUser("user4", "pwd4"))
+	jwt4, _ := pt.GetJSONField(w, "token")
+
+	// user1 ADMIN: Creating Webflyx Org budget & assigning u2, u3, u4 as MANAGER, CONTRIBUTOR, VIEWER.
+	w = pt.Call(mux, pt.CreateBudget(jwt1.(string), "Webflyx Org", "For budgeting Webflyx Org financial resources and tracking expenses."))
+	budget1, _ := pt.GetJSONField(w, "id")
+	w = pt.Call(mux, pt.AssignMemberToBudget(jwt1.(string), budget1.(string), user2.(string), "MANAGER"))
+	w = pt.Call(mux, pt.AssignMemberToBudget(jwt1.(string), budget1.(string), user3.(string), "CONTRIBUTOR"))
+	w = pt.Call(mux, pt.AssignMemberToBudget(jwt1.(string), budget1.(string), user4.(string), "VIEWER"))
+
+	// user2 MANAGER: Adding account, groups, & categories.
+	w = pt.Call(mux, pt.CreateBudgetAccount(jwt2.(string), budget1.(string), "savings", "Saved Org Funds", "Represents a bank account holding business capital."))
+	account1, _ := pt.GetJSONField(w, "id")
+	w = pt.Call(mux, pt.CreateBudgetAccount(jwt2.(string), budget1.(string), "credit", "Employee Business Credit Account", "Employees use cards that pull from this account to pay for business expenses."))
+	account2, _ := pt.GetJSONField(w, "id")
+	w = pt.Call(mux, pt.CreateGroup(jwt2.(string), budget1.(string), "Business Capital", "Categories related to company capital"))
+	group1, _ := pt.GetJSONField(w, "id")
+	w = pt.Call(mux, pt.CreateCategory(jwt2.(string), budget1.(string), group1.(string), "Surplus", "Category representing surplus funding to be spent on elective improvements to organization headquarters or employee bonuses."))
+	category1, _ := pt.GetJSONField(w, "id")
+	w = pt.Call(mux, pt.CreateCategory(jwt2.(string), budget1.(string), group1.(string), "Expenses", "Category representing funds to be used for employee expenses while on the job."))
+	category2, _ := pt.GetJSONField(w, "id")
+
+	// user3 CONTRIBUTOR: Driving a company vehicle; needs to fuel up.
+	w = pt.Call(mux, pt.CreateBudgetPayee(jwt3.(string), budget1.(string), "Smash & Dash", "A gas & convenience store"))
+	payee1, _ := pt.GetJSONField(w, "id")
+
+	transaction1Amounts := fmt.Sprintf(`{"%s": %d, "%s": %d}`, category2.(string), 1800, category1.(string), 400)
+	w = pt.Call(mux, pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "2025-09-15T23:17:00Z", payee1.(string), "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station. And yeah, I got a drink in the convenience store; sue me. Take it out of my bonus or whatever.", transaction1Amounts, "true"))
+	transaction1, _ := pt.GetJSONField(w, "id")
+
+	w = pt.Call(mux, pt.GetTransaction(jwt3.(string), budget1.(string), transaction1.(string)))
+
+	// user4 VIEWER: Works for accounting; reading transactions from employees.
+	w = pt.Call(mux, pt.GetTransactions(jwt4.(string), budget1.(string), account1.(string), "", ""))
+	assert.Equal(t, w.Code, http.StatusOK)
+	w = pt.Call(mux, pt.GetTransactions(jwt4.(string), budget1.(string), account2.(string), "", ""))
+	assert.Equal(t, w.Code, http.StatusOK)
+
+	// Delete all users
+	//w = pt.Call(mux, pt.DeleteAllUsers())
+	//assert.Equal(t, w.Code, 200)
 }
