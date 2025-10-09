@@ -12,7 +12,7 @@ import (
 func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
-		Name string `json:"payee_id"`
+		Name string `json:"name"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
