@@ -123,25 +123,26 @@ type Transaction struct {
 }
 
 type TransactionSplit struct {
-	ID              uuid.UUID 		`json:"id"`
-	TransactionID   uuid.UUID 		`json:"transaction_id"`
-	CategoryID      uuid.NullUUID 	`json:"category_id"`
-	Amount 			int64 			`json:"transaction_date"`
+	ID            uuid.UUID     `json:"id"`
+	TransactionID uuid.UUID     `json:"transaction_id"`
+	CategoryID    uuid.NullUUID `json:"category_id"`
+	Amount        int64         `json:"transaction_date"`
 }
 
 type TransactionView struct {
-	ID              uuid.UUID 		`json:"id"`
-	CreatedAt       time.Time 		`json:"created_at"`
-	UpdatedAt       time.Time 		`json:"updated_at"`
-	BudgetID        uuid.UUID 		`json:"budget_id"`
-	LoggerID        uuid.UUID 		`json:"logger_id"`
-	AccountID       uuid.UUID 		`json:"account_id"`
-	TransactionDate time.Time 		`json:"transaction_date"`
-	Payee           string 			`json:"payee_id"`
-	Notes           string    		`json:"notes"`
-	Cleared         bool      		`json:"is_cleared"`
-	TotalAmount		int64			`json:"total_amount"`
-	Splits			map[string]int 	`json:"splits"`
+	ID              uuid.UUID      `json:"id"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	BudgetID        uuid.UUID      `json:"budget_id"`
+	LoggerID        uuid.UUID      `json:"logger_id"`
+	AccountID       uuid.UUID      `json:"account_id"`
+	TransactionDate time.Time      `json:"transaction_date"`
+	Payee           string         `json:"payee"`
+	PayeeID         uuid.UUID      `json:"payee_id"`
+	Notes           string         `json:"notes"`
+	Cleared         bool           `json:"is_cleared"`
+	TotalAmount     int64          `json:"total_amount"`
+	Splits          map[string]int `json:"splits"`
 }
 
 type Payee struct {

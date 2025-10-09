@@ -100,6 +100,7 @@ type TransactionsView struct {
 	ID              uuid.UUID
 	TransactionDate time.Time
 	Payee           string
+	PayeeID         uuid.UUID
 	Notes           string
 	BudgetID        uuid.UUID
 	AccountID       uuid.UUID

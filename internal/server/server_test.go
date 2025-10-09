@@ -1,8 +1,8 @@
 package server
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -32,13 +32,13 @@ func Test_MakeAndResetUsers(t *testing.T) {
 
 	// Delete all users
 	w = pt.Call(mux, pt.DeleteAllUsers())
-	assert.Equal(t, w.Code, 200)
+	assert.Equal(t, 200, w.Code)
 
 	// Create two users
 	w = pt.Call(mux, pt.CreateUser("user1", "pwd1"))
-	assert.Equal(t, w.Code, 201)
+	assert.Equal(t, 201, w.Code)
 	w = pt.Call(mux, pt.CreateUser("user2", "pwd2"))
-	assert.Equal(t, w.Code, 201)
+	assert.Equal(t, 201, w.Code)
 
 	// User count should now be 2
 	w = pt.Call(mux, pt.GetUserCount())
@@ -53,7 +53,7 @@ func Test_MakeAndResetUsers(t *testing.T) {
 
 	// Delete all users
 	w = pt.Call(mux, pt.DeleteAllUsers())
-	assert.Equal(t, w.Code, 200)
+	assert.Equal(t, 200, w.Code)
 
 	// User count should now be 0 again
 	w = pt.Call(mux, pt.GetUserCount())
@@ -61,7 +61,7 @@ func Test_MakeAndResetUsers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to decode response body as int64: %v", err)
 	}
-	if !assert.Equal(t, count, int64(0)) {
+	if !assert.Equal(t, int64(0), count) {
 		t.Fatalf("expected user count of 0, but got %d", count)
 	}
 }
@@ -84,13 +84,13 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 
 	// Delete all users
 	w = pt.Call(mux, pt.DeleteAllUsers())
-	assert.Equal(t, w.Code, 200)
+	assert.Equal(t, 200, w.Code)
 
 	// Create two users
 	w = pt.Call(mux, pt.CreateUser("user1", "pwd1"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	w = pt.Call(mux, pt.CreateUser("user2", "pwd2"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 
 	// Log in both users
 	w = pt.Call(mux, pt.LoginUser("user1", "pwd1"))
@@ -99,7 +99,7 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 
 	// attempt deletion of user 2 as user 1
 	w = pt.Call(mux, pt.DeleteUser(jwt1.(string), "user2", "pwd2"))
-	assert.Equal(t, w.Code, http.StatusUnauthorized, "Should have a valid JSON web token from login in order to perform a user deletion")
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "Should have a valid JSON web token from login in order to perform a user deletion")
 
 	// delete user 1 as user 1
 	w = pt.Call(mux, pt.DeleteUser(jwt1.(string), "user1", "pwd1"))
@@ -111,13 +111,13 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to decode response body as int64: %v", err)
 	}
-	if !assert.Equal(t, count, int64(1)) {
+	if !assert.Equal(t, int64(1), count) {
 		t.Fatalf("expected user count of 1, but got %d", count)
 	}
 
 	// Delete all users
 	w = pt.Call(mux, pt.DeleteAllUsers())
-	assert.Equal(t, w.Code, 200)
+	assert.Equal(t, 200, w.Code)
 
 	// User count should now be 0 again
 	w = pt.Call(mux, pt.GetUserCount())
@@ -125,7 +125,7 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to decode response body as int64: %v", err)
 	}
-	if !assert.Equal(t, count, int64(0)) {
+	if !assert.Equal(t, int64(0), count) {
 		t.Fatalf("expected user count of 0, but got %d", count)
 	}
 }
@@ -152,19 +152,19 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// Delete all users
 	w = pt.Call(mux, pt.DeleteAllUsers())
-	assert.Equal(t, w.Code, 200)
+	assert.Equal(t, 200, w.Code)
 
 	// Create four users
 	w = pt.Call(mux, pt.CreateUser("user1", "pwd1"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	w = pt.Call(mux, pt.CreateUser("user2", "pwd2"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	user2, _ := pt.GetJSONField(w, "id")
 	w = pt.Call(mux, pt.CreateUser("user3", "pwd3"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	user3, _ := pt.GetJSONField(w, "id")
 	w = pt.Call(mux, pt.CreateUser("user4", "pwd4"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	user4, _ := pt.GetJSONField(w, "id")
 
 	// Log in four users
@@ -195,7 +195,7 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to decode response body as slice of budgets: %v", err)
 	}
-	assert.Equal(t, len(gotBudgets), 1)
+	assert.Equal(t, 1, len(gotBudgets))
 
 	// Try adding user2 as MANAGER using u4. Should fail auth check.
 	w = pt.Call(mux, pt.AssignMemberToBudget(jwt4.(string), budget1.(string), user2.(string), "MANAGER"))
@@ -206,7 +206,7 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// Attempt deletion of Webflyx Org budget as user2. Should fail; only admin can do it.
 	w = pt.Call(mux, pt.DeleteUserBudget(jwt2.(string), budget1.(string)))
-	assert.NotEqual(t, w.Code, http.StatusNoContent)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	// Attempt to revoke user3's Webflyx Org membership as user4. Should fail.
 	w = pt.Call(mux, pt.RevokeBudgetMembership(jwt4.(string), budget1.(string), user3.(string)))
@@ -220,11 +220,11 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to decode response body as slice of budgets: %v", err)
 	}
-	assert.Equal(t, len(gotBudgets), 2)
+	assert.Equal(t, 2, len(gotBudgets))
 
 	// Attempt deletion of Webflyx Org budget as user1. Should succeed.
 	w = pt.Call(mux, pt.DeleteUserBudget(jwt1.(string), budget1.(string)))
-	assert.Equal(t, w.Code, http.StatusNoContent)
+	assert.Equal(t, http.StatusNoContent, w.Code)
 
 	// user1 should be assigned to only 1 budget now: their personal budget.
 	w = pt.Call(mux, pt.GetUserBudgets(jwt1.(string)))
@@ -233,7 +233,7 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to decode response body as slice of budgets: %v", err)
 	}
-	assert.Equal(t, len(gotBudgets), 1)
+	assert.Equal(t, 1, len(gotBudgets))
 
 	// user4 should be assigned to NO budgets, now.
 	w = pt.Call(mux, pt.GetUserBudgets(jwt4.(string)))
@@ -242,7 +242,7 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to decode response body as slice of budgets: %v", err)
 	}
-	assert.Equal(t, len(gotBudgets), 0)
+	assert.Equal(t, 0, len(gotBudgets))
 }
 
 // Build a small organizational budget system.
@@ -263,19 +263,19 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 
 	// Delete all users
 	w = pt.Call(mux, pt.DeleteAllUsers())
-	assert.Equal(t, w.Code, 200)
+	assert.Equal(t, 200, w.Code)
 
 	// Create four users
 	w = pt.Call(mux, pt.CreateUser("user1", "pwd1"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	w = pt.Call(mux, pt.CreateUser("user2", "pwd2"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	user2, _ := pt.GetJSONField(w, "id")
 	w = pt.Call(mux, pt.CreateUser("user3", "pwd3"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	user3, _ := pt.GetJSONField(w, "id")
 	w = pt.Call(mux, pt.CreateUser("user4", "pwd4"))
-	assert.Equal(t, w.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	user4, _ := pt.GetJSONField(w, "id")
 
 	// Log in four users
@@ -297,7 +297,7 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 
 	// user2 MANAGER: Adding account, groups, & categories.
 	w = pt.Call(mux, pt.CreateBudgetAccount(jwt2.(string), budget1.(string), "savings", "Saved Org Funds", "Represents a bank account holding business capital."))
-	account1, _ := pt.GetJSONField(w, "id")
+	// account1, _ := pt.GetJSONField(w, "id")
 	w = pt.Call(mux, pt.CreateBudgetAccount(jwt2.(string), budget1.(string), "credit", "Employee Business Credit Account", "Employees use cards that pull from this account to pay for business expenses."))
 	account2, _ := pt.GetJSONField(w, "id")
 	w = pt.Call(mux, pt.CreateGroup(jwt2.(string), budget1.(string), "Business Capital", "Categories related to company capital"))
@@ -307,23 +307,25 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	w = pt.Call(mux, pt.CreateCategory(jwt2.(string), budget1.(string), group1.(string), "Expenses", "Category representing funds to be used for employee expenses while on the job."))
 	category2, _ := pt.GetJSONField(w, "id")
 
-	// user3 CONTRIBUTOR: Driving a company vehicle; needs to fuel up.
+	// user3 CONTRIBUTOR: Adding transactions (EX: gas station).
 	w = pt.Call(mux, pt.CreateBudgetPayee(jwt3.(string), budget1.(string), "Smash & Dash", "A gas & convenience store"))
 	payee1, _ := pt.GetJSONField(w, "id")
 
-	transaction1Amounts := fmt.Sprintf(`{"%s": %d, "%s": %d}`, category2.(string), 1800, category1.(string), 400)
-	w = pt.Call(mux, pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "2025-09-15T23:17:00Z", payee1.(string), "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station. And yeah, I got a drink in the convenience store; sue me. Take it out of my bonus or whatever.", transaction1Amounts, "true"))
-	transaction1, _ := pt.GetJSONField(w, "id")
+	transaction1Amounts := fmt.Sprintf(`{"%s": %d}`, category2.(string), 1800)
+	w = pt.Call(mux, pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "2025-09-15T23:17:00Z", payee1.(string), "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station.", transaction1Amounts, "true"))
+	//transaction1, _ := pt.GetJSONField(w, "id")
 
-	w = pt.Call(mux, pt.GetTransaction(jwt3.(string), budget1.(string), transaction1.(string)))
+	transaction2Amounts := fmt.Sprintf(`{"%s": %d}`, category1.(string), 400)
+	w = pt.Call(mux, pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "2025-09-15T23:22:00Z", payee1.(string), "Yeah, I got a drink in the convenience store too; sue me. Take it out of my bonus or whatever.", transaction2Amounts, "true"))
+	// transaction2, _ := pt.GetJSONField(w, "id")
 
 	// user4 VIEWER: Works for accounting; reading transactions from employees.
-	w = pt.Call(mux, pt.GetTransactions(jwt4.(string), budget1.(string), account1.(string), "", ""))
-	assert.Equal(t, w.Code, http.StatusOK)
-	w = pt.Call(mux, pt.GetTransactions(jwt4.(string), budget1.(string), account2.(string), "", ""))
-	assert.Equal(t, w.Code, http.StatusOK)
+	w = pt.Call(mux, pt.GetTransactions(jwt4.(string), budget1.(string), account2.(string), "", "", "", ""))
+	assert.Equal(t, http.StatusOK, w.Code)
+	w = pt.Call(mux, pt.GetTransactions(jwt4.(string), budget1.(string), "", "", payee1.(string), "", ""))
+	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Delete all users
 	//w = pt.Call(mux, pt.DeleteAllUsers())
-	//assert.Equal(t, w.Code, 200)
+	//assert.Equal(t, 200, w.Code)
 }

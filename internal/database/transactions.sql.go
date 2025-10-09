@@ -82,7 +82,7 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 }
 
 const getTransactionFromViewByID = `-- name: GetTransactionFromViewByID :one
-SELECT id, transaction_date, payee, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
+SELECT id, transaction_date, payee, payee_id, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
 FROM transactions_view
 WHERE id = $1
 `
@@ -94,6 +94,7 @@ func (q *Queries) GetTransactionFromViewByID(ctx context.Context, id uuid.UUID) 
 		&i.ID,
 		&i.TransactionDate,
 		&i.Payee,
+		&i.PayeeID,
 		&i.Notes,
 		&i.BudgetID,
 		&i.AccountID,
@@ -107,29 +108,42 @@ func (q *Queries) GetTransactionFromViewByID(ctx context.Context, id uuid.UUID) 
 
 const getTransactions = `-- name: GetTransactions :many
 SELECT id, created_at, updated_at, budget_id, logger_id, account_id, transaction_date, payee_id, notes, cleared
-FROM transactions
+FROM transactions t
 WHERE
-    budget_id = $1
-    AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR account_id = $2::uuid)
+    t.budget_id = $1
+    AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = $2::uuid)
     AND (
-        ($3::date = '0001-01-01' AND $4::date = '0001-01-01')
-        OR
-        (transaction_date >= $3::date AND transaction_date <= $4::date)
+        $3::uuid = '00000000-0000-0000-0000-000000000000'
+        OR EXISTS (
+            SELECT 1
+            FROM transaction_splits ts
+            WHERE ts.transaction_id = t.id AND ts.category_id = $3::uuid
+        )
     )
-ORDER BY transaction_date DESC
+    AND ($4::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = $4::uuid)
+    AND (
+        ($5::date = '0001-01-01' AND $6::date = '0001-01-01')
+        OR
+        (t.transaction_date >= $5::date AND t.transaction_date <= $6::date)
+    )
+ORDER BY t.transaction_date DESC
 `
 
 type GetTransactionsParams struct {
-	BudgetID  uuid.UUID
-	AccountID uuid.UUID
-	StartDate time.Time
-	EndDate   time.Time
+	BudgetID   uuid.UUID
+	AccountID  uuid.UUID
+	CategoryID uuid.UUID
+	PayeeID    uuid.UUID
+	StartDate  time.Time
+	EndDate    time.Time
 }
 
 func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams) ([]Transaction, error) {
 	rows, err := q.db.QueryContext(ctx, getTransactions,
 		arg.BudgetID,
 		arg.AccountID,
+		arg.CategoryID,
+		arg.PayeeID,
 		arg.StartDate,
 		arg.EndDate,
 	)
@@ -166,30 +180,43 @@ func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams
 }
 
 const getTransactionsFromView = `-- name: GetTransactionsFromView :many
-SELECT id, transaction_date, payee, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
-FROM transactions_view
+SELECT id, transaction_date, payee, payee_id, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
+FROM transactions_view t
 WHERE
-    budget_id = $1
-    AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR account_id = $2::uuid)
+    t.budget_id = $1
+    AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = $2::uuid)
     AND (
-        ($3::date = '0001-01-01' AND $4::date = '0001-01-01')
-        OR
-        (transaction_date >= $3::date AND transaction_date <= $4::date)
+        $3::uuid = '00000000-0000-0000-0000-000000000000'
+        OR EXISTS (
+            SELECT 1
+            FROM transaction_splits ts
+            WHERE ts.transaction_id = t.id AND ts.category_id = $3::uuid
+        )
     )
-ORDER BY transaction_date DESC
+    AND ($4::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = $4::uuid)
+    AND (
+        ($5::date = '0001-01-01' AND $6::date = '0001-01-01')
+        OR
+        (t.transaction_date >= $5::date AND t.transaction_date <= $6::date)
+    )
+ORDER BY t.transaction_date DESC
 `
 
 type GetTransactionsFromViewParams struct {
-	BudgetID  uuid.UUID
-	AccountID uuid.UUID
-	StartDate time.Time
-	EndDate   time.Time
+	BudgetID   uuid.UUID
+	AccountID  uuid.UUID
+	CategoryID uuid.UUID
+	PayeeID    uuid.UUID
+	StartDate  time.Time
+	EndDate    time.Time
 }
 
 func (q *Queries) GetTransactionsFromView(ctx context.Context, arg GetTransactionsFromViewParams) ([]TransactionsView, error) {
 	rows, err := q.db.QueryContext(ctx, getTransactionsFromView,
 		arg.BudgetID,
 		arg.AccountID,
+		arg.CategoryID,
+		arg.PayeeID,
 		arg.StartDate,
 		arg.EndDate,
 	)
@@ -204,6 +231,7 @@ func (q *Queries) GetTransactionsFromView(ctx context.Context, arg GetTransactio
 			&i.ID,
 			&i.TransactionDate,
 			&i.Payee,
+			&i.PayeeID,
 			&i.Notes,
 			&i.BudgetID,
 			&i.AccountID,

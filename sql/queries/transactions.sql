@@ -26,29 +26,47 @@ RETURNING *;
 
 -- name: GetTransactionsFromView :many
 SELECT *
-FROM transactions_view
+FROM transactions_view t
 WHERE
-    budget_id = sqlc.arg('budget_id')
-    AND (sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000' OR account_id = sqlc.arg('account_id')::uuid)
+    t.budget_id = sqlc.arg('budget_id')
+    AND (sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = sqlc.arg('account_id')::uuid)
+    AND (
+        sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
+        OR EXISTS (
+            SELECT 1
+            FROM transaction_splits ts
+            WHERE ts.transaction_id = t.id AND ts.category_id = sqlc.arg('category_id')::uuid
+        )
+    )
+    AND (sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = sqlc.arg('payee_id')::uuid)
     AND (
         (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
         OR
-        (transaction_date >= sqlc.arg('start_date')::date AND transaction_date <= sqlc.arg('end_date')::date)
+        (t.transaction_date >= sqlc.arg('start_date')::date AND t.transaction_date <= sqlc.arg('end_date')::date)
     )
-ORDER BY transaction_date DESC;
+ORDER BY t.transaction_date DESC;
 
 -- name: GetTransactions :many
 SELECT *
-FROM transactions
+FROM transactions t
 WHERE
-    budget_id = sqlc.arg('budget_id')
-    AND (sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000' OR account_id = sqlc.arg('account_id')::uuid)
+    t.budget_id = sqlc.arg('budget_id')
+    AND (sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = sqlc.arg('account_id')::uuid)
+    AND (
+        sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
+        OR EXISTS (
+            SELECT 1
+            FROM transaction_splits ts
+            WHERE ts.transaction_id = t.id AND ts.category_id = sqlc.arg('category_id')::uuid
+        )
+    )
+    AND (sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = sqlc.arg('payee_id')::uuid)
     AND (
         (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
         OR
-        (transaction_date >= sqlc.arg('start_date')::date AND transaction_date <= sqlc.arg('end_date')::date)
+        (t.transaction_date >= sqlc.arg('start_date')::date AND t.transaction_date <= sqlc.arg('end_date')::date)
     )
-ORDER BY transaction_date DESC;
+ORDER BY t.transaction_date DESC;
 
 -- name: GetSplitsByTransactionID :many
 SELECT *

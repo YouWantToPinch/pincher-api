@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -16,17 +17,17 @@ import (
 func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
-		AccountID       string    		`json:"account_id"`
-		TransactionDate time.Time 		`json:"transaction_date"`
-		PayeeID         string    		`json:"payee_id"`
-		Notes           string    		`json:"notes"`
-		Cleared         string    		`json:"is_cleared"`
+		AccountID       string    `json:"account_id"`
+		TransactionDate time.Time `json:"transaction_date"`
+		PayeeID         string    `json:"payee_id"`
+		Notes           string    `json:"notes"`
+		Cleared         string    `json:"is_cleared"`
 		/* Map of category UUID strings to integers.
 		   If there is > 1 entry in Amounts, the transaction is not truly split.
 		   Nonetheless, all transactions record at least one corresponding split.
 		   A 'split' reflects the sum of spending toward one particular category within the transaction.
 		*/
-		Amounts			map[string]int64	`json:"amounts"`
+		Amounts map[string]int64 `json:"amounts"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -85,12 +86,12 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		parsedCategory.UUID = parsedKey
 		parsedCategory.Valid = true
 		_, err = cfg.db.LogTransactionSplit(r.Context(), database.LogTransactionSplitParams{
-			TransactionID:	dbTransaction.ID,
-			CategoryID:		parsedCategory,
-			Amount:			v,
+			TransactionID: dbTransaction.ID,
+			CategoryID:    parsedCategory,
+			Amount:        v,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError,"Couldn't log transaction split", err)
+			respondWithError(w, http.StatusInternalServerError, "Couldn't log transaction split", err)
 			return
 		}
 	}
@@ -118,74 +119,111 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		LoggerID:        viewTransaction.LoggerID,
 		AccountID:       viewTransaction.AccountID,
 		TransactionDate: viewTransaction.TransactionDate,
-		Payee:         	 viewTransaction.Payee,
-		TotalAmount:	 viewTransaction.TotalAmount,
+		Payee:           viewTransaction.Payee,
+		PayeeID:         viewTransaction.PayeeID,
+		TotalAmount:     viewTransaction.TotalAmount,
 		Notes:           viewTransaction.Notes,
 		Cleared:         viewTransaction.Cleared,
-		Splits:			 respSplits,
+		Splits:          respSplits,
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
 	return
 }
 
+// Try to parse input path parameter; store uuid.Nil into 'parse' on failure
+func parseUUIDFromPath(pathParam string, r *http.Request, parse *uuid.UUID) error {
+	idString := r.PathValue(pathParam)
+	if idString != "" {
+		parsedID, err := uuid.Parse(idString)
+		if err != nil {
+			return errors.New(fmt.Sprintf("Parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", idString, pathParam))
+		}
+		*parse = parsedID
+	} else {
+		*parse = uuid.Nil
+	}
+	return nil
+}
+
+// Try to parse input query parameter; store time.Time{} into 'parse' on failure
+func parseDateFromQuery(queryParam string, r *http.Request, parse *time.Time) error {
+	const timeLayout = time.RFC3339
+	dateString := r.URL.Query().Get(queryParam)
+	if dateString != "" {
+		parsedDate, err := time.Parse(timeLayout, dateString)
+		if err != nil {
+			return errors.New(fmt.Sprintf("Query value '%s' for provided parameter '%s' could not be parsed as UUID", dateString, queryParam))
+		}
+		*parse = parsedDate
+	} else {
+		*parse = time.Time{}
+	}
+	return nil
+}
+
 func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
-	queryStartDate := r.URL.Query().Get("start_date")
-	var parsedStartDate time.Time
-	queryEndDate := r.URL.Query().Get("end_date")
-	var parsedEndDate time.Time
-	queryAccountID := r.URL.Query().Get("account_id")
-	var parsedAccountID uuid.UUID
-	//queryCategoryID := r.URL.Query().Get("category_id")
 
-	if queryAccountID != "" {
-		parsedAccountID, err = uuid.Parse(queryAccountID)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Provided account_id string could not be parsed as UUID", err)
-			return
-		}
-	} else {
-		parsedAccountID = uuid.Nil
+	var parsedAccountID uuid.UUID
+	err = parseUUIDFromPath("account_id", r, &parsedAccountID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		return
 	}
-	if queryStartDate != "" || queryEndDate != "" {
-		const timeLayout = time.RFC3339
-		parsedStartDate, err = time.Parse(timeLayout, queryStartDate)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Could not parse Start Date provided", err)
-			return
-		}
-		parsedEndDate, err = time.Parse(timeLayout, queryEndDate)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Could not parse End Date provided", err)
-			return
-		}
-	} else {
-		parsedStartDate = time.Time{}
-		parsedEndDate = time.Time{}
+	var parsedCategoryID uuid.UUID
+	err = parseUUIDFromPath("category_id", r, &parsedCategoryID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		return
 	}
+	var parsedPayeeID uuid.UUID
+	err = parseUUIDFromPath("payee_id", r, &parsedPayeeID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		return
+	}
+
+	var parsedStartDate time.Time
+	err = parseDateFromQuery("start_date", r, &parsedStartDate)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		return
+	}
+	var parsedEndDate time.Time
+	err = parseDateFromQuery("end_date", r, &parsedEndDate)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		return
+	}
+
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	slog.Debug("pathBudgetID: " + pathBudgetID.String())
 
-	slog.Debug(fmt.Sprintf("Transaction paramaters: budget_id=%s, account_id=%v (nil=%v), start_date=%v (zero=%v), end_date=%v (zero=%v)",
+	slog.Debug(fmt.Sprintf("Transaction paramaters: budget_id=%s, account_id=%v (nil=%v), category_id=%v (nil=%v), payee_id=%v (nil=%v), start_date=%v (zero=%v), end_date=%v (zero=%v)",
 		pathBudgetID.String(),
 		parsedAccountID,
 		parsedAccountID == uuid.Nil,
+		parsedCategoryID,
+		parsedCategoryID == uuid.Nil,
+		parsedPayeeID,
+		parsedPayeeID == uuid.Nil,
 		parsedStartDate,
 		parsedStartDate.IsZero(),
 		parsedEndDate,
 		parsedEndDate.IsZero()),
 	)
-	
+
 	getMode := r.URL.Query().Get("mode")
 	switch getMode {
 	case "db":
 		dbTransactions, err := cfg.db.GetTransactions(r.Context(), database.GetTransactionsParams{
-		AccountID: parsedAccountID,
-		StartDate: parsedStartDate,
-		EndDate:   parsedEndDate,
-		BudgetID:  pathBudgetID,
+			AccountID:  parsedAccountID,
+			CategoryID: parsedCategoryID,
+			PayeeID:    parsedPayeeID,
+			StartDate:  parsedStartDate,
+			EndDate:    parsedEndDate,
+			BudgetID:   pathBudgetID,
 		})
 		if err != nil {
 			respondWithError(w, http.StatusNotFound, "No transactions found", err)
@@ -216,10 +254,12 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 	default: // or case "view"
 
 		viewTransactions, err := cfg.db.GetTransactionsFromView(r.Context(), database.GetTransactionsFromViewParams{
-		AccountID: parsedAccountID,
-		StartDate: parsedStartDate,
-		EndDate:   parsedEndDate,
-		BudgetID:  pathBudgetID,
+			AccountID:  parsedAccountID,
+			CategoryID: parsedCategoryID,
+			PayeeID:    parsedPayeeID,
+			StartDate:  parsedStartDate,
+			EndDate:    parsedEndDate,
+			BudgetID:   pathBudgetID,
 		})
 		if err != nil {
 			respondWithError(w, http.StatusNotFound, "No transactions found", err)
@@ -246,11 +286,12 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 				LoggerID:        viewTransaction.LoggerID,
 				AccountID:       viewTransaction.AccountID,
 				TransactionDate: viewTransaction.TransactionDate,
-				Payee:         	 viewTransaction.Payee,
-				TotalAmount:	 viewTransaction.TotalAmount,
+				Payee:           viewTransaction.Payee,
+				PayeeID:         viewTransaction.PayeeID,
+				TotalAmount:     viewTransaction.TotalAmount,
 				Notes:           viewTransaction.Notes,
 				Cleared:         viewTransaction.Cleared,
-				Splits:			 respSplits,
+				Splits:          respSplits,
 			}
 			respBody = append(respBody, addTransaction)
 		}
@@ -275,10 +316,10 @@ func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 	var respBody []TransactionSplit
 	for _, split := range dbSplits {
 		addSplit := TransactionSplit{
-			ID:              split.ID,
-			TransactionID:   split.TransactionID,
-			CategoryID:      split.CategoryID,
-			Amount:       	 split.Amount,
+			ID:            split.ID,
+			TransactionID: split.TransactionID,
+			CategoryID:    split.CategoryID,
+			Amount:        split.Amount,
 		}
 		respBody = append(respBody, addSplit)
 	}
@@ -343,11 +384,11 @@ func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 			LoggerID:        viewTransaction.LoggerID,
 			AccountID:       viewTransaction.AccountID,
 			TransactionDate: viewTransaction.TransactionDate,
-			Payee:         	 viewTransaction.Payee,
-			TotalAmount:	 viewTransaction.TotalAmount,
+			Payee:           viewTransaction.Payee,
+			TotalAmount:     viewTransaction.TotalAmount,
 			Notes:           viewTransaction.Notes,
 			Cleared:         viewTransaction.Cleared,
-			Splits:			 respSplits,
+			Splits:          respSplits,
 		}
 
 		respondWithJSON(w, http.StatusCreated, respBody)

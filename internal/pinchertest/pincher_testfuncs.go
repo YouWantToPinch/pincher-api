@@ -199,8 +199,17 @@ func LogTransaction(token, budgetID, accountID, transactionDate, payeeID, notes,
 	return req
 }
 
-func GetTransactions(token, budgetID, accountID, startDate, endDate string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/transactions?account_id=%v&start_date=%v&end_date=%v", budgetID, accountID, startDate, endDate), nil)
+func GetTransactions(token, budgetID, accountID, categoryID, payeeID, startDate, endDate string) *http.Request {
+	pathParam := ""
+	if accountID != "" {
+		pathParam += "/accounts/" + accountID
+	} else if categoryID != "" {
+		pathParam += "/categories/" + categoryID
+	} else if payeeID != "" {
+		pathParam += "/payees/" + payeeID
+	}
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v%v/transactions?start_date=%v&end_date=%v", budgetID, pathParam, startDate, endDate), nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
 	req.Header.Set("Content-Type", "application/json")
 	return req
