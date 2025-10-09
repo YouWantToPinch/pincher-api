@@ -36,7 +36,7 @@ CREATE TABLE payees (
     name VARCHAR(32) NOT NULL,
     UNIQUE(budget_id, name),
     FOREIGN KEY (budget_id) REFERENCES budgets(id)
-      ON DELETE CASCADE,
+      ON DELETE CASCADE
 );
 
 CREATE TABLE transaction_splits (
