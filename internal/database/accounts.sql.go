@@ -138,6 +138,19 @@ func (q *Queries) GetAccountsFromBudget(ctx context.Context, budgetID uuid.UUID)
 	return items, nil
 }
 
+const getBudgetAccountCapital = `-- name: GetBudgetAccountCapital :one
+SELECT CAST(COALESCE(SUM(transactions_view.total_amount), 0) AS BIGINT) AS total
+FROM transactions_view
+WHERE transactions_view.account_id = $1
+`
+
+func (q *Queries) GetBudgetAccountCapital(ctx context.Context, accountID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getBudgetAccountCapital, accountID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const restoreAccount = `-- name: RestoreAccount :exec
 UPDATE accounts
 SET accounts.is_deleted = FALSE

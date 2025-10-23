@@ -23,6 +23,12 @@ type Account struct {
 	IsDeleted   bool
 }
 
+type AccountTransfer struct {
+	ID                uuid.UUID
+	FromTransactionID uuid.UUID
+	ToTransactionID   uuid.UUID
+}
+
 type Budget struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
@@ -83,6 +89,7 @@ type Transaction struct {
 	BudgetID        uuid.UUID
 	LoggerID        uuid.UUID
 	AccountID       uuid.UUID
+	TransactionType string
 	TransactionDate time.Time
 	PayeeID         uuid.UUID
 	Notes           string
@@ -98,6 +105,7 @@ type TransactionSplit struct {
 
 type TransactionsView struct {
 	ID              uuid.UUID
+	TransactionType string
 	TransactionDate time.Time
 	Payee           string
 	PayeeID         uuid.UUID

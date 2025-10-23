@@ -14,7 +14,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func SetupMux(cfg apiConfig) *http.ServeMux {
+func SetupMux(cfg *apiConfig) *http.ServeMux {
 
 	mux := http.NewServeMux()
 
@@ -41,13 +41,14 @@ func SetupMux(cfg apiConfig) *http.ServeMux {
 	mux.HandleFunc("POST /api/login", cfg.endpLoginUser)
 	mux.HandleFunc("POST /api/refresh", cfg.endpCheckRefreshToken)
 	mux.HandleFunc("POST /api/revoke", cfg.endpRevokeRefreshToken)
-	// Budget setup
+	// Budgets
 	mux.HandleFunc("POST /api/budgets", mdAuth(cfg.endpCreateBudget))
 	mux.HandleFunc("POST /api/budgets/{budget_id}/members", mdAuth(mdClear(MANAGER, cfg.endpAddBudgetMemberWithRole)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}", mdAuth(mdClear(ADMIN, cfg.endpDeleteBudget)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/members/{user_id}", mdAuth(mdClear(MANAGER, cfg.endpRemoveBudgetMember)))
 	mux.HandleFunc("GET /api/budgets", mdAuth(cfg.endpGetUserBudgets))
 	mux.HandleFunc("GET /api/budgets/{budget_id}", mdAuth(mdClear(VIEWER, cfg.endpGetBudget)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/capital", mdAuth(mdClear(VIEWER, cfg.endpGetBudgetCapital)))
 	// Groups & Categories
 	mux.HandleFunc("POST /api/budgets/{budget_id}/groups", mdAuth(mdClear(MANAGER, cfg.endpCreateGroup)))
 	mux.HandleFunc("POST /api/budgets/{budget_id}/categories", mdAuth(mdClear(MANAGER, cfg.endpCreateCategory)))
@@ -64,7 +65,8 @@ func SetupMux(cfg apiConfig) *http.ServeMux {
 	// Accounts
 	mux.HandleFunc("POST /api/budgets/{budget_id}/accounts", mdAuth(mdClear(MANAGER, cfg.endpAddAccount)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts", mdAuth(mdClear(VIEWER, cfg.endpGetAccounts)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/account/{account_id}", mdAuth(mdClear(VIEWER, cfg.endpGetAccount)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(VIEWER, cfg.endpGetAccount)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts/{account_id}/capital", mdAuth(mdClear(VIEWER, cfg.endpGetBudgetAccountCapital)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.endpDeleteAccount)))
 	// Transactions
 	mux.HandleFunc("POST /api/budgets/{budget_id}/transactions", mdAuth(mdClear(CONTRIBUTOR, cfg.endpLogTransaction)))
@@ -79,7 +81,7 @@ func SetupMux(cfg apiConfig) *http.ServeMux {
 	return mux
 }
 
-func LoadEnvConfig(path string) apiConfig {
+func LoadEnvConfig(path string) *apiConfig {
 	_ = godotenv.Load(path)
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
@@ -108,5 +110,5 @@ func LoadEnvConfig(path string) apiConfig {
 		}
 	}
 
-	return cfg
+	return &cfg
 }

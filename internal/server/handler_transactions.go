@@ -14,10 +14,30 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
+func abs(i int64) int64 {
+	if i < 0 {
+		return -1 * i
+	}
+	return i
+}
+
+func signByType(transactionType string, i int64) (int64, error) {
+	switch transactionType {
+	case "TRANSFER_TO", "DEPOSIT":
+		return (abs(i)), nil
+	case "TRANSFER_FROM", "WITHDRAWAL":
+		return -1 * (abs(i)), nil
+	default:
+		return i, errors.New(fmt.Sprintf("transaction type \"%s\" not supported", transactionType))
+	}
+}
+
 func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
 		AccountID       string    `json:"account_id"`
+		TransferAccountID       string    `json:"transfer_account_id"`
+		TransactionType string	  `json:"transaction_type"`
 		TransactionDate time.Time `json:"transaction_date"`
 		PayeeID         string    `json:"payee_id"`
 		Notes           string    `json:"notes"`
@@ -38,13 +58,15 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	isTransfer := params.TransactionType == "TRANSFER_TO" || params.TransactionType == "TRANSFER_FROM"
+
 	parsedAccountID, err := uuid.Parse(params.AccountID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Provided account_id string could not be parsed as UUID", err)
 		return
 	}
 	parsedPayeeID, err := uuid.Parse(params.PayeeID)
-	if err != nil {
+	if err != nil && !isTransfer {
 		respondWithError(w, http.StatusBadRequest, "Provided payee_id string could not be parsed as UUID", err)
 		return
 	}
@@ -59,6 +81,20 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	parsedAmounts := make(map[string]int64)
+	for k, v := range params.Amounts {
+		parsedAmounts[k], err = signByType(params.TransactionType, v)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error(), err)
+			return
+		}
+	}
+	amountsJsonBytes, err := json.Marshal(parsedAmounts)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
+		return
+	}
+
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
@@ -66,65 +102,137 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		BudgetID:        pathBudgetID,
 		LoggerID:        validatedUserID,
 		AccountID:       parsedAccountID,
+		TransactionType: params.TransactionType,
 		TransactionDate: params.TransactionDate,
 		PayeeID:         parsedPayeeID,
 		Notes:           params.Notes,
 		Cleared:         parsedCleared,
+		Amounts:		 json.RawMessage(amountsJsonBytes),
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't log transaction", err)
 		return
 	}
 
-	for k, v := range params.Amounts {
-		var parsedCategory uuid.NullUUID
-		parsedKey, err := uuid.Parse(k)
+	var transferTransactionID uuid.UUID
+	var parsedTransferAccountID uuid.UUID
+	if isTransfer {
+		// parse transfer_account_id
+		parsedTransferAccountID, err = uuid.Parse(params.TransferAccountID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Transacation split key could not be parsed as UUID", err)
+			respondWithError(w, http.StatusBadRequest, "Provided transfer_account_id string could not be parsed as UUID", err)
 			return
 		}
-		parsedCategory.UUID = parsedKey
-		parsedCategory.Valid = true
-		_, err = cfg.db.LogTransactionSplit(r.Context(), database.LogTransactionSplitParams{
-			TransactionID: dbTransaction.ID,
-			CategoryID:    parsedCategory,
-			Amount:        v,
+		// prepare inverse amounts for corresponding transaction
+		invertedAmounts := make(map[string]int64)
+		for k, v := range parsedAmounts {
+			invertedAmounts[k] = -1 * v
+		}
+		invertedAmountsJsonBytes, err := json.Marshal(invertedAmounts)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error(), err)
+			return
+		}
+		getOppositeType := func(s string) string {
+			if s == "TRANSFER_TO" {return "TRANSFER_FROM"}
+			return "TRANSFER_TO"
+		}
+		// log the corresponding transaction
+		transferTransaction, err := cfg.db.LogTransaction(r.Context(), database.LogTransactionParams{
+		BudgetID:        pathBudgetID,
+		LoggerID:        validatedUserID,
+		AccountID:       parsedTransferAccountID,
+		TransactionType: getOppositeType(params.TransactionType),
+		TransactionDate: params.TransactionDate,
+		PayeeID:         parsedPayeeID,
+		Notes:           params.Notes,
+		Cleared:         parsedCleared,
+		Amounts:		 json.RawMessage(invertedAmountsJsonBytes),
+	})
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't log corresponding transfer transaction", err)
+			return
+		}
+		transferTransactionID = transferTransaction.ID
+		// link transfer transactions
+		getTransferIDs := func(t1, t2 *database.LogTransactionRow) (*database.LogTransactionRow, *database.LogTransactionRow) {
+			if (*t1).TransactionType == "TRANSFER_FROM" {
+				return t2, t1
+			} else {
+				return t1, t2
+			}
+		}
+		toPtr, fromPtr := getTransferIDs(&dbTransaction, &transferTransaction)
+		_, err = cfg.db.LogAccountTransfer(r.Context(), database.LogAccountTransferParams{
+			FromTransactionID: (*fromPtr).ID,
+			ToTransactionID: (*toPtr).ID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Couldn't log transaction split", err)
+			respondWithError(w, http.StatusInternalServerError, "Couldn't link transfer transactions", err)
 			return
 		}
 	}
 
-	viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), dbTransaction.ID)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get transaction from view", err)
+	getTransactionView := func(transactionToViewID uuid.UUID) (TransactionView, error) {
+
+		viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), transactionToViewID)
+		if err != nil {
+			return TransactionView{}, errors.New(fmt.Sprintf("Couldn't get transaction from view using id %v; %v", transactionToViewID.String(), err.Error()))
+		}
+
+		respSplits := make(map[string]int)
+		{
+			data := []byte(viewTransaction.Splits)
+			source := (*json.RawMessage)(&data)
+			err := json.Unmarshal(*source, &respSplits)
+			if err != nil {
+				return TransactionView{}, errors.New("Failure unmarshalling transaction splits into map[string]int64")
+			}
+		}
+
+		return TransactionView{
+			ID:              viewTransaction.ID,
+			BudgetID:        viewTransaction.BudgetID,
+			LoggerID:        viewTransaction.LoggerID,
+			AccountID:       viewTransaction.AccountID,
+			TransactionType: viewTransaction.TransactionType,
+			TransactionDate: viewTransaction.TransactionDate,
+			Payee:           viewTransaction.Payee,
+			PayeeID:         viewTransaction.PayeeID,
+			TotalAmount:     viewTransaction.TotalAmount,
+			Notes:           viewTransaction.Notes,
+			Cleared:         viewTransaction.Cleared,
+			Splits:          respSplits,
+		}, nil
+	}
+
+	if isTransfer {
+		type response struct {
+			Transactions []TransactionView `json:"transactions"`
+		}
+		var respBody response
+		t1, err := getTransactionView(dbTransaction.ID)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error(), err)
+			return
+		}
+		t2, err := getTransactionView(transferTransactionID)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error(), err)
+			return
+		}
+
+		respBody.Transactions = append(respBody.Transactions, t1)
+		respBody.Transactions = append(respBody.Transactions, t2)
+
+		respondWithJSON(w, http.StatusCreated, respBody)
 		return
 	}
 
-	respSplits := make(map[string]int)
-	{
-		data := []byte(viewTransaction.Splits)
-		source := (*json.RawMessage)(&data)
-		err := json.Unmarshal(*source, &respSplits)
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Failure decoding dbTransaction splits into map[string]int", err)
-			return
-		}
-	}
-
-	respBody := TransactionView{
-		ID:              viewTransaction.ID,
-		BudgetID:        viewTransaction.BudgetID,
-		LoggerID:        viewTransaction.LoggerID,
-		AccountID:       viewTransaction.AccountID,
-		TransactionDate: viewTransaction.TransactionDate,
-		Payee:           viewTransaction.Payee,
-		PayeeID:         viewTransaction.PayeeID,
-		TotalAmount:     viewTransaction.TotalAmount,
-		Notes:           viewTransaction.Notes,
-		Cleared:         viewTransaction.Cleared,
-		Splits:          respSplits,
+	respBody, err := getTransactionView(dbTransaction.ID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error(), err)
+		return
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
@@ -239,6 +347,7 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 				BudgetID:        transaction.BudgetID,
 				LoggerID:        transaction.LoggerID,
 				AccountID:       transaction.AccountID,
+				TransactionType: transaction.TransactionType,
 				TransactionDate: transaction.TransactionDate,
 				PayeeID:         transaction.PayeeID,
 				Notes:           transaction.Notes,
@@ -285,6 +394,7 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 				BudgetID:        viewTransaction.BudgetID,
 				LoggerID:        viewTransaction.LoggerID,
 				AccountID:       viewTransaction.AccountID,
+				TransactionType: viewTransaction.TransactionType,
 				TransactionDate: viewTransaction.TransactionDate,
 				Payee:           viewTransaction.Payee,
 				PayeeID:         viewTransaction.PayeeID,

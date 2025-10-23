@@ -117,6 +117,32 @@ func (cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (cfg *apiConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http.Request) {
+
+	idString := r.PathValue("account_id")
+	pathAccountID, err := uuid.Parse(idString)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		return
+	}
+
+	capitalAmount, err := cfg.db.GetBudgetAccountCapital(r.Context(), pathAccountID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
+		return
+	}
+
+	type response struct{
+		Capital	int64	`json:"capital"`
+	}
+
+	respBody := response{
+		Capital:	capitalAmount,
+	}
+
+	respondWithJSON(w, http.StatusOK, respBody)
+}
+
 func (cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {

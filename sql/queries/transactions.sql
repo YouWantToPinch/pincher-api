@@ -1,16 +1,54 @@
 -- name: LogTransaction :one
-INSERT INTO transactions (id, created_at, updated_at, budget_id, logger_id, account_id, transaction_date, payee_id, notes, cleared)
+WITH
+tr1 AS (
+    INSERT INTO transactions (
+        id, created_at, updated_at, budget_id, logger_id,
+        account_id, transaction_type, transaction_date,
+        payee_id, notes, cleared
+    )
+    VALUES (
+        gen_random_uuid(),
+        DEFAULT,
+        DEFAULT,
+        sqlc.arg('budget_id'),
+        sqlc.arg('logger_id'),
+        sqlc.arg('account_id'),
+        sqlc.arg('transaction_type'),
+        sqlc.arg('transaction_date'),
+        sqlc.arg('payee_id'),
+        sqlc.arg('notes'),
+        sqlc.arg('cleared')
+    )
+    RETURNING *
+),
+insert_splits AS (
+    INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
+    SELECT
+        gen_random_uuid(),
+        tr1.id,
+        CASE
+            WHEN tr1.transaction_type ILIKE '%TRANSFER%' THEN NULL
+            ELSE key::uuid
+        END,
+        value::integer
+    FROM tr1, json_each_text(sqlc.arg('amounts')::json)
+    RETURNING *
+)
+SELECT 
+    tr1.*,
+    (
+        SELECT json_agg(insert_splits.*)
+        FROM insert_splits
+        WHERE insert_splits.transaction_id = tr1.id
+    ) AS splits
+FROM tr1;
+
+-- name: LogAccountTransfer :one
+INSERT INTO account_transfers (id, from_transaction_id, to_transaction_id)
 VALUES (
     gen_random_uuid(),
-    DEFAULT,
-    DEFAULT,
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6,
-    $7
+    sqlc.arg('from_transaction_id'),
+    sqlc.arg('to_transaction_id')
 )
 RETURNING *;
 

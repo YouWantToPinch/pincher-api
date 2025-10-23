@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -58,7 +59,7 @@ func (q *Queries) GetSplitsByTransactionID(ctx context.Context, id uuid.UUID) ([
 }
 
 const getTransactionByID = `-- name: GetTransactionByID :one
-SELECT id, created_at, updated_at, budget_id, logger_id, account_id, transaction_date, payee_id, notes, cleared
+SELECT id, created_at, updated_at, budget_id, logger_id, account_id, transaction_type, transaction_date, payee_id, notes, cleared
 FROM transactions
 WHERE id = $1
 `
@@ -73,6 +74,7 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 		&i.BudgetID,
 		&i.LoggerID,
 		&i.AccountID,
+		&i.TransactionType,
 		&i.TransactionDate,
 		&i.PayeeID,
 		&i.Notes,
@@ -82,7 +84,7 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 }
 
 const getTransactionFromViewByID = `-- name: GetTransactionFromViewByID :one
-SELECT id, transaction_date, payee, payee_id, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
+SELECT id, transaction_type, transaction_date, payee, payee_id, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
 FROM transactions_view
 WHERE id = $1
 `
@@ -92,6 +94,7 @@ func (q *Queries) GetTransactionFromViewByID(ctx context.Context, id uuid.UUID) 
 	var i TransactionsView
 	err := row.Scan(
 		&i.ID,
+		&i.TransactionType,
 		&i.TransactionDate,
 		&i.Payee,
 		&i.PayeeID,
@@ -107,7 +110,7 @@ func (q *Queries) GetTransactionFromViewByID(ctx context.Context, id uuid.UUID) 
 }
 
 const getTransactions = `-- name: GetTransactions :many
-SELECT id, created_at, updated_at, budget_id, logger_id, account_id, transaction_date, payee_id, notes, cleared
+SELECT id, created_at, updated_at, budget_id, logger_id, account_id, transaction_type, transaction_date, payee_id, notes, cleared
 FROM transactions t
 WHERE
     t.budget_id = $1
@@ -161,6 +164,7 @@ func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams
 			&i.BudgetID,
 			&i.LoggerID,
 			&i.AccountID,
+			&i.TransactionType,
 			&i.TransactionDate,
 			&i.PayeeID,
 			&i.Notes,
@@ -180,7 +184,7 @@ func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams
 }
 
 const getTransactionsFromView = `-- name: GetTransactionsFromView :many
-SELECT id, transaction_date, payee, payee_id, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
+SELECT id, transaction_type, transaction_date, payee, payee_id, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
 FROM transactions_view t
 WHERE
     t.budget_id = $1
@@ -229,6 +233,7 @@ func (q *Queries) GetTransactionsFromView(ctx context.Context, arg GetTransactio
 		var i TransactionsView
 		if err := rows.Scan(
 			&i.ID,
+			&i.TransactionType,
 			&i.TransactionDate,
 			&i.Payee,
 			&i.PayeeID,
@@ -253,44 +258,114 @@ func (q *Queries) GetTransactionsFromView(ctx context.Context, arg GetTransactio
 	return items, nil
 }
 
-const logTransaction = `-- name: LogTransaction :one
-INSERT INTO transactions (id, created_at, updated_at, budget_id, logger_id, account_id, transaction_date, payee_id, notes, cleared)
+const logAccountTransfer = `-- name: LogAccountTransfer :one
+INSERT INTO account_transfers (id, from_transaction_id, to_transaction_id)
 VALUES (
     gen_random_uuid(),
-    DEFAULT,
-    DEFAULT,
     $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6,
-    $7
+    $2
 )
-RETURNING id, created_at, updated_at, budget_id, logger_id, account_id, transaction_date, payee_id, notes, cleared
+RETURNING id, from_transaction_id, to_transaction_id
+`
+
+type LogAccountTransferParams struct {
+	FromTransactionID uuid.UUID
+	ToTransactionID   uuid.UUID
+}
+
+func (q *Queries) LogAccountTransfer(ctx context.Context, arg LogAccountTransferParams) (AccountTransfer, error) {
+	row := q.db.QueryRowContext(ctx, logAccountTransfer, arg.FromTransactionID, arg.ToTransactionID)
+	var i AccountTransfer
+	err := row.Scan(&i.ID, &i.FromTransactionID, &i.ToTransactionID)
+	return i, err
+}
+
+const logTransaction = `-- name: LogTransaction :one
+WITH
+tr1 AS (
+    INSERT INTO transactions (
+        id, created_at, updated_at, budget_id, logger_id,
+        account_id, transaction_type, transaction_date,
+        payee_id, notes, cleared
+    )
+    VALUES (
+        gen_random_uuid(),
+        DEFAULT,
+        DEFAULT,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8
+    )
+    RETURNING id, created_at, updated_at, budget_id, logger_id, account_id, transaction_type, transaction_date, payee_id, notes, cleared
+),
+insert_splits AS (
+    INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
+    SELECT
+        gen_random_uuid(),
+        tr1.id,
+        CASE
+            WHEN tr1.transaction_type ILIKE '%TRANSFER%' THEN NULL
+            ELSE key::uuid
+        END,
+        value::integer
+    FROM tr1, json_each_text($9::json)
+    RETURNING id, transaction_id, category_id, amount
+)
+SELECT 
+    tr1.id, tr1.created_at, tr1.updated_at, tr1.budget_id, tr1.logger_id, tr1.account_id, tr1.transaction_type, tr1.transaction_date, tr1.payee_id, tr1.notes, tr1.cleared,
+    (
+        SELECT json_agg(insert_splits.*)
+        FROM insert_splits
+        WHERE insert_splits.transaction_id = tr1.id
+    ) AS splits
+FROM tr1
 `
 
 type LogTransactionParams struct {
 	BudgetID        uuid.UUID
 	LoggerID        uuid.UUID
 	AccountID       uuid.UUID
+	TransactionType string
 	TransactionDate time.Time
 	PayeeID         uuid.UUID
 	Notes           string
 	Cleared         bool
+	Amounts         json.RawMessage
 }
 
-func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) (Transaction, error) {
+type LogTransactionRow struct {
+	ID              uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	BudgetID        uuid.UUID
+	LoggerID        uuid.UUID
+	AccountID       uuid.UUID
+	TransactionType string
+	TransactionDate time.Time
+	PayeeID         uuid.UUID
+	Notes           string
+	Cleared         bool
+	Splits          json.RawMessage
+}
+
+func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) (LogTransactionRow, error) {
 	row := q.db.QueryRowContext(ctx, logTransaction,
 		arg.BudgetID,
 		arg.LoggerID,
 		arg.AccountID,
+		arg.TransactionType,
 		arg.TransactionDate,
 		arg.PayeeID,
 		arg.Notes,
 		arg.Cleared,
+		arg.Amounts,
 	)
-	var i Transaction
+	var i LogTransactionRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -298,10 +373,12 @@ func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) 
 		&i.BudgetID,
 		&i.LoggerID,
 		&i.AccountID,
+		&i.TransactionType,
 		&i.TransactionDate,
 		&i.PayeeID,
 		&i.Notes,
 		&i.Cleared,
+		&i.Splits,
 	)
 	return i, err
 }

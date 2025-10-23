@@ -239,6 +239,19 @@ func (q *Queries) GetBudgetByID(ctx context.Context, id uuid.UUID) (Budget, erro
 	return i, err
 }
 
+const getBudgetCapital = `-- name: GetBudgetCapital :one
+SELECT CAST(COALESCE(SUM(transactions_view.total_amount), 0) AS BIGINT) AS total
+FROM transactions_view
+WHERE transactions_view.budget_id = $1
+`
+
+func (q *Queries) GetBudgetCapital(ctx context.Context, budgetID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getBudgetCapital, budgetID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const getBudgetMemberRole = `-- name: GetBudgetMemberRole :one
 SELECT member_role
 FROM budgets_users

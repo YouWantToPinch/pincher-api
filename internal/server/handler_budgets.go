@@ -145,6 +145,25 @@ func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 	return
 }
 
+func (cfg *apiConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Request) {
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	capitalAmount, err := cfg.db.GetBudgetCapital(r.Context(), pathBudgetID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
+		return
+	}
+
+	type response struct{
+		Capital	int64	`json:"capital"`
+	}
+
+	respBody := response{
+		Capital:	capitalAmount,
+	}
+
+	respondWithJSON(w, http.StatusOK, respBody)
+}
+
 func (cfg *apiConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http.Request) {
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")

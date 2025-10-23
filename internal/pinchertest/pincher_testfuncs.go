@@ -91,6 +91,19 @@ func GetBudgetAccounts(token, budgetID string) *http.Request {
 	return req
 }
 
+func GetBudgetCapital(token, budgetID, accountID string) *http.Request {
+	var path string
+	if accountID != "" {
+		path = fmt.Sprintf("/api/budgets/%v/accounts/%v/capital", budgetID, accountID)
+	} else {
+		path = fmt.Sprintf("/api/budgets/%v/capital", budgetID)
+	}
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
 func AssignMemberToBudget(token, budgetID, userID, memberRole string) *http.Request {
 	payload := strings.NewReader(fmt.Sprintf(`{"user_id":"%v","member_role":"%v"}`, userID, memberRole))
 	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/members", budgetID), payload)
@@ -189,8 +202,8 @@ func DeleteBudgetGroup(token, budgetID, groupID string) *http.Request {
 
 // BUDGET -> TRANSACTION CRUD
 
-func LogTransaction(token, budgetID, accountID, transactionDate, payeeID, notes, amounts, isCleared string) *http.Request {
-	payloadString := fmt.Sprintf(`{"account_id":"%v","transaction_date":"%v","payee_id":"%v","notes":"%v","amounts":%v,"is_cleared":"%v"}`, accountID, transactionDate, payeeID, notes, amounts, isCleared)
+func LogTransaction(token, budgetID, accountID, transferAccountID, transactionType, transactionDate, payeeID, notes, amounts, isCleared string) *http.Request {
+	payloadString := fmt.Sprintf(`{"account_id":"%v","transfer_account_id":"%v","transaction_type":"%v","transaction_date":"%v","payee_id":"%v","notes":"%v","amounts":%v,"is_cleared":"%v"}`, accountID, transferAccountID, transactionType, transactionDate, payeeID, notes, amounts, isCleared)
 	//slog.Info(fmt.Sprintf("Payload string for new log transaction: %v", payloadString))
 	payload := strings.NewReader(payloadString)
 	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/transactions", budgetID), payload)
