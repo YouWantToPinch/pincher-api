@@ -64,8 +64,8 @@ type User struct {
 }
 
 type BudgetMembership struct {
-	BudgetID   uuid.UUID        `json:"budget_id`
-	UserID     uuid.UUID        `json:"user_id`
+	BudgetID   uuid.UUID        `json:"budget_id"`
+	UserID     uuid.UUID        `json:"user_id"`
 	MemberRole BudgetMemberRole `json:"member_role"`
 }
 
@@ -74,8 +74,8 @@ type Budget struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	AdminID   uuid.UUID `json:"admin_id"`
-	Name      string    `json:"name`
-	Notes     string    `json:"notes`
+	Name      string    `json:"name"`
+	Notes     string    `json:"notes"`
 }
 
 type Group struct {

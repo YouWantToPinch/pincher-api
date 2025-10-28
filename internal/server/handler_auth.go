@@ -12,7 +12,7 @@ import (
 func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Password string `json:"password"`
-		Username string `json:"username`
+		Username string `json:"username"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
