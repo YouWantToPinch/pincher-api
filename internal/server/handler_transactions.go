@@ -35,13 +35,13 @@ func signByType(transactionType string, i int64) (int64, error) {
 func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
-		AccountID       string    `json:"account_id"`
-		TransferAccountID       string    `json:"transfer_account_id"`
-		TransactionType string	  `json:"transaction_type"`
-		TransactionDate time.Time `json:"transaction_date"`
-		PayeeID         string    `json:"payee_id"`
-		Notes           string    `json:"notes"`
-		Cleared         string    `json:"is_cleared"`
+		AccountID         string    `json:"account_id"`
+		TransferAccountID string    `json:"transfer_account_id"`
+		TransactionType   string    `json:"transaction_type"`
+		TransactionDate   time.Time `json:"transaction_date"`
+		PayeeID           string    `json:"payee_id"`
+		Notes             string    `json:"notes"`
+		Cleared           string    `json:"is_cleared"`
 		/* Map of category UUID strings to integers.
 		   If there is > 1 entry in Amounts, the transaction is not truly split.
 		   Nonetheless, all transactions record at least one corresponding split.
@@ -107,7 +107,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		PayeeID:         parsedPayeeID,
 		Notes:           params.Notes,
 		Cleared:         parsedCleared,
-		Amounts:		 json.RawMessage(amountsJsonBytes),
+		Amounts:         json.RawMessage(amountsJsonBytes),
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't log transaction", err)
@@ -134,21 +134,23 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		getOppositeType := func(s string) string {
-			if s == "TRANSFER_TO" {return "TRANSFER_FROM"}
+			if s == "TRANSFER_TO" {
+				return "TRANSFER_FROM"
+			}
 			return "TRANSFER_TO"
 		}
 		// log the corresponding transaction
 		transferTransaction, err := cfg.db.LogTransaction(r.Context(), database.LogTransactionParams{
-		BudgetID:        pathBudgetID,
-		LoggerID:        validatedUserID,
-		AccountID:       parsedTransferAccountID,
-		TransactionType: getOppositeType(params.TransactionType),
-		TransactionDate: params.TransactionDate,
-		PayeeID:         parsedPayeeID,
-		Notes:           params.Notes,
-		Cleared:         parsedCleared,
-		Amounts:		 json.RawMessage(invertedAmountsJsonBytes),
-	})
+			BudgetID:        pathBudgetID,
+			LoggerID:        validatedUserID,
+			AccountID:       parsedTransferAccountID,
+			TransactionType: getOppositeType(params.TransactionType),
+			TransactionDate: params.TransactionDate,
+			PayeeID:         parsedPayeeID,
+			Notes:           params.Notes,
+			Cleared:         parsedCleared,
+			Amounts:         json.RawMessage(invertedAmountsJsonBytes),
+		})
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "Couldn't log corresponding transfer transaction", err)
 			return
@@ -165,7 +167,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		toPtr, fromPtr := getTransferIDs(&dbTransaction, &transferTransaction)
 		_, err = cfg.db.LogAccountTransfer(r.Context(), database.LogAccountTransferParams{
 			FromTransactionID: (*fromPtr).ID,
-			ToTransactionID: (*toPtr).ID,
+			ToTransactionID:   (*toPtr).ID,
 		})
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "Couldn't link transfer transactions", err)
@@ -236,7 +238,6 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 // Try to parse input path parameter; store uuid.Nil into 'parse' on failure
@@ -435,7 +436,6 @@ func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request) {
@@ -532,5 +532,4 @@ func (cfg *apiConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	respondWithText(w, http.StatusNoContent, "The transaction was deleted")
-	return
 }

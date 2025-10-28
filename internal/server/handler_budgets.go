@@ -75,7 +75,6 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +97,6 @@ func (cfg *apiConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +140,6 @@ func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Request) {
@@ -153,12 +150,12 @@ func (cfg *apiConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	type response struct{
-		Capital	int64	`json:"capital"`
+	type response struct {
+		Capital int64 `json:"capital"`
 	}
 
 	respBody := response{
-		Capital:	capitalAmount,
+		Capital: capitalAmount,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
@@ -216,7 +213,6 @@ func (cfg *apiConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 
 }
 
@@ -241,7 +237,6 @@ func (cfg *apiConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 	}
 
 	respondWithText(w, http.StatusNoContent, "Revoked membership successfully")
-	return
 }
 
 func (cfg *apiConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
@@ -255,5 +250,4 @@ func (cfg *apiConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithText(w, http.StatusNoContent, "Deleted budget")
-	return
 }

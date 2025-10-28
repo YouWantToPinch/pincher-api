@@ -54,7 +54,6 @@ func (cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +80,6 @@ func (cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
@@ -113,5 +111,4 @@ func (cfg *apiConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondWithText(w, http.StatusNoContent, "The group was deleted")
-	return
 }

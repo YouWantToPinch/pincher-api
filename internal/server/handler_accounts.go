@@ -53,7 +53,6 @@ func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +84,6 @@ func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +112,6 @@ func (cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http.Request) {
@@ -132,12 +129,12 @@ func (cfg *apiConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http
 		return
 	}
 
-	type response struct{
-		Capital	int64	`json:"capital"`
+	type response struct {
+		Capital int64 `json:"capital"`
 	}
 
 	respBody := response{
-		Capital:	capitalAmount,
+		Capital: capitalAmount,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)

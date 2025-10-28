@@ -70,7 +70,6 @@ func (cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +114,6 @@ func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +177,6 @@ func (cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.R
 	})
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) {
@@ -207,5 +204,4 @@ func (cfg *apiConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	respondWithText(w, http.StatusNoContent, "The category was deleted")
-	return
 }

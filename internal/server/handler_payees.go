@@ -43,7 +43,6 @@ func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +67,6 @@ func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +93,6 @@ func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
@@ -126,5 +123,4 @@ func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithText(w, http.StatusNoContent, "The payee was deleted.")
-	return
 }

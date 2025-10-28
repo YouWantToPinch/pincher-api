@@ -19,7 +19,6 @@ func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 	respondWithJSON(w, code, errorResponse{
 		Error: msg,
 	})
-	return
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
@@ -32,7 +31,6 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(dat)
-	return
 }
 
 func respondWithHTML(w http.ResponseWriter, code int, msg string) {
@@ -41,7 +39,6 @@ func respondWithHTML(w http.ResponseWriter, code int, msg string) {
 	if _, err := w.Write([]byte(msg)); err != nil {
 		slog.Error(err.Error())
 	}
-	return
 }
 
 func respondWithText(w http.ResponseWriter, code int, msg string) {
@@ -50,5 +47,4 @@ func respondWithText(w http.ResponseWriter, code int, msg string) {
 	if _, err := w.Write([]byte(msg)); err != nil {
 		slog.Error(err.Error())
 	}
-	return
 }

@@ -43,7 +43,6 @@ func (cfg *apiConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
@@ -59,5 +58,4 @@ func (cfg *apiConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Reque
 	}
 
 	respondWithJSON(w, http.StatusOK, count)
-	return
 }

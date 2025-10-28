@@ -65,7 +65,6 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +104,6 @@ func (cfg *apiConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Reque
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
@@ -126,5 +124,4 @@ func (cfg *apiConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Requ
 
 	respMsg := "Revoked refresh token for user: " + dbUser.Username
 	respondWithText(w, http.StatusNoContent, respMsg)
-	return
 }

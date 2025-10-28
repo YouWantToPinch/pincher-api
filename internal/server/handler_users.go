@@ -49,7 +49,6 @@ func (cfg *apiConfig) endpCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +92,6 @@ func (cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
-	return
 }
 
 func (cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -135,5 +133,4 @@ func (cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	cfg.db.DeleteUserByID(r.Context(), validatedUserID)
 	respondWithText(w, http.StatusOK, "The user was deleted.")
-	return
 }
