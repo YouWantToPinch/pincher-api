@@ -28,7 +28,7 @@ func signByType(transactionType string, i int64) (int64, error) {
 	case "TRANSFER_FROM", "WITHDRAWAL":
 		return -1 * (abs(i)), nil
 	default:
-		return i, errors.New(fmt.Sprintf("transaction type \"%s\" not supported", transactionType))
+		return i, (fmt.Errorf("transaction type \"%s\" not supported", transactionType))
 	}
 }
 
@@ -179,7 +179,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 
 		viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), transactionToViewID)
 		if err != nil {
-			return TransactionView{}, errors.New(fmt.Sprintf("Couldn't get transaction from view using id %v; %v", transactionToViewID.String(), err.Error()))
+			return TransactionView{}, fmt.Errorf("Couldn't get transaction from view using id %v; %v", transactionToViewID.String(), err.Error())
 		}
 
 		respSplits := make(map[string]int)
@@ -246,7 +246,7 @@ func parseUUIDFromPath(pathParam string, r *http.Request, parse *uuid.UUID) erro
 	if idString != "" {
 		parsedID, err := uuid.Parse(idString)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", idString, pathParam))
+			return fmt.Errorf("Parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", idString, pathParam)
 		}
 		*parse = parsedID
 	} else {
@@ -262,7 +262,7 @@ func parseDateFromQuery(queryParam string, r *http.Request, parse *time.Time) er
 	if dateString != "" {
 		parsedDate, err := time.Parse(timeLayout, dateString)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Query value '%s' for provided parameter '%s' could not be parsed as UUID", dateString, queryParam))
+			return fmt.Errorf("Query value '%s' for provided parameter '%s' could not be parsed as UUID", dateString, queryParam)
 		}
 		*parse = parsedDate
 	} else {

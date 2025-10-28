@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -51,7 +50,7 @@ func BMRFromString(s string) (BudgetMemberRole, error) {
 	if val, ok := bmrFromString[s]; ok {
 		return val, nil
 	}
-	return -1, errors.New(fmt.Sprintf("Invalid role: %s", s))
+	return -1, fmt.Errorf("Invalid role: %s", s)
 }
 
 type User struct {
@@ -116,7 +115,7 @@ type Transaction struct {
 	BudgetID        uuid.UUID `json:"budget_id"`
 	LoggerID        uuid.UUID `json:"logger_id"`
 	AccountID       uuid.UUID `json:"account_id"`
-	TransactionType	string 	  `json:"transaction_type"`
+	TransactionType string    `json:"transaction_type"`
 	TransactionDate time.Time `json:"transaction_date"`
 	PayeeID         uuid.UUID `json:"payee_id"`
 	Notes           string    `json:"notes"`
@@ -137,7 +136,7 @@ type TransactionView struct {
 	BudgetID        uuid.UUID      `json:"budget_id"`
 	LoggerID        uuid.UUID      `json:"logger_id"`
 	AccountID       uuid.UUID      `json:"account_id"`
-	TransactionType	string 	  `json:"transaction_type"`
+	TransactionType string         `json:"transaction_type"`
 	TransactionDate time.Time      `json:"transaction_date"`
 	Payee           string         `json:"payee"`
 	PayeeID         uuid.UUID      `json:"payee_id"`
