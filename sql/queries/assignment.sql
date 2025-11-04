@@ -2,22 +2,27 @@
 -- name: AssignAmountToCategory :one
 INSERT INTO assignments (month, category_id, assigned)
 VALUES (
-  sqlc.arg('month_id'),
+  DATE_TRUNC('month', sqlc.arg('month_id')::timestamp),
   sqlc.arg('category_id'),
-  sqlc.arg('assigned')
+  sqlc.arg('amount')
 )
 ON CONFLICT (month, category_id)
 DO UPDATE
 SET assigned = assignments.assigned + EXCLUDED.assigned
 RETURNING *;
 
--- name: GetMonthReport :many
-SELECT * FROM month_report ar
-WHERE ar.month = $1;
+-- name: GetMonthReport :one
+SELECT SUM(assigned) AS assinged, SUM(activity) AS activity, SUM(balance) AS balance
+FROM month_report mr
+WHERE mr.month = $1;
 
--- name: GetMonthCategory :one
-SELECT * FROM month_report ar
-WHERE ar.month = $1 AND ar.category_id = $2;
+-- name: GetMonthCategoryReports :many
+SELECT * FROM month_report mr
+WHERE mr.month = $1;
+
+-- name: GetMonthCategoryReport :one
+SELECT * FROM month_report mr
+WHERE mr.month = $1 AND mr.category_id = $2;
 
 -- name: DeleteMonthAssignmentForCat :exec
 DELETE FROM assignments

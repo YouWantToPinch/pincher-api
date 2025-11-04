@@ -15,7 +15,7 @@ import (
 const assignAmountToCategory = `-- name: AssignAmountToCategory :one
 INSERT INTO assignments (month, category_id, assigned)
 VALUES (
-  $1,
+  DATE_TRUNC('month', $1::timestamp),
   $2,
   $3
 )
@@ -28,11 +28,11 @@ RETURNING month, category_id, assigned
 type AssignAmountToCategoryParams struct {
 	MonthID    time.Time
 	CategoryID uuid.UUID
-	Assigned   int64
+	Amount     int64
 }
 
 func (q *Queries) AssignAmountToCategory(ctx context.Context, arg AssignAmountToCategoryParams) (Assignment, error) {
-	row := q.db.QueryRowContext(ctx, assignAmountToCategory, arg.MonthID, arg.CategoryID, arg.Assigned)
+	row := q.db.QueryRowContext(ctx, assignAmountToCategory, arg.MonthID, arg.CategoryID, arg.Amount)
 	var i Assignment
 	err := row.Scan(&i.Month, &i.CategoryID, &i.Assigned)
 	return i, err
@@ -53,37 +53,37 @@ func (q *Queries) DeleteMonthAssignmentForCat(ctx context.Context, arg DeleteMon
 	return err
 }
 
-const getMonthCategory = `-- name: GetMonthCategory :one
-SELECT month, name, assigned, category_id, activity, balance FROM month_report ar
-WHERE ar.month = $1 AND ar.category_id = $2
+const getMonthCategoryReport = `-- name: GetMonthCategoryReport :one
+SELECT month, category_name, category_id, assigned, activity, balance FROM month_report mr
+WHERE mr.month = $1 AND mr.category_id = $2
 `
 
-type GetMonthCategoryParams struct {
+type GetMonthCategoryReportParams struct {
 	Month      time.Time
 	CategoryID uuid.UUID
 }
 
-func (q *Queries) GetMonthCategory(ctx context.Context, arg GetMonthCategoryParams) (MonthReport, error) {
-	row := q.db.QueryRowContext(ctx, getMonthCategory, arg.Month, arg.CategoryID)
+func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCategoryReportParams) (MonthReport, error) {
+	row := q.db.QueryRowContext(ctx, getMonthCategoryReport, arg.Month, arg.CategoryID)
 	var i MonthReport
 	err := row.Scan(
 		&i.Month,
-		&i.Name,
-		&i.Assigned,
+		&i.CategoryName,
 		&i.CategoryID,
+		&i.Assigned,
 		&i.Activity,
 		&i.Balance,
 	)
 	return i, err
 }
 
-const getMonthReport = `-- name: GetMonthReport :many
-SELECT month, name, assigned, category_id, activity, balance FROM month_report ar
-WHERE ar.month = $1
+const getMonthCategoryReports = `-- name: GetMonthCategoryReports :many
+SELECT month, category_name, category_id, assigned, activity, balance FROM month_report mr
+WHERE mr.month = $1
 `
 
-func (q *Queries) GetMonthReport(ctx context.Context, month time.Time) ([]MonthReport, error) {
-	rows, err := q.db.QueryContext(ctx, getMonthReport, month)
+func (q *Queries) GetMonthCategoryReports(ctx context.Context, month time.Time) ([]MonthReport, error) {
+	rows, err := q.db.QueryContext(ctx, getMonthCategoryReports, month)
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +93,9 @@ func (q *Queries) GetMonthReport(ctx context.Context, month time.Time) ([]MonthR
 		var i MonthReport
 		if err := rows.Scan(
 			&i.Month,
-			&i.Name,
-			&i.Assigned,
+			&i.CategoryName,
 			&i.CategoryID,
+			&i.Assigned,
 			&i.Activity,
 			&i.Balance,
 		); err != nil {
@@ -110,4 +110,23 @@ func (q *Queries) GetMonthReport(ctx context.Context, month time.Time) ([]MonthR
 		return nil, err
 	}
 	return items, nil
+}
+
+const getMonthReport = `-- name: GetMonthReport :one
+SELECT SUM(assigned) AS assinged, SUM(activity) AS activity, SUM(balance) AS balance
+FROM month_report mr
+WHERE mr.month = $1
+`
+
+type GetMonthReportRow struct {
+	Assinged int64
+	Activity int64
+	Balance  int64
+}
+
+func (q *Queries) GetMonthReport(ctx context.Context, month time.Time) (GetMonthReportRow, error) {
+	row := q.db.QueryRowContext(ctx, getMonthReport, month)
+	var i GetMonthReportRow
+	err := row.Scan(&i.Assinged, &i.Activity, &i.Balance)
+	return i, err
 }

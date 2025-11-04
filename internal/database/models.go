@@ -72,12 +72,12 @@ type Group struct {
 }
 
 type MonthReport struct {
-	Month      time.Time
-	Name       string
-	Assigned   int64
-	CategoryID uuid.UUID
-	Activity   int64
-	Balance    int64
+	Month        time.Time
+	CategoryName string
+	CategoryID   uuid.UUID
+	Assigned     int64
+	Activity     int64
+	Balance      int64
 }
 
 type Payee struct {

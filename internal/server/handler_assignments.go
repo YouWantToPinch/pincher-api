@@ -36,17 +36,17 @@ func (cfg *apiConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 		return
 	}
 
-	pathCategoryString := r.PathValue("category_id")
-	pathCategoryID, err := uuid.Parse(pathCategoryString)
+	var parsedCategoryID uuid.UUID
+	err = parseUUIDFromPath("category_id", r, &parsedCategoryID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
 		return
 	}
 
 	dbAssignment, err := cfg.db.AssignAmountToCategory(r.Context(), database.AssignAmountToCategoryParams{
 		MonthID:    parsedMonth,
-		CategoryID: pathCategoryID,
-		Assigned:   params.Amount,
+		CategoryID: parsedCategoryID,
+		Amount:     params.Amount,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't assign amount to category for month specified", err)
@@ -57,12 +57,74 @@ func (cfg *apiConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 }
 
 func (cfg *apiConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request) {
+	var parsedMonth time.Time
+	err := parseDateFromPath("month_id", r, &parsedMonth)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value input for month", err)
+		return
+	}
 
-	// Should respond with the equivalent of 'GetMonthCategory,' but for ALL categories that EXIST.
-	// respondWithJSON(w, http.StatusOK, respBody)
+	monthReport, err := cfg.db.GetMonthReport(r.Context(), parsedMonth)
+
+	respondWithJSON(w, http.StatusOK, monthReport)
+}
+
+func (cfg *apiConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Request) {
+
+	var parsedMonth time.Time
+	err := parseDateFromPath("month_id", r, &parsedMonth)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value input for month", err)
+		return
+	}
+
+	dbCategoryReports, err := cfg.db.GetMonthCategoryReports(r.Context(), parsedMonth)
+
+	var respBody []CategoryReport
+	for _, report := range dbCategoryReports {
+
+		newReport := CategoryReport{
+			MonthID:    report.Month,
+			CategoryID: report.CategoryID,
+			Name:       report.CategoryName,
+			Assigned:   report.Assigned,
+			Activity:   report.Activity,
+			Balance:    report.Balance,
+		}
+
+		respBody = append(respBody, newReport)
+	}
+
+	respondWithJSON(w, http.StatusOK, respBody)
 }
 
 func (cfg *apiConfig) endpGetMonthCategory(w http.ResponseWriter, r *http.Request) {
-	// Should respond with the month_report row for a given cateogory within a given month
-	// respondWithJSON(w, http.StatusOK, respBody)
+
+	var parsedMonth time.Time
+	err := parseDateFromPath("month_id", r, &parsedMonth)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value input for month", err)
+		return
+	}
+
+	pathCategoryString := r.PathValue("category_id")
+	pathCategoryID, err := uuid.Parse(pathCategoryString)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		return
+	}
+	dbCategoryReport, err := cfg.db.GetMonthCategoryReport(r.Context(), database.GetMonthCategoryReportParams{
+		Month:      parsedMonth,
+		CategoryID: pathCategoryID,
+	})
+
+	respBody := CategoryReport{
+		MonthID:    dbCategoryReport.Month,
+		CategoryID: dbCategoryReport.CategoryID,
+		Name:       dbCategoryReport.CategoryName,
+		Assigned:   dbCategoryReport.Assigned,
+		Activity:   dbCategoryReport.Activity,
+		Balance:    dbCategoryReport.Balance,
+	}
+	respondWithJSON(w, http.StatusOK, respBody)
 }
