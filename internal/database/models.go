@@ -29,6 +29,12 @@ type AccountTransfer struct {
 	ToTransactionID   uuid.UUID
 }
 
+type Assignment struct {
+	Month      time.Time
+	CategoryID uuid.UUID
+	Assigned   int64
+}
+
 type Budget struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
@@ -63,6 +69,15 @@ type Group struct {
 	BudgetID  uuid.UUID
 	Name      string
 	Notes     string
+}
+
+type MonthReport struct {
+	Month      time.Time
+	Name       string
+	Assigned   int64
+	CategoryID uuid.UUID
+	Activity   int64
+	Balance    int64
 }
 
 type Payee struct {

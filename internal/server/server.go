@@ -77,7 +77,10 @@ func SetupMux(cfg *apiConfig) *http.ServeMux {
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(VIEWER, cfg.endpGetTransaction)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}/splits", mdAuth(mdClear(VIEWER, cfg.endpGetTransactionSplits)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.endpDeleteTransaction)))
-
+	// Months & Dollar Assignment
+	mux.HandleFunc("POST /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.endpAssignAmountToCategory)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.endpGetMonthCategory)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}", mdAuth(mdClear(MANAGER, cfg.endpGetMonthReport)))
 	return mux
 }
 
