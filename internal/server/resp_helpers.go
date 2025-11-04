@@ -2,8 +2,11 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
@@ -47,4 +50,50 @@ func respondWithText(w http.ResponseWriter, code int, msg string) {
 	if _, err := w.Write([]byte(msg)); err != nil {
 		slog.Error(err.Error())
 	}
+}
+
+// Try to parse input path parameter; store uuid.Nil into 'parse' on failure
+func parseUUIDFromPath(pathParam string, r *http.Request, parse *uuid.UUID) error {
+	idString := r.PathValue(pathParam)
+	if idString != "" {
+		parsedID, err := uuid.Parse(idString)
+		if err != nil {
+			return fmt.Errorf("Parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", idString, pathParam)
+		}
+		*parse = parsedID
+	} else {
+		*parse = uuid.Nil
+	}
+	return nil
+}
+
+// Try to parse input query parameter; store time.Time{} into 'parse' on failure
+func parseDateFromQuery(queryParam string, r *http.Request, parse *time.Time) error {
+	const timeLayout = time.RFC3339
+	dateString := r.URL.Query().Get(queryParam)
+	if dateString != "" {
+		parsedDate, err := time.Parse(timeLayout, dateString)
+		if err != nil {
+			return fmt.Errorf("Query value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, queryParam)
+		}
+		*parse = parsedDate
+	} else {
+		*parse = time.Time{}
+	}
+	return nil
+}
+
+func parseDateFromPath(pathParam string, r *http.Request, parse *time.Time) error {
+	const timeLayout = time.RFC3339
+	dateString := r.PathValue(pathParam)
+	if dateString != "" {
+		parsedDate, err := time.Parse(timeLayout, dateString)
+		if err != nil {
+			return fmt.Errorf("Path value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, pathParam)
+		}
+		*parse = parsedDate
+	} else {
+		*parse = time.Time{}
+	}
+	return nil
 }

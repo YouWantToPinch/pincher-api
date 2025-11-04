@@ -240,37 +240,6 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	respondWithJSON(w, http.StatusCreated, respBody)
 }
 
-// Try to parse input path parameter; store uuid.Nil into 'parse' on failure
-func parseUUIDFromPath(pathParam string, r *http.Request, parse *uuid.UUID) error {
-	idString := r.PathValue(pathParam)
-	if idString != "" {
-		parsedID, err := uuid.Parse(idString)
-		if err != nil {
-			return fmt.Errorf("Parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", idString, pathParam)
-		}
-		*parse = parsedID
-	} else {
-		*parse = uuid.Nil
-	}
-	return nil
-}
-
-// Try to parse input query parameter; store time.Time{} into 'parse' on failure
-func parseDateFromQuery(queryParam string, r *http.Request, parse *time.Time) error {
-	const timeLayout = time.RFC3339
-	dateString := r.URL.Query().Get(queryParam)
-	if dateString != "" {
-		parsedDate, err := time.Parse(timeLayout, dateString)
-		if err != nil {
-			return fmt.Errorf("Query value '%s' for provided parameter '%s' could not be parsed as UUID", dateString, queryParam)
-		}
-		*parse = parsedDate
-	} else {
-		*parse = time.Time{}
-	}
-	return nil
-}
-
 func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
 	var err error
 
