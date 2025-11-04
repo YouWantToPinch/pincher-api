@@ -2,11 +2,11 @@ package server
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
+	"github.com/google/uuid"
+	"log/slog"
 	"net/http"
 	"strings"
-
-	"github.com/google/uuid"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
@@ -75,8 +75,8 @@ func (cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
 
 	queryGroupID := r.URL.Query().Get("group_id")
-	log.Printf("queryGroupID is: %s", queryGroupID)
-	log.Printf("URL: %s", r.URL.String())
+	slog.Info(fmt.Sprintf("queryGroupID is: %s", queryGroupID))
+	slog.Info(fmt.Sprintf("URL: %s", r.URL.String()))
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
@@ -96,7 +96,7 @@ func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 				}
 				got := strings.ToLower(strings.TrimSpace(category.GroupID.UUID.String()))
 				if got != want {
-					log.Printf("got (%s) != want (%s)", got, want)
+					slog.Info(fmt.Sprintf("got (%s) != want (%s)", got, want))
 					continue
 				}
 			}
