@@ -98,7 +98,7 @@ func (cfg *apiConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 	respondWithJSON(w, http.StatusOK, respBody)
 }
 
-func (cfg *apiConfig) endpGetMonthCategory(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.Request) {
 
 	var parsedMonth time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonth)
