@@ -69,31 +69,55 @@ func parseUUIDFromPath(pathParam string, r *http.Request, parse *uuid.UUID) erro
 
 // Try to parse input query parameter; store time.Time{} into 'parse' on failure
 func parseDateFromQuery(queryParam string, r *http.Request, parse *time.Time) error {
-	const timeLayout = time.RFC3339
 	dateString := r.URL.Query().Get(queryParam)
-	if dateString != "" {
-		parsedDate, err := time.Parse(timeLayout, dateString)
-		if err != nil {
-			return fmt.Errorf("Query value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, queryParam)
-		}
-		*parse = parsedDate
-	} else {
+
+	if dateString == "" {
 		*parse = time.Time{}
+		return nil
 	}
-	return nil
+
+	var parsedDate time.Time
+	var err error
+
+	timeLayouts := []string{
+		time.RFC3339,
+		"2006-01-02",
+	}
+
+	for _, layout := range timeLayouts {
+		parsedDate, err = time.Parse(layout, dateString)
+		if err == nil {
+			*parse = parsedDate
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Query value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, queryParam)
 }
 
+// Try to parse input path parameter; store time.Time{} into 'parse' on failure
 func parseDateFromPath(pathParam string, r *http.Request, parse *time.Time) error {
-	const timeLayout = time.RFC3339
 	dateString := r.PathValue(pathParam)
-	if dateString != "" {
-		parsedDate, err := time.Parse(timeLayout, dateString)
-		if err != nil {
-			return fmt.Errorf("Path value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, pathParam)
-		}
-		*parse = parsedDate
-	} else {
+	if dateString == "" {
 		*parse = time.Time{}
+		return nil
 	}
-	return nil
+
+	var parsedDate time.Time
+	var err error
+
+	timeLayouts := []string{
+		time.RFC3339,
+		"2006-01-02",
+	}
+
+	for _, layout := range timeLayouts {
+		parsedDate, err = time.Parse(layout, dateString)
+		if err == nil {
+			*parse = parsedDate
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Path value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, pathParam)
 }
