@@ -330,8 +330,8 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 }
 
-// Build a budgets and give it a predictable amount of money to operate with between 1-2 accounts.
-// Log all various transaction types, and check that the endpoint for getting budget capital responds with the right amount(s).
+// Build a budget and give it a predictable amount of money to operate with between 1-2 accounts.
+// Log transactions of each type, and check that the endpoint for getting budget capital responds with the right amount(s).
 func Test_TransactionTypesAndCapital(t *testing.T) {
 	// TEST SETUP
 	var w *httptest.ResponseRecorder
@@ -358,12 +358,12 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	jwt1, _ := pt.GetJSONField(w, "token")
 
 	// user2 ADMIN: Creating personal budget, making accounts and deposit transactions.
-	w = pt.Call(mux, pt.CreateBudget(jwt1.(string), "Personal Budget", "For personal accounting (user2)."))
+	w = pt.Call(mux, pt.CreateBudget(jwt1.(string), "Personal Budget", "For personal accounting (user1)."))
 	budget1, _ := pt.GetJSONField(w, "id")
 
 	w = pt.Call(mux, pt.CreateBudgetAccount(jwt1.(string), budget1.(string), "checking", "Checking (Big Banking Inc)", "Reflects my checking account opened via Big Banking, Inc."))
 	account1, _ := pt.GetJSONField(w, "id")
-	w = pt.Call(mux, pt.CreateBudgetAccount(jwt1.(string), budget1.(string), "credit", "Credit (Big Banking Inc)", "Reflects my checking account opened via Big Banking, Inc."))
+	w = pt.Call(mux, pt.CreateBudgetAccount(jwt1.(string), budget1.(string), "credit", "Credit (Big Banking Inc)", "Reflects my credit account opened via Big Banking, Inc."))
 	account2, _ := pt.GetJSONField(w, "id")
 
 	w = pt.Call(mux, pt.CreateGroup(jwt1.(string), budget1.(string), "Spending", "Categories related to day-to-day spending"))
@@ -378,10 +378,10 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	w = pt.Call(mux, pt.CreateBudgetPayee(jwt1.(string), budget1.(string), "Messy Joe's", "Nice atmosphere. Food's great. It's got a bit of an edge."))
 	payee2, _ := pt.GetJSONField(w, "id")
 
-	// deposit some money into checking account, assigned to a cateogory
+	// deposit some money into checking account, allocated (but not explicitly assigned) to the DINING OUT category
 	depositAmount := fmt.Sprintf(`{"%s": %d}`, category1.(string), 10000)
 	w = pt.Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", depositAmount, "true"))
-	
+
 	w = pt.Call(mux, pt.GetBudgetCapital(jwt1.(string), budget1.(string), account1.(string)))
 	budgetCheckingCapital, _ := pt.GetJSONField(w, "capital")
 	assert.Equal(t, int64(10000), budgetCheckingCapital)
@@ -409,7 +409,7 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	// pay off credit account, using the checking account, using a transfer transaction
 	transferAmount := fmt.Sprintf(`{"TRANSFER AMOUNT": %d}`, 5000)
 	w = pt.Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), account2.(string), "TRANSFER_FROM", "2025-09-15T19:00:00Z", "ACCOUNT TRANSFER", "Pay off credit account balance", transferAmount, "true"))
-	
+
 	w = pt.Call(mux, pt.GetBudgetCapital(jwt1.(string), budget1.(string), account2.(string)))
 	budgetCreditCapital, _ = pt.GetJSONField(w, "capital")
 	assert.Equal(t, int64(0), budgetCreditCapital)
@@ -421,6 +421,143 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	w = pt.Call(mux, pt.GetBudgetCapital(jwt1.(string), budget1.(string), ""))
 	budgetTotalCapital, _ = pt.GetJSONField(w, "capital")
 	assert.Equal(t, int64(5000), budgetTotalCapital)
+
+	// Delete all users
+	w = pt.Call(mux, pt.DeleteAllUsers())
+	assert.Equal(t, 200, w.Code)
+}
+
+// Build a budget and simulate 3 months of transactions and dollar assignment.
+// Then, ensure that:
+//  1. Deposit transactions with non-null categories contribute to its balance by virtue of merely being counted as activity.
+//  2. Assignments are agnostic of whether or not there is an equal amount of money between the accounts they represent.
+//  3. For each month, we get the assignment, activity, and balance totals we would expect from the actions recorded within the budget.
+func Test_CategoryMoneyAssignment(t *testing.T) {
+	// TEST SETUP
+	var w *httptest.ResponseRecorder
+	// SERVER SETUP
+	const port = "8080"
+	cfg := LoadEnvConfig("../../.env")
+	pincher := &http.Server{
+		Addr:    ":" + port,
+		Handler: SetupMux(cfg),
+	}
+	mux := pincher.Handler
+	// REQUESTS
+
+	// Delete all users
+	w = pt.Call(mux, pt.DeleteAllUsers())
+	assert.Equal(t, 200, w.Code)
+
+	// Create user
+	w = pt.Call(mux, pt.CreateUser("user1", "pwd1"))
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// Log in user
+	w = pt.Call(mux, pt.LoginUser("user1", "pwd1"))
+	jwt1, _ := pt.GetJSONField(w, "token")
+
+	// user2 ADMIN: Creating personal budget, making account and other resources.
+	w = pt.Call(mux, pt.CreateBudget(jwt1.(string), "Personal Budget", "For personal accounting (user1)."))
+	budget1, _ := pt.GetJSONField(w, "id")
+
+	w = pt.Call(mux, pt.CreateBudgetAccount(jwt1.(string), budget1.(string), "checking", "Checking (Big Banking Inc)", "Reflects my checking account opened via Big Banking, Inc."))
+	account1, _ := pt.GetJSONField(w, "id")
+
+	w = pt.Call(mux, pt.CreateGroup(jwt1.(string), budget1.(string), "Ungrouped", "All categories"))
+	group1, _ := pt.GetJSONField(w, "id")
+
+	w = pt.Call(mux, pt.CreateCategory(jwt1.(string), budget1.(string), group1.(string), "Dining Out", "Money for ordering takeout or dining in."))
+	category1, _ := pt.GetJSONField(w, "id")
+
+	w = pt.Call(mux, pt.CreateCategory(jwt1.(string), budget1.(string), group1.(string), "Savings", "My savings fund."))
+	category2, _ := pt.GetJSONField(w, "id")
+
+	w = pt.Call(mux, pt.CreateBudgetPayee(jwt1.(string), budget1.(string), "Webflyx Org", "user1 employer"))
+	payee1, _ := pt.GetJSONField(w, "id")
+
+	w = pt.Call(mux, pt.CreateBudgetPayee(jwt1.(string), budget1.(string), "Messy Joe's", "Nice atmosphere. Food's great. It's got a bit of an edge."))
+	payee2, _ := pt.GetJSONField(w, "id")
+
+	// SEPTEMBER 2025 ACTIVITIES
+	// deposit some money into the checking account, allocated (but not explicitly assigned) to the Dining Out category
+	depositAmount := fmt.Sprintf(`{"%s": %d}`, category1.(string), 10000)
+	w = pt.Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", depositAmount, "true"))
+
+	// spend money out of Dining Out category
+	spendAmount := fmt.Sprintf(`{"%s": %d}`, category1.(string), 5000)
+	w = pt.Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "WITHDRAWAL", "2025-09-15T18:00:00Z", payee2.(string), "$50 dinner at a restaurant", spendAmount, "true"))
+
+	// we expect that there's 5000 in capital remaining, and NO assignable money.
+	// 5000 in Dining Out; 0 in Savings.
+	w = pt.Call(mux, pt.GetBudgetCapital(jwt1.(string), budget1.(string), ""))
+	budgetTotalCapital, _ := pt.GetJSONField(w, "capital")
+	assert.Equal(t, int64(5000), budgetTotalCapital)
+
+	w = pt.Call(mux, pt.GetMonthCategoryReport(jwt1.(string), budget1.(string), "2025-09-01", category1.(string)))
+	balanceCategory1, _ := pt.GetJSONField(w, "balance")
+	assert.Equal(t, int64(5000), balanceCategory1)
+
+	w = pt.Call(mux, pt.GetMonthCategoryReport(jwt1.(string), budget1.(string), "2025-09-01", category2.(string)))
+	balanceCategory2, _ := pt.GetJSONField(w, "balance")
+	assert.Equal(t, int64(0), balanceCategory2)
+
+	// OCTOBER 2025 ACTIVITIES
+	// deposit more money into the checking account, with NO category allocation.
+	// Assign some (but not all of it, to test for underassignment) to each of two categories.
+	depositAmount = fmt.Sprintf(`{"%s": %d}`, "UNCATEGORIZED", 10000)
+	w = pt.Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-10-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", depositAmount, "true"))
+
+	w = pt.Call(mux, pt.AssignMoneyToCategory(jwt1.(string), budget1.(string), "2025-10-01", category1.(string), 4000))
+	w = pt.Call(mux, pt.AssignMoneyToCategory(jwt1.(string), budget1.(string), "2025-10-01", category2.(string), 5000))
+
+	// spend money out of Dining Out category
+	spendAmount = fmt.Sprintf(`{"%s": %d}`, category1.(string), 4000)
+	w = pt.Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "WITHDRAWAL", "2025-10-15T18:00:00Z", payee2.(string), "I was very busy having fun, fun, fun!", spendAmount, "true"))
+
+	// we expect that there's 11000 in capital remaining, and 1000 in assignable money.
+	// 5000 in Dining Out; 5000 in Savings.
+	w = pt.Call(mux, pt.GetBudgetCapital(jwt1.(string), budget1.(string), ""))
+	budgetTotalCapital, _ = pt.GetJSONField(w, "capital")
+	assert.Equal(t, int64(11000), budgetTotalCapital)
+
+	w = pt.Call(mux, pt.GetMonthCategoryReport(jwt1.(string), budget1.(string), "2025-10-01", category1.(string)))
+	balanceCategory1, _ = pt.GetJSONField(w, "balance")
+	assert.Equal(t, int64(5000), balanceCategory1)
+
+	w = pt.Call(mux, pt.GetMonthCategoryReport(jwt1.(string), budget1.(string), "2025-10-01", category2.(string)))
+	balanceCategory2, _ = pt.GetJSONField(w, "balance")
+	assert.Equal(t, int64(5000), balanceCategory2)
+
+	w = pt.Call(mux, pt.GetMonthReport(jwt1.(string), budget1.(string), "2025-10-01"))
+	budgetTotalBalance, _ := pt.GetJSONField(w, "balance")
+	assert.Equal(t, int64(1000), (budgetTotalCapital.(int64) - budgetTotalBalance.(int64)))
+
+	// NOVEMBER 2025 ACTIVITIES
+	// deposit NO more money into the checking account.
+	// Assign the 1000 left available from OCTOBER to the SAVINGS category.
+	// Assign 1000 (that we don't have) to DINING OUT to test for overassignment.
+
+	w = pt.Call(mux, pt.AssignMoneyToCategory(jwt1.(string), budget1.(string), "2025-11-01", category2.(string), 1000))
+	w = pt.Call(mux, pt.AssignMoneyToCategory(jwt1.(string), budget1.(string), "2025-11-01", category1.(string), 1000))
+
+	// we expect that there's still just 11000 in capital remaining, and -1000 in assignable money, which indicates overassignment.
+	// 6000 in Dining Out; 6000 in Savings.
+	w = pt.Call(mux, pt.GetBudgetCapital(jwt1.(string), budget1.(string), ""))
+	budgetTotalCapital, _ = pt.GetJSONField(w, "capital")
+	assert.Equal(t, int64(11000), budgetTotalCapital)
+
+	w = pt.Call(mux, pt.GetMonthCategoryReport(jwt1.(string), budget1.(string), "2025-11-01", category1.(string)))
+	balanceCategory1, _ = pt.GetJSONField(w, "balance")
+	assert.Equal(t, int64(6000), balanceCategory1)
+
+	w = pt.Call(mux, pt.GetMonthCategoryReport(jwt1.(string), budget1.(string), "2025-11-01", category2.(string)))
+	balanceCategory2, _ = pt.GetJSONField(w, "balance")
+	assert.Equal(t, int64(6000), balanceCategory2)
+
+	w = pt.Call(mux, pt.GetMonthReport(jwt1.(string), budget1.(string), "2025-11-01"))
+	budgetTotalBalance, _ = pt.GetJSONField(w, "balance")
+	assert.Equal(t, int64(-1000), (budgetTotalCapital.(int64) - budgetTotalBalance.(int64)))
 
 	// Delete all users
 	//w = pt.Call(mux, pt.DeleteAllUsers())

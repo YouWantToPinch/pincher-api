@@ -204,7 +204,7 @@ func DeleteBudgetGroup(token, budgetID, groupID string) *http.Request {
 
 func LogTransaction(token, budgetID, accountID, transferAccountID, transactionType, transactionDate, payeeID, notes, amounts, isCleared string) *http.Request {
 	payloadString := fmt.Sprintf(`{"account_id":"%v","transfer_account_id":"%v","transaction_type":"%v","transaction_date":"%v","payee_id":"%v","notes":"%v","amounts":%v,"is_cleared":"%v"}`, accountID, transferAccountID, transactionType, transactionDate, payeeID, notes, amounts, isCleared)
-	//slog.Info(fmt.Sprintf("Payload string for new log transaction: %v", payloadString))
+	//slog.Debug(fmt.Sprintf("Payload string for new log transaction: %v", payloadString))
 	payload := strings.NewReader(payloadString)
 	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/transactions", budgetID), payload)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
@@ -237,6 +237,38 @@ func GetTransaction(token, budgetID, transactionID string) *http.Request {
 
 func DeleteTransaction(token, budgetID, transactionID string) *http.Request {
 	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/budgets/%v/transactions/%v", budgetID, transactionID), nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+// BUDGET -> ASSIGNMENT CRUD
+
+func AssignMoneyToCategory(token, budgetID, monthID, categoryID string, amount int64) *http.Request {
+	payloadString := fmt.Sprintf(`{"amount":%d}`, amount)
+	payload := strings.NewReader(payloadString)
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/months/%v/categories/%v", budgetID, monthID, categoryID), payload)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func GetMonthCategoryReport(token, budgetID, monthID, categoryID string) *http.Request {
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/months/%v/categories/%v", budgetID, monthID, categoryID), nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func GetMonthCategoryReports(token, budgetID, monthID string) *http.Request {
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/months/%v/categories", budgetID, monthID), nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func GetMonthReport(token, budgetID, monthID string) *http.Request {
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/months/%v", budgetID, monthID), nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
 	req.Header.Set("Content-Type", "application/json")
 	return req
