@@ -75,7 +75,7 @@ type MonthReport struct {
 	Month        time.Time
 	CategoryName string
 	CategoryID   uuid.UUID
-	Assigned     int64
+	Assigned     interface{}
 	Activity     int64
 	Balance      int64
 }

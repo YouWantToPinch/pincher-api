@@ -113,13 +113,13 @@ func (q *Queries) GetMonthCategoryReports(ctx context.Context, month time.Time) 
 }
 
 const getMonthReport = `-- name: GetMonthReport :one
-SELECT SUM(assigned) AS assinged, SUM(activity) AS activity, SUM(balance) AS balance
+SELECT SUM(assigned) AS assigned, SUM(activity) AS activity, SUM(balance) AS balance
 FROM month_report mr
 WHERE mr.month = $1
 `
 
 type GetMonthReportRow struct {
-	Assinged int64
+	Assigned int64
 	Activity int64
 	Balance  int64
 }
@@ -127,6 +127,6 @@ type GetMonthReportRow struct {
 func (q *Queries) GetMonthReport(ctx context.Context, month time.Time) (GetMonthReportRow, error) {
 	row := q.db.QueryRowContext(ctx, getMonthReport, month)
 	var i GetMonthReportRow
-	err := row.Scan(&i.Assinged, &i.Activity, &i.Balance)
+	err := row.Scan(&i.Assigned, &i.Activity, &i.Balance)
 	return i, err
 }

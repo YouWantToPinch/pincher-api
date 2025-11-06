@@ -12,7 +12,7 @@ SET assigned = assignments.assigned + EXCLUDED.assigned
 RETURNING *;
 
 -- name: GetMonthReport :one
-SELECT SUM(assigned) AS assinged, SUM(activity) AS activity, SUM(balance) AS balance
+SELECT SUM(assigned) AS assigned, SUM(activity) AS activity, SUM(balance) AS balance
 FROM month_report mr
 WHERE mr.month = $1;
 
@@ -27,3 +27,4 @@ WHERE mr.month = $1 AND mr.category_id = $2;
 -- name: DeleteMonthAssignmentForCat :exec
 DELETE FROM assignments
 WHERE $1 = assignments.month AND $2 = assignments.category_id;
+
