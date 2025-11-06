@@ -6,18 +6,18 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/YouWantToPinch/pincher-api/internal/server"
+	"github.com/YouWantToPinch/pincher-api/internal/api"
 )
 
 func main() {
 	const filepathRoot = "."
 	const port = "8080"
 
-	cfg := server.LoadEnvConfig(".env")
+	cfg := api.LoadEnvConfig(".env")
 
 	pincher := &http.Server{
 		Addr:    ":" + port,
-		Handler: server.SetupMux(cfg),
+		Handler: api.SetupMux(cfg),
 	}
 
 	// start server
