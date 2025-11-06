@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	//"log/slog"
 	"net/http"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 )
 
 func (cfg *apiConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.Request) {
-
 	type parameters struct {
 		Amount int64 `json:"amount"`
 	}
@@ -65,8 +65,18 @@ func (cfg *apiConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request)
 	}
 
 	monthReport, err := cfg.db.GetMonthReport(r.Context(), parsedMonth)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Failed to retrieve report for month specified", err)
+		return
+	}
 
-	respondWithJSON(w, http.StatusOK, monthReport)
+	respBody := MonthReport{
+		Assigned: monthReport.Assigned,
+		Activity: monthReport.Activity,
+		Balance:  monthReport.Balance,
+	}
+
+	respondWithJSON(w, http.StatusOK, respBody)
 }
 
 func (cfg *apiConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +89,10 @@ func (cfg *apiConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 	}
 
 	dbCategoryReports, err := cfg.db.GetMonthCategoryReports(r.Context(), parsedMonth)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Failed to retrieve category reports for month specified", err)
+		return
+	}
 
 	var respBody []CategoryReport
 	for _, report := range dbCategoryReports {
@@ -117,6 +131,10 @@ func (cfg *apiConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.
 		Month:      parsedMonth,
 		CategoryID: pathCategoryID,
 	})
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Couldn't to retrieve category report for month specified", err)
+		return
+	}
 
 	respBody := CategoryReport{
 		MonthID:    dbCategoryReport.Month,

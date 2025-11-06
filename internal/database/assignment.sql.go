@@ -54,8 +54,8 @@ func (q *Queries) DeleteMonthAssignmentForCat(ctx context.Context, arg DeleteMon
 }
 
 const getMonthCategoryReport = `-- name: GetMonthCategoryReport :one
-SELECT month, category_name, category_id, assigned, activity, balance FROM month_report mr
-WHERE mr.month = $1 AND mr.category_id = $2
+SELECT month, category_name, category_id, assigned, activity, balance FROM category_reports cr
+WHERE cr.month = $1 AND cr.category_id = $2
 `
 
 type GetMonthCategoryReportParams struct {
@@ -63,9 +63,9 @@ type GetMonthCategoryReportParams struct {
 	CategoryID uuid.UUID
 }
 
-func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCategoryReportParams) (MonthReport, error) {
+func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCategoryReportParams) (CategoryReport, error) {
 	row := q.db.QueryRowContext(ctx, getMonthCategoryReport, arg.Month, arg.CategoryID)
-	var i MonthReport
+	var i CategoryReport
 	err := row.Scan(
 		&i.Month,
 		&i.CategoryName,
@@ -78,19 +78,19 @@ func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCatego
 }
 
 const getMonthCategoryReports = `-- name: GetMonthCategoryReports :many
-SELECT month, category_name, category_id, assigned, activity, balance FROM month_report mr
-WHERE mr.month = $1
+SELECT month, category_name, category_id, assigned, activity, balance FROM category_reports cr
+WHERE cr.month = $1
 `
 
-func (q *Queries) GetMonthCategoryReports(ctx context.Context, month time.Time) ([]MonthReport, error) {
+func (q *Queries) GetMonthCategoryReports(ctx context.Context, month time.Time) ([]CategoryReport, error) {
 	rows, err := q.db.QueryContext(ctx, getMonthCategoryReports, month)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []MonthReport
+	var items []CategoryReport
 	for rows.Next() {
-		var i MonthReport
+		var i CategoryReport
 		if err := rows.Scan(
 			&i.Month,
 			&i.CategoryName,
@@ -114,7 +114,7 @@ func (q *Queries) GetMonthCategoryReports(ctx context.Context, month time.Time) 
 
 const getMonthReport = `-- name: GetMonthReport :one
 SELECT SUM(assigned) AS assigned, SUM(activity) AS activity, SUM(balance) AS balance
-FROM month_report mr
+FROM category_reports mr
 WHERE mr.month = $1
 `
 

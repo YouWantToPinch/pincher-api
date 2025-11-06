@@ -162,3 +162,9 @@ type CategoryReport struct {
 	Activity   int64     `json:"activity"`
 	Balance    int64     `json:"balance"`
 }
+
+type MonthReport struct {
+	Assigned int64 `json:"assigned"`
+	Activity int64 `json:"activity"`
+	Balance  int64 `json:"balance"`
+}

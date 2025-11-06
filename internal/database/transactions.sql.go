@@ -310,6 +310,7 @@ insert_splits AS (
         tr1.id,
         CASE
             WHEN tr1.transaction_type ILIKE '%TRANSFER%' THEN NULL
+            WHEN tr1.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
             ELSE key::uuid
         END,
         value::integer

@@ -62,6 +62,15 @@ type Category struct {
 	Notes     string
 }
 
+type CategoryReport struct {
+	Month        time.Time
+	CategoryName string
+	CategoryID   uuid.UUID
+	Assigned     int64
+	Activity     int64
+	Balance      int64
+}
+
 type Group struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
@@ -69,15 +78,6 @@ type Group struct {
 	BudgetID  uuid.UUID
 	Name      string
 	Notes     string
-}
-
-type MonthReport struct {
-	Month        time.Time
-	CategoryName string
-	CategoryID   uuid.UUID
-	Assigned     interface{}
-	Activity     int64
-	Balance      int64
 }
 
 type Payee struct {

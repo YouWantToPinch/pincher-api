@@ -13,16 +13,16 @@ RETURNING *;
 
 -- name: GetMonthReport :one
 SELECT SUM(assigned) AS assigned, SUM(activity) AS activity, SUM(balance) AS balance
-FROM month_report mr
+FROM category_reports mr
 WHERE mr.month = $1;
 
 -- name: GetMonthCategoryReports :many
-SELECT * FROM month_report mr
-WHERE mr.month = $1;
+SELECT * FROM category_reports cr
+WHERE cr.month = $1;
 
 -- name: GetMonthCategoryReport :one
-SELECT * FROM month_report mr
-WHERE mr.month = $1 AND mr.category_id = $2;
+SELECT * FROM category_reports cr
+WHERE cr.month = $1 AND cr.category_id = $2;
 
 -- name: DeleteMonthAssignmentForCat :exec
 DELETE FROM assignments
