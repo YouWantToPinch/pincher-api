@@ -53,7 +53,19 @@ func (cfg *apiConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, dbAssignment)
+	type Assignment struct {
+		MonthID    time.Time `json:"month_id"`
+		CategoryID uuid.UUID `json:"category_id"`
+		Amount     int64     `json:"amount"`
+	}
+
+	respBody := Assignment{
+		MonthID:    dbAssignment.Month,
+		CategoryID: dbAssignment.CategoryID,
+		Amount:     dbAssignment.Assigned,
+	}
+
+	respondWithJSON(w, http.StatusCreated, respBody)
 }
 
 func (cfg *apiConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request) {
