@@ -57,5 +57,13 @@ func (cfg *apiConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, count)
+	type resp struct {
+		Count int64 `json:"count"`
+	}
+
+	respBody := resp{
+		Count: count,
+	}
+
+	respondWithJSON(w, http.StatusOK, respBody)
 }

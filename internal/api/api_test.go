@@ -24,7 +24,6 @@ func Call(mux http.Handler, req *http.Request) *httptest.ResponseRecorder {
 // Should properly make, count, and delete users
 func Test_MakeAndResetUsers(t *testing.T) {
 	// TEST SETUP
-	var err error
 	var w *httptest.ResponseRecorder
 	// SERVER SETUP
 	const port = "8080"
@@ -48,11 +47,7 @@ func Test_MakeAndResetUsers(t *testing.T) {
 
 	// User count should now be 2
 	w = Call(mux, pt.GetUserCount())
-	var count int64
-	err = json.NewDecoder(w.Body).Decode(&count)
-	if err != nil {
-		t.Fatalf("failed to decode response body as int64: %v", err)
-	}
+	count, _ := pt.GetJSONField(w, "count")
 	if !assert.Equal(t, count, int64(2)) {
 		t.Fatalf("expected user count of 2, but got %d", count)
 	}
@@ -63,10 +58,7 @@ func Test_MakeAndResetUsers(t *testing.T) {
 
 	// User count should now be 0 again
 	w = Call(mux, pt.GetUserCount())
-	err = json.NewDecoder(w.Body).Decode(&count)
-	if err != nil {
-		t.Fatalf("failed to decode response body as int64: %v", err)
-	}
+	count, _ = pt.GetJSONField(w, "count")
 	if !assert.Equal(t, int64(0), count) {
 		t.Fatalf("expected user count of 0, but got %d", count)
 	}
@@ -76,7 +68,6 @@ func Test_MakeAndResetUsers(t *testing.T) {
 // but not each other
 func Test_MakeLoginDeleteUsers(t *testing.T) {
 	// TEST SETUP
-	var err error
 	var w *httptest.ResponseRecorder
 	// SERVER SETUP
 	const port = "8080"
@@ -112,11 +103,7 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 
 	// User count should now be 1
 	w = Call(mux, pt.GetUserCount())
-	var count int64
-	err = json.NewDecoder(w.Body).Decode(&count)
-	if err != nil {
-		t.Fatalf("failed to decode response body as int64: %v", err)
-	}
+	count, _ := pt.GetJSONField(w, "count")
 	if !assert.Equal(t, int64(1), count) {
 		t.Fatalf("expected user count of 1, but got %d", count)
 	}
@@ -127,10 +114,7 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 
 	// User count should now be 0 again
 	w = Call(mux, pt.GetUserCount())
-	err = json.NewDecoder(w.Body).Decode(&count)
-	if err != nil {
-		t.Fatalf("failed to decode response body as int64: %v", err)
-	}
+	count, _ = pt.GetJSONField(w, "count")
 	if !assert.Equal(t, int64(0), count) {
 		t.Fatalf("expected user count of 0, but got %d", count)
 	}
