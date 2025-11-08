@@ -1,35 +1,18 @@
 package pinchertest
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http/httptest"
+	"net/http"
 )
 
-func GetJSONField(w *httptest.ResponseRecorder, field string) (any, error) {
-	res := w.Result()
-	defer res.Body.Close()
+// ========== MIDDLEWARE ==========
 
-	var body map[string]any
-	decoder := json.NewDecoder(res.Body)
-	decoder.UseNumber()
-	err := decoder.Decode(&body)
-	if err != nil {
-		return nil, err
-	}
-	val, ok := body[field]
-	if !ok {
-		return nil, fmt.Errorf("field %s not found in response", field)
-	}
+func headerJSON(req *http.Request) *http.Request {
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
 
-	if num, ok := val.(json.Number); ok {
-		if i, err := num.Int64(); err == nil {
-			return i, nil
-		}
-		if f, err := num.Float64(); err == nil {
-			return f, nil
-		}
-	}
-
-	return val, nil
+func requireToken(req *http.Request, token string) *http.Request {
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
+	return req
 }
