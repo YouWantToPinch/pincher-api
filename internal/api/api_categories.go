@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"log/slog"
@@ -19,9 +18,8 @@ func (cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 		GroupID string `json:"group_id"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
+	var params parameters
+	err := decodeParams(r, &params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -124,9 +122,8 @@ func (cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.R
 		GroupID string `json:"group_id"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err = decoder.Decode(&params)
+	var params parameters
+	err = decodeParams(r, &params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return

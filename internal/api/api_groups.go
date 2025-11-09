@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -16,9 +15,8 @@ func (cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 		Notes string `json:"notes"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
+	var params parameters
+	err := decodeParams(r, &params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return

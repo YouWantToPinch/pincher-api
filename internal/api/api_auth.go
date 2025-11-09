@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -15,9 +14,8 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
+	var params parameters
+	err := decodeParams(r, &params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not log in user", err)
 		return

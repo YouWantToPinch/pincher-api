@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+func decodeParams(r *http.Request, paramStruct interface{}) error {
+	return json.NewDecoder(r.Body).Decode(paramStruct)
+}
+
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 
 	if err != nil {

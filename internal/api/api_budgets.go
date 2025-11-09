@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -23,9 +22,8 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		Notes string `json:"notes"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
+	var params parameters
+	err := decodeParams(r, &params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -170,9 +168,8 @@ func (cfg *apiConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 		MemberRole string `json:"member_role"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
+	var params parameters
+	err := decodeParams(r, &params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return

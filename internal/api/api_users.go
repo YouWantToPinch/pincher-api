@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/YouWantToPinch/pincher-api/internal/auth"
@@ -14,9 +13,8 @@ func (cfg *apiConfig) endpCreateUser(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
+	var params parameters
+	err := decodeParams(r, &params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -57,9 +55,8 @@ func (cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 		Username string `json:"username"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
+	var params parameters
+	err := decodeParams(r, &params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters", err)
 		return
@@ -100,9 +97,8 @@ func (cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
+	var params parameters
+	err := decodeParams(r, &params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters", err)
 		return
