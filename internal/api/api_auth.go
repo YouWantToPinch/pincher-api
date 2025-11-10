@@ -14,8 +14,7 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not log in user", err)
 		return

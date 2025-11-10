@@ -1,7 +1,6 @@
 package api
 
 import (
-	//"log/slog"
 	"net/http"
 	"time"
 
@@ -15,8 +14,7 @@ func (cfg *apiConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 		Amount int64 `json:"amount"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return

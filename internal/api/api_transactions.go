@@ -50,8 +50,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		Amounts map[string]int64 `json:"amounts"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters when logging transaction", err)
 		return

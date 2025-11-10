@@ -18,8 +18,7 @@ func (cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 		GroupID string `json:"group_id"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -120,8 +119,7 @@ func (cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.R
 		GroupID string `json:"group_id"`
 	}
 
-	var params parameters
-	err = decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return

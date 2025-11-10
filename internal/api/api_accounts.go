@@ -17,8 +17,7 @@ func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 		Notes       string `json:"notes"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -145,8 +144,7 @@ func (cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 		DeleteHard bool   `json:"delete_hard"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return

@@ -20,8 +20,7 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		Notes string `json:"notes"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -162,8 +161,7 @@ func (cfg *apiConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 		MemberRole string `json:"member_role"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return

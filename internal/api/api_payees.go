@@ -14,8 +14,7 @@ func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 		Name string `json:"name"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return

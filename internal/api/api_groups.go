@@ -15,8 +15,7 @@ func (cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 		Notes string `json:"notes"`
 	}
 
-	var params parameters
-	err := decodeParams(r, &params)
+	params, err := decodeParams[parameters](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
