@@ -275,7 +275,6 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 	}
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
-	slog.Debug("pathBudgetID: " + pathBudgetID.String())
 
 	slog.Debug(fmt.Sprintf("Transaction paramaters: budget_id=%s, account_id=%v (nil=%v), category_id=%v (nil=%v), payee_id=%v (nil=%v), start_date=%v (zero=%v), end_date=%v (zero=%v)",
 		pathBudgetID.String(),

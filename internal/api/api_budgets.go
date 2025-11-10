@@ -12,8 +12,6 @@ import (
 
 func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 
-	slog.Debug("CreateBudget endpoint HIT")
-
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
 	slog.Debug("user_id is " + validatedUserID.String())
 
@@ -29,8 +27,6 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Debug("Decoded name & notes within CreateBudget endpoint")
-
 	dbBudget, err := cfg.db.CreateBudget(r.Context(), database.CreateBudgetParams{
 		AdminID: validatedUserID,
 		Name:    params.Name,
@@ -44,8 +40,6 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Debug("Created budget successfully within the CreateBudget endpoint.")
-
 	_, err = cfg.db.AssignBudgetMemberWithRole(r.Context(), database.AssignBudgetMemberWithRoleParams{
 		BudgetID:   dbBudget.ID,
 		UserID:     validatedUserID,
@@ -53,13 +47,13 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to assign ADMIN to new budget", err)
-		slog.Debug("Attempting deletion of new budget, as no admin could be assigned.")
+		slog.Info("Attempting deletion of new budget, as no admin could be assigned.")
 		err := cfg.db.DeleteBudget(r.Context(), dbBudget.ID)
 		if err != nil {
 			slog.Warn("Attempted deletion of newly initialized budget, but FAILED.")
 			return
 		}
-		slog.Debug("Initialized budget was deleted successfully.")
+		slog.Info("Initialized budget was deleted successfully.")
 		return
 	}
 
