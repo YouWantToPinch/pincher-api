@@ -1,166 +1,168 @@
 package pinchertest
 
 import (
-	"fmt"
 	"net/http"
-	"net/http/httptest"
-	"strings"
 )
 
 // USER CRUD
 
 func CreateUser(username, password string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"username":"%v","password":"%v"}`, username, password))
-	req := httptest.NewRequest(http.MethodPost, "/api/users", payload)
-	return headerJSON(req)
+	return MakeRequest(http.MethodPost, "/api/users", "", map[string]any{
+		"username": username,
+		"password": password,
+	})
 }
 
 func GetUserCount() *http.Request {
-	req := httptest.NewRequest(http.MethodGet, "/admin/users/count", nil)
-	return headerJSON(req)
+	return MakeRequest(http.MethodGet, "/admin/users/count", "", nil)
 }
 
 func DeleteUser(token, username, password string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"username":"%v","password":"%v"}`, username, password))
-	req := httptest.NewRequest(http.MethodDelete, "/api/users", payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodDelete, "/api/users", token, map[string]any{
+		"username": username,
+		"password": password,
+	})
 }
 
 func DeleteAllUsers() *http.Request {
-	req := httptest.NewRequest(http.MethodPost, "/admin/reset", nil)
-	return req
+	return MakeRequest(http.MethodPost, "/admin/reset", "", nil)
 }
 
 // USER AUTH
 
 func LoginUser(username, password string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"username":"%v","password":"%v"}`, username, password))
-	req := httptest.NewRequest(http.MethodPost, "/api/login", payload)
-	return headerJSON(req)
+	return MakeRequest(http.MethodPost, "/api/login", "", map[string]any{
+		"username": username,
+		"password": password,
+	})
 }
 
 // USER -> BUDGET CRUD
 
 func CreateBudget(token, name, notes string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"name":"%v","notes":"%v"}`, name, notes))
-	req := httptest.NewRequest(http.MethodPost, "/api/budgets", payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodPost, "/api/budgets", token, map[string]any{
+		"name":  name,
+		"notes": notes,
+	})
 }
 
 func GetUserBudgets(token string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, "/api/budgets", nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodGet, "/api/budgets", token, nil)
 }
 
 func DeleteUserBudget(token, budgetID string) *http.Request {
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/budgets/%v", budgetID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID, token, nil)
 }
 
 // BUDGET -> ACCOUNT CRUD
 
 func CreateBudgetAccount(token, budgetID, accountType, name, notes string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"account_type":"%v","name":"%v","notes":"%v"}`, accountType, name, notes))
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/accounts", budgetID), payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/accounts", token, map[string]any{
+		"account_type": accountType,
+		"name":         name,
+		"notes":        notes,
+	})
 }
 
 func GetBudgetAccounts(token, budgetID string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/accounts", budgetID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/accounts", token, nil)
 }
 
 func GetBudgetCapital(token, budgetID, accountID string) *http.Request {
-	var path string
+	path := "/api/budgets/" + budgetID
 	if accountID != "" {
-		path = fmt.Sprintf("/api/budgets/%v/accounts/%v/capital", budgetID, accountID)
-	} else {
-		path = fmt.Sprintf("/api/budgets/%v/capital", budgetID)
+		path += "/accounts/" + accountID
 	}
-	req := httptest.NewRequest(http.MethodGet, path, nil)
-	return headerJSON(requireToken(req, token))
+	path += "/capital"
+
+	return MakeRequest(http.MethodGet, path, token, nil)
 }
 
 func AssignMemberToBudget(token, budgetID, userID, memberRole string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"user_id":"%v","member_role":"%v"}`, userID, memberRole))
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/members", budgetID), payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/members", token, map[string]any{
+		"user_id":     userID,
+		"member_role": memberRole,
+	})
 }
 
 func RevokeBudgetMembership(token, budgetID, userID string) *http.Request {
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/budgets/%v/members/%v", budgetID, userID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/members"+userID, token, nil)
 }
 
 func DeleteBudgetAccount(token, budgetID, accountID, name, deleteHard string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"name":"%v","delete_hard":"%v"}`, name, deleteHard))
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/budgets/%v/accounts/%v", budgetID, accountID), payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/accounts/"+accountID, token, map[string]any{
+		"name":        name,
+		"delete_hard": deleteHard,
+	})
 }
 
 // BUDGET -> PAYEE CRUD
 
 func CreateBudgetPayee(token, budgetID, name, notes string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"name":"%v","notes":"%v"}`, name, notes))
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/payees", budgetID), payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/payees", token, map[string]any{
+		"name":  name,
+		"notes": notes,
+	})
 }
 
 func GetBudgetPayees(token, budgetID string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/payees", budgetID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/payees", token, nil)
 }
 
 // BUDGET -> CATEGORY CRUD
 
 func CreateCategory(token, budgetID, groupID, name, notes string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"name":"%v","notes":"%v","group_id":"%v"}`, name, notes, groupID))
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/categories", budgetID), payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/categories", token, map[string]any{
+		"name":     name,
+		"notes":    notes,
+		"group_id": groupID,
+	})
 }
 
 func GetBudgetCategories(token, budgetID, query string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/categories%v", budgetID, query), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/categories"+query, token, nil)
 }
 
 func AssignCategoryToGroup(token, budgetID, categoryID, groupID string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"group_id":"%v"}`, groupID))
-	req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/budgets/%v/categories/%v", budgetID, categoryID), payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID+"/categories/"+categoryID, token, map[string]any{
+		"group_id": groupID,
+	})
 }
 
 func DeleteBudgetCategory(token, budgetID, categoryID string) *http.Request {
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/budgets/%v/categories/%v", budgetID, categoryID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/categories/"+categoryID, token, nil)
 }
 
 // BUDGET -> GROUP CRUD
 
 func CreateGroup(token, budgetID, name, notes string) *http.Request {
-	payload := strings.NewReader(fmt.Sprintf(`{"name":"%v","notes":"%v"}`, name, notes))
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/groups", budgetID), payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/groups", token, map[string]any{
+		"name":  name,
+		"notes": notes,
+	})
 }
 
 func GetBudgetGroups(token, budgetID string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/groups", budgetID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/groups", token, nil)
 }
 
 func DeleteBudgetGroup(token, budgetID, groupID string) *http.Request {
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/budgets/%v/groups/%v", budgetID, groupID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/groups/"+groupID, token, nil)
 }
 
 // BUDGET -> TRANSACTION CRUD
 
-func LogTransaction(token, budgetID, accountID, transferAccountID, transactionType, transactionDate, payeeID, notes, amounts, isCleared string) *http.Request {
-	payloadString := fmt.Sprintf(`{"account_id":"%v","transfer_account_id":"%v","transaction_type":"%v","transaction_date":"%v","payee_id":"%v","notes":"%v","amounts":%v,"is_cleared":"%v"}`, accountID, transferAccountID, transactionType, transactionDate, payeeID, notes, amounts, isCleared)
-	//slog.Debug(fmt.Sprintf("Payload string for new log transaction: %v", payloadString))
-	payload := strings.NewReader(payloadString)
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/transactions", budgetID), payload)
-	return headerJSON(requireToken(req, token))
+func LogTransaction(token, budgetID, accountID, transferAccountID, transactionType, transactionDate, payeeID, notes, isCleared string, amounts map[string]int64) *http.Request {
+	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/transactions", token, map[string]any{
+		"account_id":          accountID,
+		"transfer_account_id": transferAccountID,
+		"transaction_type":    transactionType,
+		"transaction_date":    transactionDate,
+		"payee_id":            payeeID,
+		"notes":               notes,
+		"amounts":             amounts,
+		"is_cleared":          isCleared,
+	})
 }
 
 func GetTransactions(token, budgetID, accountID, categoryID, payeeID, startDate, endDate string) *http.Request {
@@ -172,41 +174,37 @@ func GetTransactions(token, budgetID, accountID, categoryID, payeeID, startDate,
 	} else if payeeID != "" {
 		pathParam += "/payees/" + payeeID
 	}
-
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v%v/transactions?start_date=%v&end_date=%v", budgetID, pathParam, startDate, endDate), nil)
-	return headerJSON(requireToken(req, token))
+	query := ""
+	if startDate != "" && endDate != "" {
+		query += "?start_date=" + startDate + "&end_date=" + endDate
+	}
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+pathParam+"/transactions"+query, token, nil)
 }
 
 func GetTransaction(token, budgetID, transactionID string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/transactions/%v", budgetID, transactionID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodGet, "api/budgets/"+budgetID+"/transactions/"+transactionID, token, nil)
 }
 
 func DeleteTransaction(token, budgetID, transactionID string) *http.Request {
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/budgets/%v/transactions/%v", budgetID, transactionID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodDelete, "api/budgets/"+budgetID+"/transactions/"+transactionID, token, nil)
 }
 
 // BUDGET -> ASSIGNMENT CRUD
 
 func AssignMoneyToCategory(token, budgetID, monthID, categoryID string, amount int64) *http.Request {
-	payloadString := fmt.Sprintf(`{"amount":%d}`, amount)
-	payload := strings.NewReader(payloadString)
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/budgets/%v/months/%v/categories/%v", budgetID, monthID, categoryID), payload)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/months/"+monthID+"/categories/"+categoryID, token, map[string]int64{
+		"amount": amount,
+	})
 }
 
 func GetMonthCategoryReport(token, budgetID, monthID, categoryID string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/months/%v/categories/%v", budgetID, monthID, categoryID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/months/"+monthID+"/categories/"+categoryID, token, nil)
 }
 
 func GetMonthCategoryReports(token, budgetID, monthID string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/months/%v/categories", budgetID, monthID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/months/"+monthID+"/categories/", token, nil)
 }
 
 func GetMonthReport(token, budgetID, monthID string) *http.Request {
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/budgets/%v/months/%v", budgetID, monthID), nil)
-	return headerJSON(requireToken(req, token))
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/months/"+monthID, token, nil)
 }

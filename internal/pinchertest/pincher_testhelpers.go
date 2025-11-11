@@ -1,18 +1,30 @@
 package pinchertest
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
+	"net/http/httptest"
 )
 
-// ========== MIDDLEWARE ==========
+func MakeRequest(method, path, token string, body any) *http.Request {
+	var buffer io.Reader
 
-func headerJSON(req *http.Request) *http.Request {
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			panic(err)
+		}
+		buffer = bytes.NewReader(b)
+	}
+
+	req := httptest.NewRequest(method, path, buffer)
 	req.Header.Set("Content-Type", "application/json")
-	return req
-}
 
-func requireToken(req *http.Request, token string) *http.Request {
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", token))
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
 	return req
 }

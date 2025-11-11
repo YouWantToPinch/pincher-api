@@ -204,7 +204,11 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	w = Call(mux, pt.CreateBudget(jwt1.(string), "Personal", "user1's budget for personal finance."))
 
 	// Try adding user2 as ADMIN using user4 (not in budget), then as MANAGER. Both should fail.
-	w = Call(mux, pt.AssignMemberToBudget(jwt4.(string), budget1.(string), user2.(string), "ADMIN"))
+	w = Call(mux, pt.AssignMemberToBudget(
+		jwt4.(string),
+		budget1.(string),
+		user2.(string),
+		"ADMIN"))
 	w = Call(mux, pt.AssignMemberToBudget(jwt4.(string), budget1.(string), user2.(string), "MANAGER"))
 
 	// Add user4 to Webflyx Org as user1 ADMIN, with role: VIEWER
@@ -333,12 +337,14 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	w = Call(mux, pt.CreateBudgetPayee(jwt3.(string), budget1.(string), "Smash & Dash", "A gas & convenience store"))
 	payee1, _ := GetJSONField(w, "id")
 
-	transaction1Amounts := fmt.Sprintf(`{"%s": %d}`, category2.(string), -1800)
-	w = Call(mux, pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "NONE", "WITHDRAWAL", "2025-09-15T23:17:00Z", payee1.(string), "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station.", transaction1Amounts, "true"))
+	transaction1Amounts := map[string]int64{}
+	transaction1Amounts[category2.(string)] = 1800
+	w = Call(mux, pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "NONE", "WITHDRAWAL", "2025-09-15T23:17:00Z", payee1.(string), "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station.", "true", transaction1Amounts))
 	//transaction1, _ := GetJSONField(w, "id")
 
-	transaction2Amounts := fmt.Sprintf(`{"%s": %d}`, category1.(string), -400)
-	w = Call(mux, pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "NONE", "WITHDRAWAL", "2025-09-15T23:22:00Z", payee1.(string), "Yeah, I got a drink in the convenience store too; sue me. Take it out of my bonus or whatever.", transaction2Amounts, "true"))
+	transaction2Amounts := map[string]int64{}
+	transaction2Amounts[category1.(string)] = -400
+	w = Call(mux, pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "NONE", "WITHDRAWAL", "2025-09-15T23:22:00Z", payee1.(string), "Yeah, I got a drink in the convenience store too; sue me. Take it out of my bonus or whatever.", "true", transaction2Amounts))
 	// transaction2, _ := GetJSONField(w, "id")
 
 	// user4 VIEWER: Works for accounting; reading transactions from employees.
@@ -401,8 +407,9 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	payee2, _ := GetJSONField(w, "id")
 
 	// deposit some money into checking account, allocated (but not explicitly assigned) to the DINING OUT category
-	depositAmount := fmt.Sprintf(`{"%s": %d}`, category1.(string), 10000)
-	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", depositAmount, "true"))
+	depositAmount := map[string]int64{}
+	depositAmount[category1.(string)] = 10000
+	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", "true", depositAmount))
 
 	w = Call(mux, pt.GetBudgetCapital(jwt1.(string), budget1.(string), account1.(string)))
 	budgetCheckingCapital, _ := GetJSONField(w, "capital")
@@ -417,8 +424,9 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	assert.Equal(t, int64(10000), budgetTotalCapital)
 
 	// spend money out of a credit account
-	spendAmount := fmt.Sprintf(`{"%s": %d}`, category1.(string), 5000)
-	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account2.(string), "NONE", "WITHDRAWAL", "2025-09-15T18:00:00Z", payee2.(string), "$50 dinner at a restaurant", spendAmount, "true"))
+	spendAmount := map[string]int64{}
+	spendAmount[category1.(string)] = 5000
+	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account2.(string), "NONE", "WITHDRAWAL", "2025-09-15T18:00:00Z", payee2.(string), "$50 dinner at a restaurant", "true", spendAmount))
 
 	w = Call(mux, pt.GetBudgetCapital(jwt1.(string), budget1.(string), account2.(string)))
 	budgetCreditCapital, _ = GetJSONField(w, "capital")
@@ -429,8 +437,9 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	assert.Equal(t, int64(5000), budgetTotalCapital)
 
 	// pay off credit account, using the checking account, using a transfer transaction
-	transferAmount := fmt.Sprintf(`{"TRANSFER AMOUNT": %d}`, 5000)
-	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), account2.(string), "TRANSFER_FROM", "2025-09-15T19:00:00Z", "ACCOUNT TRANSFER", "Pay off credit account balance", transferAmount, "true"))
+	transferAmount := map[string]int64{}
+	transferAmount["TRANSFER AMOUNT"] = 5000
+	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), account2.(string), "TRANSFER_FROM", "2025-09-15T19:00:00Z", "ACCOUNT TRANSFER", "Pay off credit account balance", "true", transferAmount))
 
 	w = Call(mux, pt.GetBudgetCapital(jwt1.(string), budget1.(string), account2.(string)))
 	budgetCreditCapital, _ = GetJSONField(w, "capital")
@@ -503,12 +512,14 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 
 	// SEPTEMBER 2025 ACTIVITIES
 	// deposit some money into the checking account, allocated (but not explicitly assigned) to the Dining Out category
-	depositAmount := fmt.Sprintf(`{"%s": %d}`, category1.(string), 10000)
-	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", depositAmount, "true"))
+	depositAmount := map[string]int64{}
+	depositAmount[category1.(string)] = 10000
+	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", "true", depositAmount))
 
 	// spend money out of Dining Out category
-	spendAmount := fmt.Sprintf(`{"%s": %d}`, category1.(string), 5000)
-	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "WITHDRAWAL", "2025-09-15T18:00:00Z", payee2.(string), "$50 dinner at a restaurant", spendAmount, "true"))
+	spendAmount := map[string]int64{}
+	spendAmount[category1.(string)] = 5000
+	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "WITHDRAWAL", "2025-09-15T18:00:00Z", payee2.(string), "$50 dinner at a restaurant", "true", spendAmount))
 
 	// we expect that there's 5000 in capital remaining, and NO assignable money.
 	// 5000 in Dining Out; 0 in Savings.
@@ -527,15 +538,17 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	// OCTOBER 2025 ACTIVITIES
 	// deposit more money into the checking account, with NO category allocation.
 	// Assign some (but not all of it, to test for underassignment) to each of two categories.
-	depositAmount = fmt.Sprintf(`{"%s": %d}`, "UNCATEGORIZED", 10000)
-	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-10-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", depositAmount, "true"))
+	clear(depositAmount)
+	depositAmount["UNCATEGORIZED"] = 10000
+	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-10-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", "true", depositAmount))
 
 	w = Call(mux, pt.AssignMoneyToCategory(jwt1.(string), budget1.(string), "2025-10-01", category1.(string), 4000))
 	w = Call(mux, pt.AssignMoneyToCategory(jwt1.(string), budget1.(string), "2025-10-01", category2.(string), 5000))
 
 	// spend money out of Dining Out category
-	spendAmount = fmt.Sprintf(`{"%s": %d}`, category1.(string), 4000)
-	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "WITHDRAWAL", "2025-10-15T18:00:00Z", payee2.(string), "I was very busy having fun, fun, fun!", spendAmount, "true"))
+	clear(spendAmount)
+	spendAmount[category1.(string)] = 4000
+	w = Call(mux, pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "WITHDRAWAL", "2025-10-15T18:00:00Z", payee2.(string), "I was very busy having fun, fun, fun!", "true", spendAmount))
 
 	// we expect that there's 11000 in capital remaining, and 1000 in assignable money.
 	// 5000 in Dining Out; 5000 in Savings.
