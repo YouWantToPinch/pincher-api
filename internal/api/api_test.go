@@ -58,10 +58,8 @@ func Test_MakeAndResetUsers(t *testing.T) {
 	// TEST SETUP
 	var w *httptest.ResponseRecorder
 	// SERVER SETUP
-	const port = "8080"
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{
-		Addr:    ":" + port,
 		Handler: SetupMux(cfg),
 	}
 	mux := pincher.Handler
@@ -80,9 +78,7 @@ func Test_MakeAndResetUsers(t *testing.T) {
 	// User count should now be 2
 	w = Call(mux, pt.GetUserCount())
 	count, _ := GetJSONField(w, "count")
-	if !assert.Equal(t, count, int64(2)) {
-		t.Fatalf("expected user count of 2, but got %d", count)
-	}
+	assert.Equal(t, count, int64(2))
 
 	// Delete all users
 	w = Call(mux, pt.DeleteAllUsers())
@@ -91,9 +87,7 @@ func Test_MakeAndResetUsers(t *testing.T) {
 	// User count should now be 0 again
 	w = Call(mux, pt.GetUserCount())
 	count, _ = GetJSONField(w, "count")
-	if !assert.Equal(t, int64(0), count) {
-		t.Fatalf("expected user count of 0, but got %d", count)
-	}
+	assert.Equal(t, int64(0), count)
 }
 
 // Should make and log in 2 users, which should be able to then delete themselves,
@@ -102,10 +96,8 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 	// TEST SETUP
 	var w *httptest.ResponseRecorder
 	// SERVER SETUP
-	const port = "8080"
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{
-		Addr:    ":" + port,
 		Handler: SetupMux(cfg),
 	}
 	mux := pincher.Handler
@@ -136,9 +128,7 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 	// User count should now be 1
 	w = Call(mux, pt.GetUserCount())
 	count, _ := GetJSONField(w, "count")
-	if !assert.Equal(t, int64(1), count) {
-		t.Fatalf("expected user count of 1, but got %d", count)
-	}
+	assert.Equal(t, int64(1), count)
 
 	// Delete all users
 	w = Call(mux, pt.DeleteAllUsers())
@@ -147,9 +137,7 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 	// User count should now be 0 again
 	w = Call(mux, pt.GetUserCount())
 	count, _ = GetJSONField(w, "count")
-	if !assert.Equal(t, int64(0), count) {
-		t.Fatalf("expected user count of 0, but got %d", count)
-	}
+	assert.Equal(t, int64(0), count)
 }
 
 /*
@@ -163,10 +151,8 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	var err error
 	var w *httptest.ResponseRecorder
 	// SERVER SETUP
-	const port = "8080"
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{
-		Addr:    ":" + port,
 		Handler: SetupMux(cfg),
 	}
 	mux := pincher.Handler
@@ -278,10 +264,8 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	// TEST SETUP
 	var w *httptest.ResponseRecorder
 	// SERVER SETUP
-	const port = "8080"
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{
-		Addr:    ":" + port,
 		Handler: SetupMux(cfg),
 	}
 	mux := pincher.Handler
@@ -364,10 +348,8 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	// TEST SETUP
 	var w *httptest.ResponseRecorder
 	// SERVER SETUP
-	const port = "8080"
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{
-		Addr:    ":" + port,
 		Handler: SetupMux(cfg),
 	}
 	mux := pincher.Handler
