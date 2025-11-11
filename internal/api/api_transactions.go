@@ -43,7 +43,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		Notes             string    `json:"notes"`
 		Cleared           string    `json:"is_cleared"`
 		/* Map of category UUID strings to integers.
-		   If there is > 1 entry in Amounts, the transaction is not truly split.
+		   If there is only one entry in Amounts, the transaction is not truly split.
 		   Nonetheless, all transactions record at least one corresponding split.
 		   A 'split' reflects the sum of spending toward one particular category within the transaction.
 		*/
