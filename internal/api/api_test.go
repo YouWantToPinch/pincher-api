@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +11,8 @@ import (
 	pt "github.com/YouWantToPinch/pincher-api/internal/pinchertest"
 	"github.com/stretchr/testify/assert"
 )
+
+// TODO: adapt remaining tests to new case-checking standard! :)
 
 // ---------------
 // HELPER FUNCS
@@ -44,14 +47,59 @@ func GetJSONField(w *httptest.ResponseRecorder, field string) (any, error) {
 }
 
 type APIClient struct {
-	Mux http.Handler
-	W   *httptest.ResponseRecorder
+	Mux       http.Handler
+	W         *httptest.ResponseRecorder
+	Resources map[string]any
 }
 
 func (c *APIClient) Request(req *http.Request) {
 	w := httptest.NewRecorder()
 	c.Mux.ServeHTTP(w, req)
 	c.W = w
+}
+
+func (c *APIClient) SaveResourceFromJSON(field string, name string) {
+	jsonObject, _ := GetJSONField(c.W, field)
+	c.Resources[name] = jsonObject
+	slog.Debug(fmt.Sprintf("Saved value: %d", c.Resources[name]))
+}
+
+func (c *APIClient) equalsResourceAt(expected any, resourceName string) func() bool {
+	return func() bool {
+		return expected == c.Resources[resourceName]
+	}
+}
+
+type httpTestCase struct {
+	// Optional name for subtest
+	Name string
+	// Request to make; use pt.MakeRequest, or a premade wrapper that uses it
+	Request *http.Request
+	// JSON objects, derived from the Response body at the given JSON fields, to assign to given names
+	SaveFields map[string]string
+	// Status code that this subtest expects to receive in response to its Request
+	Expected int
+	// Further expectations beyond status code, typically surrounding resources
+	Checks []func() bool
+}
+
+func (tc *httpTestCase) Handle(t *testing.T, client *APIClient) {
+	t.Helper()
+	client.Request(tc.Request)
+	assert.Equal(t, tc.Expected, client.W.Code)
+	for key, val := range tc.SaveFields {
+		client.SaveResourceFromJSON(key, val)
+	}
+	for _, check := range tc.Checks {
+		assert.True(t, check())
+	}
+}
+
+func (tc *httpTestCase) getName() string {
+	if tc.Name != "" {
+		return tc.Name
+	}
+	return tc.Request.URL.Path
 }
 
 // ---------------
@@ -63,33 +111,63 @@ func Test_MakeAndResetUsers(t *testing.T) {
 	// SERVER SETUP
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{Handler: SetupMux(cfg)}
-	c := APIClient{Mux: pincher.Handler}
+	c := APIClient{Mux: pincher.Handler, Resources: map[string]any{}}
 
 	// REQUESTS
 
-	// Delete all users
-	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
+	cases := []httpTestCase{
+		// Delete all users in the database
+		{
+			Request:  pt.DeleteAllUsers(),
+			Expected: http.StatusOK,
+		},
+		// Create two new users
+		{
+			Request:  pt.CreateUser("user1", "pwd1"),
+			Expected: http.StatusCreated,
+		},
+		{
+			Request:  pt.CreateUser("user2", "pwd2"),
+			Expected: http.StatusCreated,
+		},
+		// User count should now be 2
+		{
+			Request: pt.GetUserCount(),
+			SaveFields: map[string]string{
+				"count": "count",
+			},
+			Expected: http.StatusOK,
+			Checks: []func() bool{
+				c.equalsResourceAt(int64(2), "count"),
+			},
+		},
+		// Delete all users again
+		{
+			Request:  pt.DeleteAllUsers(),
+			Expected: http.StatusOK,
+		},
+		// User count should now be 0 again
+		{
+			Request: pt.GetUserCount(),
+			SaveFields: map[string]string{
+				"count": "count",
+			},
+			Expected: http.StatusOK,
+			Checks: []func() bool{
+				(c.equalsResourceAt(int64(0), "count")),
+			},
+		},
+		{
+			Request:  pt.GetUserCount(),
+			Expected: http.StatusOK,
+		},
+	}
 
-	// Create two users
-	c.Request(pt.CreateUser("user1", "pwd1"))
-	assert.Equal(t, 201, c.W.Code)
-	c.Request(pt.CreateUser("user2", "pwd2"))
-	assert.Equal(t, 201, c.W.Code)
-
-	// User count should now be 2
-	c.Request(pt.GetUserCount())
-	count, _ := GetJSONField(c.W, "count")
-	assert.Equal(t, count, int64(2))
-
-	// Delete all users
-	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
-
-	// User count should now be 0 again
-	c.Request(pt.GetUserCount())
-	count, _ = GetJSONField(c.W, "count")
-	assert.Equal(t, int64(0), count)
+	for _, tc := range cases {
+		t.Run(tc.getName(), func(t *testing.T) {
+			tc.Handle(t, &c)
+		})
+	}
 }
 
 // Should make and log in 2 users, which should be able to then delete themselves,
