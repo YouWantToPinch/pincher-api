@@ -12,7 +12,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: adapt remaining tests to new case-checking standard! :)
+// NOTE: This integration testing has two optional implementations.
+// Firstly, the conventional one; a more stateful approach recording variables for use in further mock requests.
+// But secondly, in an effort to make the tests more readable, a test-case slice approach was implemented.
+// Far too late, it appeared that this second implementation may only make things more readable for those
+// 	tests which don't demand very detailed requests, and may otherwise be an overengineered solution to
+// 	running others.
+// Both implementations are left here for developer use.
+// When in doubt: loop through a slice of httpTestCase structs for lighter tests,
+// 	but use the more traditional, stateful approach for anything else.
 
 // ---------------
 // HELPER FUNCS
@@ -52,16 +60,24 @@ type APIClient struct {
 	Resources map[string]any
 }
 
-func (c *APIClient) Request(req *http.Request) {
+func (c *APIClient) Request(req *http.Request) *http.Request {
 	w := httptest.NewRecorder()
 	c.Mux.ServeHTTP(w, req)
 	c.W = w
+	return req
+}
+
+func (c *APIClient) GetResource(name string) any {
+	if v, ok := c.Resources[name]; ok {
+		return v
+	}
+	return nil
 }
 
 func (c *APIClient) SaveResourceFromJSON(field string, name string) {
 	jsonObject, _ := GetJSONField(c.W, field)
 	c.Resources[name] = jsonObject
-	slog.Debug(fmt.Sprintf("Saved value: %d", c.Resources[name]))
+	slog.Debug(fmt.Sprintf("Saved resource %s at: %v (type: %T)", name, c.Resources[name], c.Resources[name]))
 }
 
 func (c *APIClient) equalsResourceAt(expected any, resourceName string) func() bool {
@@ -73,8 +89,10 @@ func (c *APIClient) equalsResourceAt(expected any, resourceName string) func() b
 type httpTestCase struct {
 	// Optional name for subtest
 	Name string
+	// Path saved from making the request
+	Path string
 	// Request to make; use pt.MakeRequest, or a premade wrapper that uses it
-	Request *http.Request
+	RequestFunc func() *http.Request
 	// JSON objects, derived from the Response body at the given JSON fields, to assign to given names
 	SaveFields map[string]string
 	// Status code that this subtest expects to receive in response to its Request
@@ -85,7 +103,7 @@ type httpTestCase struct {
 
 func (tc *httpTestCase) Handle(t *testing.T, client *APIClient) {
 	t.Helper()
-	client.Request(tc.Request)
+	tc.Path = client.Request(tc.RequestFunc()).URL.Path
 	assert.Equal(t, tc.Expected, client.W.Code)
 	for key, val := range tc.SaveFields {
 		client.SaveResourceFromJSON(key, val)
@@ -99,7 +117,7 @@ func (tc *httpTestCase) getName() string {
 	if tc.Name != "" {
 		return tc.Name
 	}
-	return tc.Request.URL.Path
+	return tc.Path
 }
 
 // ---------------
@@ -118,21 +136,29 @@ func Test_MakeAndResetUsers(t *testing.T) {
 	cases := []httpTestCase{
 		// Delete all users in the database
 		{
-			Request:  pt.DeleteAllUsers(),
+			RequestFunc: func() *http.Request {
+				return pt.DeleteAllUsers()
+			},
 			Expected: http.StatusOK,
 		},
 		// Create two new users
 		{
-			Request:  pt.CreateUser("user1", "pwd1"),
+			RequestFunc: func() *http.Request {
+				return pt.CreateUser("user1", "pwd1")
+			},
 			Expected: http.StatusCreated,
 		},
 		{
-			Request:  pt.CreateUser("user2", "pwd2"),
+			RequestFunc: func() *http.Request {
+				return pt.CreateUser("user2", "pwd2")
+			},
 			Expected: http.StatusCreated,
 		},
 		// User count should now be 2
 		{
-			Request: pt.GetUserCount(),
+			RequestFunc: func() *http.Request {
+				return pt.GetUserCount()
+			},
 			SaveFields: map[string]string{
 				"count": "count",
 			},
@@ -143,12 +169,16 @@ func Test_MakeAndResetUsers(t *testing.T) {
 		},
 		// Delete all users again
 		{
-			Request:  pt.DeleteAllUsers(),
+			RequestFunc: func() *http.Request {
+				return pt.DeleteAllUsers()
+			},
 			Expected: http.StatusOK,
 		},
 		// User count should now be 0 again
 		{
-			Request: pt.GetUserCount(),
+			RequestFunc: func() *http.Request {
+				return pt.GetUserCount()
+			},
 			SaveFields: map[string]string{
 				"count": "count",
 			},
@@ -156,10 +186,6 @@ func Test_MakeAndResetUsers(t *testing.T) {
 			Checks: []func() bool{
 				(c.equalsResourceAt(int64(0), "count")),
 			},
-		},
-		{
-			Request:  pt.GetUserCount(),
-			Expected: http.StatusOK,
 		},
 	}
 
@@ -176,45 +202,102 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 	// SERVER SETUP
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{Handler: SetupMux(cfg)}
-	c := APIClient{Mux: pincher.Handler}
+	c := APIClient{Mux: pincher.Handler, Resources: map[string]any{}}
 
 	// REQUESTS
 
-	// Delete all users
-	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
+	cases := []httpTestCase{
+		// Delete all users in the database
+		{
+			RequestFunc: func() *http.Request { return pt.DeleteAllUsers() },
+			Expected:    http.StatusOK,
+		},
+		// Create two new users
+		{
+			RequestFunc: func() *http.Request {
+				return pt.CreateUser("user1", "pwd1")
+			},
+			Expected: http.StatusCreated,
+		},
+		{
+			RequestFunc: func() *http.Request {
+				return pt.CreateUser("user2", "pwd2")
+			},
+			Expected: http.StatusCreated,
+		},
+		// Log in both users
+		{
+			Name: "User1Login",
+			RequestFunc: func() *http.Request {
+				return pt.LoginUser("user1", "pwd1")
+			},
+			SaveFields: map[string]string{
+				"token": "jwt1",
+			},
+			Expected: http.StatusOK,
+		},
+		{
+			Name: "User2Login",
+			RequestFunc: func() *http.Request {
+				return pt.LoginUser("user2", "pwd2")
+			},
+			SaveFields: map[string]string{
+				"token": "jwt2",
+			},
+			Expected: http.StatusOK,
+		},
+		// attempt deletion of user 2 as user 1; should fail
+		{
+			RequestFunc: func() *http.Request {
+				return pt.DeleteUser(c.GetResource("jwt1").(string), "user2", "pwd2")
+			},
+			Expected: http.StatusUnauthorized,
+		},
+		// Attempt deletion of user 1 as user 1
+		{
+			RequestFunc: func() *http.Request {
+				return pt.DeleteUser(c.GetResource("jwt1").(string), "user1", "pwd1")
+			},
+			Expected: http.StatusOK,
+		},
+		// User count should now be 1
+		{
+			RequestFunc: func() *http.Request {
+				return pt.GetUserCount()
+			},
+			SaveFields: map[string]string{
+				"count": "count",
+			},
+			Expected: http.StatusOK,
+			Checks: []func() bool{
+				c.equalsResourceAt(int64(1), "count"),
+			},
+		},
+		// Delete all users
+		{
+			RequestFunc: func() *http.Request { return pt.DeleteAllUsers() },
+			Expected:    http.StatusOK,
+		},
+		// User count should now be 0
+		{
+			RequestFunc: func() *http.Request {
+				return pt.GetUserCount()
+			},
+			SaveFields: map[string]string{
+				"count": "count",
+			},
+			Expected: http.StatusOK,
+			Checks: []func() bool{
+				(c.equalsResourceAt(int64(0), "count")),
+			},
+		},
+	}
 
-	// Create two users
-	c.Request(pt.CreateUser("user1", "pwd1"))
-	assert.Equal(t, http.StatusCreated, c.W.Code)
-	c.Request(pt.CreateUser("user2", "pwd2"))
-	assert.Equal(t, http.StatusCreated, c.W.Code)
-
-	// Log in both users
-	c.Request(pt.LoginUser("user1", "pwd1"))
-	jwt1, _ := GetJSONField(c.W, "token")
-	c.Request(pt.LoginUser("user2", "pwd2"))
-
-	// attempt deletion of user 2 as user 1
-	c.Request(pt.DeleteUser(jwt1.(string), "user2", "pwd2"))
-	assert.Equal(t, http.StatusUnauthorized, c.W.Code, "Should have a valid JSON web token from login in order to perform a user deletion")
-
-	// delete user 1 as user 1
-	c.Request(pt.DeleteUser(jwt1.(string), "user1", "pwd1"))
-
-	// User count should now be 1
-	c.Request(pt.GetUserCount())
-	count, _ := GetJSONField(c.W, "count")
-	assert.Equal(t, int64(1), count)
-
-	// Delete all users
-	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
-
-	// User count should now be 0 again
-	c.Request(pt.GetUserCount())
-	count, _ = GetJSONField(c.W, "count")
-	assert.Equal(t, int64(0), count)
+	for _, tc := range cases {
+		t.Run(tc.getName(), func(t *testing.T) {
+			tc.Handle(t, &c)
+		})
+	}
 }
 
 /*
