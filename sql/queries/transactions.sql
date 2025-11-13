@@ -53,16 +53,6 @@ VALUES (
 )
 RETURNING *;
 
--- name: LogTransactionSplit :one
-INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
-VALUES (
-    gen_random_uuid(),
-    $1,
-    $2,
-    $3
-)
-RETURNING *;
-
 -- name: GetTransactionsFromView :many
 SELECT *
 FROM transactions_view t
