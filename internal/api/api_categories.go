@@ -1,11 +1,9 @@
 package api
 
 import (
-	"fmt"
-	"github.com/google/uuid"
-	"log/slog"
 	"net/http"
-	"strings"
+
+	"github.com/google/uuid"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
@@ -72,40 +70,46 @@ func (cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
 
 	queryGroupID := r.URL.Query().Get("group_id")
+	var parsedGroupID uuid.UUID
+	if queryGroupID != "" {
+		var err error
+		parsedGroupID, err = uuid.Parse(queryGroupID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "invalid id", err)
+		}
+	}
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	categories, err := cfg.db.GetCategoriesByBudgetID(r.Context(), pathBudgetID)
+	categories, err := cfg.db.GetCategories(r.Context(), database.GetCategoriesParams{
+		BudgetID: pathBudgetID,
+		GroupID:  parsedGroupID,
+	})
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Couldn't find categories in group specified", err)
+		respondWithError(w, http.StatusNotFound, "Database error", err)
 		return
 	}
 
-	var respBody []Category
-	{
-		want := strings.ToLower(strings.TrimSpace(queryGroupID))
-		for _, category := range categories {
-			if want != "" {
-				if !category.GroupID.Valid {
-					continue
-				}
-				got := strings.ToLower(strings.TrimSpace(category.GroupID.UUID.String()))
-				if got != want {
-					slog.Debug(fmt.Sprintf("got (%s) != want (%s)", got, want))
-					continue
-				}
-			}
-			addCategory := Category{
-				ID:        category.ID,
-				CreatedAt: category.CreatedAt,
-				UpdatedAt: category.UpdatedAt,
-				Name:      category.Name,
-				BudgetID:  category.BudgetID,
-				GroupID:   category.GroupID,
-				Notes:     category.Notes,
-			}
-			respBody = append(respBody, addCategory)
+	var respCategories []Category
+	for _, category := range categories {
+		addCategory := Category{
+			ID:        category.ID,
+			CreatedAt: category.CreatedAt,
+			UpdatedAt: category.UpdatedAt,
+			Name:      category.Name,
+			BudgetID:  category.BudgetID,
+			GroupID:   category.GroupID,
+			Notes:     category.Notes,
 		}
+		respCategories = append(respCategories, addCategory)
+	}
+
+	type resp struct {
+		Categories []Category `json:"categories"`
+	}
+
+	respBody := resp{
+		Categories: respCategories,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)

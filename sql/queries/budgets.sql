@@ -134,15 +134,14 @@ SELECT *
 FROM categories
 WHERE categories.id = $1;
 
--- name: GetCategoriesByBudgetID :many
+-- name: GetCategories :many
 SELECT *
-FROM categories
-WHERE categories.budget_id = $1;
-
--- name: GetCategoriesByGroup :many
-SELECT *
-FROM categories
-WHERE categories.group_id = $1;
+FROM categories c
+WHERE c.budget_id = sqlc.arg('budget_id')
+  AND (
+    sqlc.arg('group_id')::uuid IS NULL
+    OR c.group_id = sqlc.arg('group_id')
+  );
 
 -- name: UpdateCategory :one
 UPDATE categories
