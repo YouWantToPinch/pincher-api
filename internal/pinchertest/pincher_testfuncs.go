@@ -182,11 +182,11 @@ func GetTransactions(token, budgetID, accountID, categoryID, payeeID, startDate,
 }
 
 func GetTransaction(token, budgetID, transactionID string) *http.Request {
-	return MakeRequest(http.MethodGet, "api/budgets/"+budgetID+"/transactions/"+transactionID, token, nil)
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/transactions/"+transactionID, token, nil)
 }
 
 func DeleteTransaction(token, budgetID, transactionID string) *http.Request {
-	return MakeRequest(http.MethodDelete, "api/budgets/"+budgetID+"/transactions/"+transactionID, token, nil)
+	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/transactions/"+transactionID, token, nil)
 }
 
 // BUDGET -> ASSIGNMENT CRUD
