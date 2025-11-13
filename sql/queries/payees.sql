@@ -26,6 +26,18 @@ SET updated_at = NOW(), name = $2, notes = $3
 WHERE id = $1
 RETURNING *;
 
+-- name: ReassignTransactions :exec
+UPDATE transactions
+SET payee_id = sqlc.arg('new_payee_id')
+WHERE payee_id = sqlc.arg('old_payee_id');
+
+-- name: IsPayeeInUse :one
+SELECT EXISTS (
+  SELECT 1
+  FROM transactions
+  WHERE payee_id = $1
+) AS found;
+
 -- name: DeletePayee :exec
 DELETE
 FROM payees

@@ -109,6 +109,12 @@ func GetBudgetPayees(token, budgetID string) *http.Request {
 	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/payees", token, nil)
 }
 
+func DeletePayee(token, budgetID, payeeID, newPayeeID string) *http.Request {
+	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/payees/"+payeeID, token, map[string]any{
+		"new_payee_id": newPayeeID,
+	})
+}
+
 // BUDGET -> CATEGORY CRUD
 
 func CreateCategory(token, budgetID, groupID, name, notes string) *http.Request {

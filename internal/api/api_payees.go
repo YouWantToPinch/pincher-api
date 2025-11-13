@@ -149,6 +149,41 @@ func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type parameters struct {
+		NewPayeeID string `json:"new_payee_id"`
+	}
+
+	params, err := decodeParams[parameters](r)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		return
+	}
+
+	payeeInUse, err := cfg.db.IsPayeeInUse(r.Context(), pathPayeeID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Database error", err)
+	}
+
+	if payeeInUse {
+		if params.NewPayeeID == "" {
+			respondWithError(w, http.StatusBadRequest, "No Payee ID provided to reassign transactions to", err)
+			return
+		}
+		parsedNewPayeeID, err := uuid.Parse(params.NewPayeeID)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "invalid id", err)
+			return
+		}
+		err = cfg.db.ReassignTransactions(r.Context(), database.ReassignTransactionsParams{
+			OldPayeeID: pathPayeeID,
+			NewPayeeID: parsedNewPayeeID,
+		})
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Could not reassign payee for transactions", err)
+			return
+		}
+	}
+
 	err = cfg.db.DeletePayee(r.Context(), pathPayeeID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to delete payee from budget", err)

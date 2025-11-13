@@ -111,6 +111,37 @@ func (q *Queries) GetPayeeByID(ctx context.Context, id uuid.UUID) (Payee, error)
 	return i, err
 }
 
+const isPayeeInUse = `-- name: IsPayeeInUse :one
+SELECT EXISTS (
+  SELECT 1
+  FROM transactions
+  WHERE payee_id = $1
+) AS found
+`
+
+func (q *Queries) IsPayeeInUse(ctx context.Context, payeeID uuid.UUID) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isPayeeInUse, payeeID)
+	var found bool
+	err := row.Scan(&found)
+	return found, err
+}
+
+const reassignTransactions = `-- name: ReassignTransactions :exec
+UPDATE transactions
+SET payee_id = $1
+WHERE payee_id = $2
+`
+
+type ReassignTransactionsParams struct {
+	NewPayeeID uuid.UUID
+	OldPayeeID uuid.UUID
+}
+
+func (q *Queries) ReassignTransactions(ctx context.Context, arg ReassignTransactionsParams) error {
+	_, err := q.db.ExecContext(ctx, reassignTransactions, arg.NewPayeeID, arg.OldPayeeID)
+	return err
+}
+
 const updatePayee = `-- name: UpdatePayee :one
 UPDATE payees
 SET updated_at = NOW(), name = $2, notes = $3
