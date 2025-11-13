@@ -12,24 +12,26 @@ import (
 )
 
 const createPayee = `-- name: CreatePayee :one
-INSERT INTO payees (id, created_at, updated_at, budget_id, name)
+INSERT INTO payees (id, created_at, updated_at, budget_id, name, notes)
 VALUES (
     gen_random_uuid(),
     DEFAULT,
     DEFAULT,
     $1,
-    $2
+    $2,
+    $3
 )
-RETURNING id, created_at, updated_at, budget_id, name
+RETURNING id, created_at, updated_at, budget_id, name, notes
 `
 
 type CreatePayeeParams struct {
 	BudgetID uuid.UUID
 	Name     string
+	Notes    string
 }
 
 func (q *Queries) CreatePayee(ctx context.Context, arg CreatePayeeParams) (Payee, error) {
-	row := q.db.QueryRowContext(ctx, createPayee, arg.BudgetID, arg.Name)
+	row := q.db.QueryRowContext(ctx, createPayee, arg.BudgetID, arg.Name, arg.Notes)
 	var i Payee
 	err := row.Scan(
 		&i.ID,
@@ -37,6 +39,7 @@ func (q *Queries) CreatePayee(ctx context.Context, arg CreatePayeeParams) (Payee
 		&i.UpdatedAt,
 		&i.BudgetID,
 		&i.Name,
+		&i.Notes,
 	)
 	return i, err
 }
@@ -53,7 +56,7 @@ func (q *Queries) DeletePayee(ctx context.Context, id uuid.UUID) error {
 }
 
 const getBudgetPayees = `-- name: GetBudgetPayees :many
-SELECT id, created_at, updated_at, budget_id, name
+SELECT id, created_at, updated_at, budget_id, name, notes
 FROM payees
 WHERE payees.budget_id = $1
 `
@@ -73,6 +76,7 @@ func (q *Queries) GetBudgetPayees(ctx context.Context, budgetID uuid.UUID) ([]Pa
 			&i.UpdatedAt,
 			&i.BudgetID,
 			&i.Name,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -88,7 +92,7 @@ func (q *Queries) GetBudgetPayees(ctx context.Context, budgetID uuid.UUID) ([]Pa
 }
 
 const getPayeeByID = `-- name: GetPayeeByID :one
-SELECT id, created_at, updated_at, budget_id, name
+SELECT id, created_at, updated_at, budget_id, name, notes
 FROM payees
 WHERE payees.id = $1
 `
@@ -102,6 +106,34 @@ func (q *Queries) GetPayeeByID(ctx context.Context, id uuid.UUID) (Payee, error)
 		&i.UpdatedAt,
 		&i.BudgetID,
 		&i.Name,
+		&i.Notes,
+	)
+	return i, err
+}
+
+const updatePayee = `-- name: UpdatePayee :one
+UPDATE payees
+SET updated_at = NOW(), name = $2, notes = $3
+WHERE id = $1
+RETURNING id, created_at, updated_at, budget_id, name, notes
+`
+
+type UpdatePayeeParams struct {
+	ID    uuid.UUID
+	Name  string
+	Notes string
+}
+
+func (q *Queries) UpdatePayee(ctx context.Context, arg UpdatePayeeParams) (Payee, error) {
+	row := q.db.QueryRowContext(ctx, updatePayee, arg.ID, arg.Name, arg.Notes)
+	var i Payee
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BudgetID,
+		&i.Name,
+		&i.Notes,
 	)
 	return i, err
 }

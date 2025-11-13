@@ -20,6 +20,12 @@ SELECT *
 FROM payees
 WHERE payees.id = $1;
 
+-- name: UpdatePayee :one
+UPDATE payees
+SET updated_at = NOW(), name = $2, notes = $3
+WHERE id = $1
+RETURNING *;
+
 -- name: DeletePayee :exec
 DELETE
 FROM payees

@@ -224,6 +224,34 @@ func (cfg *apiConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 	respondWithText(w, http.StatusNoContent, "Revoked membership successfully")
 }
 
+func (cfg *apiConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
+
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+
+	type parameters struct {
+		Name  string `json:"name"`
+		Notes string `json:"notes"`
+	}
+
+	params, err := decodeParams[parameters](r)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		return
+	}
+
+	_, err = cfg.db.UpdateBudget(r.Context(), database.UpdateBudgetParams{
+		ID:    pathBudgetID,
+		Name:  params.Name,
+		Notes: params.Notes,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to update budget", err)
+		return
+	}
+
+	respondWithText(w, http.StatusNoContent, "Budget '"+params.Name+"' updated successfully!")
+}
+
 func (cfg *apiConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")

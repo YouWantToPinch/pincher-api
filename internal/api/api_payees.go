@@ -97,8 +97,39 @@ func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, respBody)
 }
 
-func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
+	var pathPayeeID uuid.UUID
+	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		return
+	}
 
+	type parameters struct {
+		Name  string `json:"name"`
+		Notes string `json:"notes"`
+	}
+
+	params, err := decodeParams[parameters](r)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		return
+	}
+
+	_, err = cfg.db.UpdateGroup(r.Context(), database.UpdateGroupParams{
+		ID:    pathPayeeID,
+		Name:  params.Name,
+		Notes: params.Notes,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to update payee", err)
+		return
+	}
+
+	respondWithText(w, http.StatusNoContent, "Payee '"+params.Name+"' updated successfully!")
+}
+
+func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("payee_id")
 	pathPayeeID, err := uuid.Parse(idString)
 	if err != nil {

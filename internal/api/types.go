@@ -152,6 +152,7 @@ type Payee struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	BudgetID  uuid.UUID `json:"budget_id"`
 	Name      string    `json:"name"`
+	Notes     string    `json:"notes"`
 }
 
 type CategoryReport struct {

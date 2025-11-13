@@ -32,6 +32,12 @@ UPDATE accounts
 SET accounts.is_deleted = FALSE
 WHERE accounts.id = $1;
 
+-- name: UpdateAccount :one
+UPDATE accounts
+SET updated_at = NOW(), account_type = $2, name = $3, notes = $4
+WHERE id = $1
+RETURNING *;
+
 -- name: DeleteAccountSoft :exec
 UPDATE accounts
 SET accounts.is_deleted = TRUE

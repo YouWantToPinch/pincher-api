@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -134,8 +133,41 @@ func (cfg *apiConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http
 	respondWithJSON(w, http.StatusOK, respBody)
 }
 
-func (cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) {
+	var pathAccountID uuid.UUID
+	err := parseUUIDFromPath("account_id", r, &pathAccountID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		return
+	}
 
+	type parameters struct {
+		AccountType string `json:"account_type"`
+		Name        string `json:"name"`
+		Notes       string `json:"notes"`
+	}
+
+	params, err := decodeParams[parameters](r)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		return
+	}
+
+	_, err = cfg.db.UpdateAccount(r.Context(), database.UpdateAccountParams{
+		ID:          pathAccountID,
+		AccountType: params.AccountType,
+		Name:        params.Name,
+		Notes:       params.Notes,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to update account", err)
+		return
+	}
+
+	respondWithText(w, http.StatusNoContent, "Account '"+params.Name+"' updated successfully!")
+}
+
+func (cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Name       string `json:"name"`
 		DeleteHard bool   `json:"delete_hard"`

@@ -45,33 +45,6 @@ func (q *Queries) AssignBudgetMemberWithRole(ctx context.Context, arg AssignBudg
 	return i, err
 }
 
-const assignCategoryToGroup = `-- name: AssignCategoryToGroup :one
-UPDATE categories
-SET updated_at = NOW(), group_id = $2
-WHERE id = $1
-RETURNING id, created_at, updated_at, budget_id, name, group_id, notes
-`
-
-type AssignCategoryToGroupParams struct {
-	ID      uuid.UUID
-	GroupID uuid.NullUUID
-}
-
-func (q *Queries) AssignCategoryToGroup(ctx context.Context, arg AssignCategoryToGroupParams) (Category, error) {
-	row := q.db.QueryRowContext(ctx, assignCategoryToGroup, arg.ID, arg.GroupID)
-	var i Category
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.BudgetID,
-		&i.Name,
-		&i.GroupID,
-		&i.Notes,
-	)
-	return i, err
-}
-
 const createBudget = `-- name: CreateBudget :one
 
 INSERT INTO budgets (id, created_at, updated_at, admin_id, name, notes)
@@ -518,4 +491,92 @@ type RevokeBudgetMembershipParams struct {
 func (q *Queries) RevokeBudgetMembership(ctx context.Context, arg RevokeBudgetMembershipParams) error {
 	_, err := q.db.ExecContext(ctx, revokeBudgetMembership, arg.BudgetID, arg.UserID)
 	return err
+}
+
+const updateBudget = `-- name: UpdateBudget :one
+UPDATE budgets
+SET updated_at = NOW(), name = $2, notes = $3
+WHERE id = $1
+RETURNING id, created_at, updated_at, admin_id, name, notes
+`
+
+type UpdateBudgetParams struct {
+	ID    uuid.UUID
+	Name  string
+	Notes string
+}
+
+func (q *Queries) UpdateBudget(ctx context.Context, arg UpdateBudgetParams) (Budget, error) {
+	row := q.db.QueryRowContext(ctx, updateBudget, arg.ID, arg.Name, arg.Notes)
+	var i Budget
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AdminID,
+		&i.Name,
+		&i.Notes,
+	)
+	return i, err
+}
+
+const updateCategory = `-- name: UpdateCategory :one
+UPDATE categories
+SET updated_at = NOW(), group_id = $2, name = $3, notes = $4
+WHERE id = $1
+RETURNING id, created_at, updated_at, budget_id, name, group_id, notes
+`
+
+type UpdateCategoryParams struct {
+	ID      uuid.UUID
+	GroupID uuid.NullUUID
+	Name    string
+	Notes   string
+}
+
+func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
+	row := q.db.QueryRowContext(ctx, updateCategory,
+		arg.ID,
+		arg.GroupID,
+		arg.Name,
+		arg.Notes,
+	)
+	var i Category
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BudgetID,
+		&i.Name,
+		&i.GroupID,
+		&i.Notes,
+	)
+	return i, err
+}
+
+const updateGroup = `-- name: UpdateGroup :one
+UPDATE groups
+SET updated_at = NOW(), name = $2, notes = $3
+WHERE id = $1
+RETURNING id, created_at, updated_at, budget_id, name, notes
+`
+
+type UpdateGroupParams struct {
+	ID    uuid.UUID
+	Name  string
+	Notes string
+}
+
+func (q *Queries) UpdateGroup(ctx context.Context, arg UpdateGroupParams) (Group, error) {
+	row := q.db.QueryRowContext(ctx, updateGroup, arg.ID, arg.Name, arg.Notes)
+	var i Group
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BudgetID,
+		&i.Name,
+		&i.Notes,
+	)
+	return i, err
 }

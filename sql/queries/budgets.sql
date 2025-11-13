@@ -56,6 +56,12 @@ SELECT CAST(COALESCE(SUM(transactions_view.total_amount), 0) AS BIGINT) AS total
 FROM transactions_view
 WHERE transactions_view.budget_id = $1;
 
+-- name: UpdateBudget :one
+UPDATE budgets
+SET updated_at = NOW(), name = $2, notes = $3
+WHERE id = $1
+RETURNING *;
+
 -- name: RevokeBudgetMembership :exec
 DELETE
 FROM budgets_users
@@ -97,6 +103,12 @@ SELECT *
 FROM groups
 WHERE groups.name = $1 AND groups.budget_id = $2;
 
+-- name: UpdateGroup :one
+UPDATE groups
+SET updated_at = NOW(), name = $2, notes = $3
+WHERE id = $1
+RETURNING *;
+
 -- name: DeleteGroupByID :exec
 DELETE
 FROM groups
@@ -132,9 +144,9 @@ SELECT *
 FROM categories
 WHERE categories.group_id = $1;
 
--- name: AssignCategoryToGroup :one
+-- name: UpdateCategory :one
 UPDATE categories
-SET updated_at = NOW(), group_id = $2
+SET updated_at = NOW(), group_id = $2, name = $3, notes = $4
 WHERE id = $1
 RETURNING *;
 

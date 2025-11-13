@@ -69,14 +69,46 @@ func (cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 			ID:        group.ID,
 			CreatedAt: group.CreatedAt,
 			UpdatedAt: group.UpdatedAt,
-			Name:      group.Name,
 			BudgetID:  group.BudgetID,
+			Name:      group.Name,
 			Notes:     group.Notes,
 		}
 		respBody = append(respBody, addGroup)
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
+}
+
+func (cfg *apiConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
+	var pathGroupID uuid.UUID
+	err := parseUUIDFromPath("group_id", r, &pathGroupID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		return
+	}
+
+	type parameters struct {
+		Name  string `json:"name"`
+		Notes string `json:"notes"`
+	}
+
+	params, err := decodeParams[parameters](r)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		return
+	}
+
+	_, err = cfg.db.UpdatePayee(r.Context(), database.UpdatePayeeParams{
+		ID:    pathGroupID,
+		Name:  params.Name,
+		Notes: params.Notes,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to update group", err)
+		return
+	}
+
+	respondWithText(w, http.StatusNoContent, "Group '"+params.Name+"' updated successfully!")
 }
 
 func (cfg *apiConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {

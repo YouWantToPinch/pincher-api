@@ -73,20 +73,13 @@ func (cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
 
-	dbUserUpdated, err := cfg.db.UpdateUserCredentials(r.Context(), database.UpdateUserCredentialsParams{
+	_, err = cfg.db.UpdateUserCredentials(r.Context(), database.UpdateUserCredentialsParams{
 		ID:             validatedUserID,
 		Username:       params.Username,
 		HashedPassword: hashedPass,
 	})
 
-	respBody := User{
-		ID:        dbUserUpdated.ID,
-		CreatedAt: dbUserUpdated.CreatedAt,
-		UpdatedAt: dbUserUpdated.UpdatedAt,
-		Username:  dbUserUpdated.Username,
-	}
-
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithText(w, http.StatusNoContent, "User '"+params.Username+"' updated successfully!")
 }
 
 func (cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {

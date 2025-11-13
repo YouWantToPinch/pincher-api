@@ -40,7 +40,6 @@ SELECT
     (
         SELECT json_agg(insert_splits.*)
         FROM insert_splits
-        WHERE insert_splits.transaction_id = tr1.id
     ) AS splits
 FROM tr1;
 
@@ -111,6 +110,51 @@ WHERE id = $1;
 SELECT *
 FROM transactions_view
 WHERE id = $1;
+
+-- name: UpdateTransaction :one
+WITH
+updated_txn AS (
+    UPDATE transactions t
+    SET
+        updated_at = NOW(),
+        account_id = sqlc.arg('account_id'),
+        transaction_type = sqlc.arg('transaction_type'),
+        transaction_date = sqlc.arg('transaction_date'),
+        payee_id = sqlc.arg('payee_id'),
+        notes = sqlc.arg('notes'),
+        cleared = sqlc.arg('cleared')
+    WHERE t.id = sqlc.arg('transaction_id')
+    RETURNING *
+),
+
+-- Clear out existing splits for this transaction
+deleted_splits AS (
+    DELETE FROM transaction_splits
+    WHERE transaction_id = sqlc.arg('transaction_id')
+),
+
+-- Insert fresh splits from the provided JSON
+inserted_splits AS (
+    INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
+    SELECT
+        gen_random_uuid(),
+        updated_txn.id,
+        CASE
+            WHEN updated_txn.transaction_type ILIKE '%TRANSFER%' THEN NULL
+            WHEN updated_txn.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
+            ELSE key::uuid
+        END,
+        value::integer
+    FROM updated_txn, json_each_text(sqlc.arg('amounts')::json)
+    RETURNING *
+)
+SELECT
+    updated_txn.*,
+    (
+        SELECT json_agg(inserted_splits.*)
+        FROM inserted_splits
+    ) AS splits
+FROM updated_txn;
 
 -- name: DeleteTransaction :exec
 DELETE

@@ -86,6 +86,7 @@ type Payee struct {
 	UpdatedAt time.Time
 	BudgetID  uuid.UUID
 	Name      string
+	Notes     string
 }
 
 type RefreshToken struct {

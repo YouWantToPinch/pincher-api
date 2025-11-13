@@ -111,11 +111,18 @@ func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusOK, respBody)
 }
 
-func (cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("category_id")
-	pathCategoryID, err := uuid.Parse(idString)
+func (cfg *apiConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request) {
+
+	var pathCategoryID uuid.UUID
+	err := parseUUIDFromPath("category_id", r, &pathCategoryID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		return
+	}
 
 	type parameters struct {
+		Name    string `json:"name"`
+		Notes   string `json:"notes"`
 		GroupID string `json:"group_id"`
 	}
 
@@ -127,54 +134,40 @@ func (cfg *apiConfig) endpAssignCategoryToGroup(w http.ResponseWriter, r *http.R
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	if params.GroupID == "" {
-		respondWithError(w, http.StatusBadRequest, "Request provided no group_id for assignment", err)
-		return
-	}
-
 	var assignedGroup uuid.NullUUID
-	parsedGroupID, err := uuid.Parse(params.GroupID)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Provided group_id query parameter could not be parsed as UUID", err)
-		return
-	}
-	foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
-		BudgetID: pathBudgetID,
-		ID:       parsedGroupID,
-	})
-	if err != nil || pathBudgetID != foundGroup.BudgetID {
-		respondWithError(w, http.StatusBadRequest, "Found no group with provided group_id", err)
-		return
-	}
-	assignedGroup.UUID = foundGroup.ID
-	assignedGroup.Valid = true
-
-	dbCategory, err := cfg.db.GetCategoryByID(r.Context(), pathCategoryID)
-	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Couldn't find category to assign to", err)
-		return
-	}
-	respBody := Category{
-		ID:        dbCategory.ID,
-		CreatedAt: dbCategory.CreatedAt,
-		UpdatedAt: dbCategory.UpdatedAt,
-		BudgetID:  dbCategory.BudgetID,
-		Name:      dbCategory.Name,
-		GroupID:   assignedGroup,
-		Notes:     dbCategory.Notes,
+	if params.GroupID != "" {
+		parsedGroupID, err := uuid.Parse(params.GroupID)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "Provided group_id could not be parsed as UUID", err)
+			return
+		}
+		foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
+			BudgetID: pathBudgetID,
+			ID:       parsedGroupID,
+		})
+		if err != nil || pathBudgetID != foundGroup.BudgetID {
+			respondWithError(w, http.StatusBadRequest, "Found no group in budget with provided group_id", err)
+			return
+		}
+		assignedGroup.UUID = foundGroup.ID
+		assignedGroup.Valid = true
+	} else {
+		assignedGroup.Valid = false
 	}
 
-	cfg.db.AssignCategoryToGroup(r.Context(), database.AssignCategoryToGroupParams{
+	cfg.db.UpdateCategory(r.Context(), database.UpdateCategoryParams{
 		ID:      pathCategoryID,
 		GroupID: assignedGroup,
+		Name:    params.Name,
+		Notes:   params.Notes,
 	})
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithText(w, http.StatusNoContent, "Category '"+params.Name+"' updated successfully!")
 }
 
 func (cfg *apiConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("category_id")
-	pathCategoryID, err := uuid.Parse(idString)
+	var pathCategoryID uuid.UUID
+	err := parseUUIDFromPath("category_id", r, &pathCategoryID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "invalid id", err)
 		return
