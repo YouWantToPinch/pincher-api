@@ -120,9 +120,187 @@ func (tc *httpTestCase) getName() string {
 	return tc.Path
 }
 
-// ---------------
-// TESTING
-// ---------------
+// --------------------
+// INTEGRATION TESTING
+// --------------------
+
+// Check CRUD for each resource exclusively, in order
+func Test_CRUD(t *testing.T) {
+	// SERVER SETUP
+	cfg := LoadEnvConfig("../../.env")
+	pincher := &http.Server{Handler: SetupMux(cfg)}
+	c := APIClient{Mux: pincher.Handler}
+
+	// PREP: Delete all users
+	c.Request(pt.DeleteAllUsers())
+	assert.Equal(t, 200, c.W.Code)
+
+	// REQUESTS
+
+	t.Run("Users", func(t *testing.T) {
+		// CREATE user, log in
+		c.Request(pt.CreateUser("user1", "pwd1"))
+		assert.Equal(t, http.StatusCreated, c.W.Code)
+		c.Request(pt.LoginUser("user1", "pwd1"))
+		assert.Equal(t, http.StatusOK, c.W.Code)
+		jwt1, _ := GetJSONField(c.W, "token")
+		// UPDATE user
+		c.Request(pt.UpdateUser(jwt1.(string), "newUsername", "verySecure123456"))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+		// DELETE user
+		c.Request(pt.DeleteUser(jwt1.(string), "newUsername", "verySecure123456"))
+		assert.Equal(t, http.StatusOK, c.W.Code)
+	})
+
+	// PREP: Create user, log in
+	c.Request(pt.CreateUser("user1", "pwd1"))
+	c.Request(pt.LoginUser("user1", "pwd1"))
+	jwt1, _ := GetJSONField(c.W, "token")
+
+	t.Run("Budgets", func(t *testing.T) {
+		// CREATE budget
+		c.Request(pt.CreateBudget(jwt1.(string), "userBudget", "A new budget for the test user."))
+		assert.Equal(t, http.StatusCreated, c.W.Code)
+		budgetID1, _ := GetJSONField(c.W, "id")
+		// READ budget(s)
+		c.Request(pt.GetUserBudgets(jwt1.(string)))
+		assert.Equal(t, http.StatusOK, c.W.Code)
+		// UPDATE budgets
+		c.Request(pt.UpdateBudget(jwt1.(string), budgetID1.(string), "User Budget", "Test user's budget, now updated."))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+		// DELETE budget
+		c.Request(pt.DeleteUserBudget(jwt1.(string), budgetID1.(string)))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+
+	})
+
+	// PREP: Create budget
+	c.Request(pt.CreateBudget(jwt1.(string), "userBudget", "A new budget for the test user."))
+	budgetID1, _ := GetJSONField(c.W, "id")
+
+	t.Run("Groups", func(t *testing.T) {
+		// CREATE group
+		c.Request(pt.CreateGroup(jwt1.(string), budgetID1.(string), "testGroup", "A group for testing."))
+		assert.Equal(t, http.StatusCreated, c.W.Code)
+		groupID1, _ := GetJSONField(c.W, "id")
+		// READ group(s)
+		c.Request(pt.GetBudgetGroups(jwt1.(string), budgetID1.(string)))
+		assert.Equal(t, http.StatusOK, c.W.Code)
+		// UPDATE budgets
+		c.Request(pt.UpdateGroup(jwt1.(string), budgetID1.(string), groupID1.(string), "Test Group", "Test user's first group, now updated."))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+		// DELETE budget
+		c.Request(pt.DeleteBudgetGroup(jwt1.(string), budgetID1.(string), groupID1.(string)))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+	})
+
+	// PREP: Create group
+	c.Request(pt.CreateGroup(jwt1.(string), budgetID1.(string), "testGroup", "A group for testing."))
+	assert.Equal(t, http.StatusCreated, c.W.Code)
+	groupID1, _ := GetJSONField(c.W, "id")
+
+	t.Run("Categories", func(t *testing.T) {
+		// PREP: Create another group
+		c.Request(pt.CreateGroup(jwt1.(string), budgetID1.(string), "tempTestGroup", "A group for testing updates."))
+		groupID2, _ := GetJSONField(c.W, "id")
+
+		// CREATE category
+		c.Request(pt.CreateCategory(jwt1.(string), budgetID1.(string), groupID1.(string), "testCategory", "A category for testing."))
+		assert.Equal(t, http.StatusCreated, c.W.Code)
+		categoryID1, _ := GetJSONField(c.W, "id")
+		// READ categories(s)
+		c.Request(pt.GetBudgetCategories(jwt1.(string), budgetID1.(string), "?group_id="+groupID1.(string)))
+		assert.Equal(t, http.StatusOK, c.W.Code)
+		// UPDATE category
+		c.Request(pt.UpdateCategory(jwt1.(string), budgetID1.(string), categoryID1.(string), groupID2.(string), "Test Group", "Test user's first category, now updated to a new group."))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+		// DELETE category
+		c.Request(pt.DeleteBudgetCategory(jwt1.(string), budgetID1.(string), categoryID1.(string)))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+	})
+
+	// PREP: Create category
+	c.Request(pt.CreateCategory(jwt1.(string), budgetID1.(string), groupID1.(string), "testCategory", "A category for testing."))
+	assert.Equal(t, http.StatusCreated, c.W.Code)
+	categoryID1, _ := GetJSONField(c.W, "id")
+
+	t.Run("Accounts", func(t *testing.T) {
+		// CREATE account
+		c.Request(pt.CreateBudgetAccount(jwt1.(string), budgetID1.(string), "CHECKING", "testAccount", "An account for testing."))
+		assert.Equal(t, http.StatusCreated, c.W.Code)
+		accountID1, _ := GetJSONField(c.W, "id")
+		// READ account(s)
+		c.Request(pt.GetBudgetAccounts(jwt1.(string), budgetID1.(string)))
+		assert.Equal(t, http.StatusOK, c.W.Code)
+		// UPDATE account
+		// NOTE: As of this commit, Account Types mean nothing, so updates to an account
+		// 	may include changing them. This may need to be prohibited when Account Types
+		// 	logic is implemented.
+		c.Request(pt.UpdateAccount(jwt1.(string), budgetID1.(string), accountID1.(string), "CREDIT", "Test Account", "Test user's first account, now updated."))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+		// DELETE account SOFT
+		c.Request(pt.DeleteBudgetAccount(jwt1.(string), budgetID1.(string), accountID1.(string), "Test Account", false))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+		// DELETE account HARD
+		c.Request(pt.DeleteBudgetAccount(jwt1.(string), budgetID1.(string), accountID1.(string), "Test Account", true))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+	})
+
+	// CREATE account
+	c.Request(pt.CreateBudgetAccount(jwt1.(string), budgetID1.(string), "CREDIT", "testAccount", "An account for testing."))
+	assert.Equal(t, http.StatusCreated, c.W.Code)
+	accountID1, _ := GetJSONField(c.W, "id")
+
+	t.Run("Payees", func(t *testing.T) {
+		// CREATE payee
+		c.Request(pt.CreateBudgetPayee(jwt1.(string), budgetID1.(string), "testPayee", "A payee for testing."))
+		assert.Equal(t, http.StatusCreated, c.W.Code)
+		payeeID1, _ := GetJSONField(c.W, "id")
+		// READ payee(s)
+		c.Request(pt.GetBudgetPayees(jwt1.(string), budgetID1.(string)))
+		assert.Equal(t, http.StatusOK, c.W.Code)
+		// UPDATE payee
+		c.Request(pt.UpdatePayee(jwt1.(string), budgetID1.(string), payeeID1.(string), "Test Payee", "Test user's first account, now updated."))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+		// DELETE payee
+		c.Request(pt.DeletePayee(jwt1.(string), budgetID1.(string), payeeID1.(string), ""))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+	})
+
+	// PREP: Create payee
+	c.Request(pt.CreateBudgetPayee(jwt1.(string), budgetID1.(string), "testPayee", "A payee for testing."))
+	assert.Equal(t, http.StatusCreated, c.W.Code)
+	payeeID1, _ := GetJSONField(c.W, "id")
+
+	t.Run("Transactions", func(t *testing.T) {
+		// PREP: Create payee
+		c.Request(pt.CreateBudgetPayee(jwt1.(string), budgetID1.(string), "testPayee2", "A payee for testing payee reassignment & deletion."))
+		assert.Equal(t, http.StatusCreated, c.W.Code)
+		payeeID2, _ := GetJSONField(c.W, "id")
+
+		// CREATE transaction
+		transactionAmounts := map[string]int64{}
+		transactionAmounts[categoryID1.(string)] = -500
+
+		c.Request(pt.LogTransaction(jwt1.(string), budgetID1.(string), accountID1.(string), "NONE", "WITHDRAWAL", "2025-09-15T19:00:00Z", payeeID2.(string), "A transaction for testing.", "true", transactionAmounts))
+		assert.Equal(t, http.StatusCreated, c.W.Code)
+		transactionID1, _ := GetJSONField(c.W, "id")
+		// READ transaction
+		c.Request(pt.GetTransaction(jwt1.(string), budgetID1.(string), transactionID1.(string)))
+		assert.Equal(t, http.StatusOK, c.W.Code)
+		// UPDATE transaction
+		c.Request(pt.LogTransaction(jwt1.(string), budgetID1.(string), accountID1.(string), "NONE", "WITHDRAWAL", "2025-09-15T19:00:00Z", payeeID2.(string), "A transaction whose notes are now updated.", "true", transactionAmounts))
+		assert.Equal(t, http.StatusCreated, c.W.Code)
+		// DELETE payee
+		c.Request(pt.DeletePayee(jwt1.(string), budgetID1.(string), payeeID2.(string), payeeID1.(string)))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+		// DELETE transaction
+		c.Request(pt.DeleteTransaction(jwt1.(string), budgetID1.(string), transactionID1.(string)))
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
+
+	})
+
+}
 
 // Should properly make, count, and delete users
 func Test_MakeAndResetUsers(t *testing.T) {
@@ -307,7 +485,7 @@ they should or should not be able to do; authorizations that
 should be verified.
 */
 func Test_BuildOrgDoAuthChecks(t *testing.T) {
-	/// SERVER SETUP
+	// SERVER SETUP
 	cfg := LoadEnvConfig("../../.env")
 	pincher := &http.Server{Handler: SetupMux(cfg)}
 	c := APIClient{Mux: pincher.Handler}
