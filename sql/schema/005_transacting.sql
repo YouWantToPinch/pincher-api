@@ -6,7 +6,7 @@ CREATE TABLE accounts (
     budget_id UUID NOT NULL,
     account_type TEXT NOT NULL,
     name TEXT NOT NULL,
-    notes TEXT,
+    notes TEXT NOT NULL DEFAULT '',
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (budget_id) REFERENCES budgets(id)
         ON DELETE CASCADE
@@ -22,7 +22,7 @@ CREATE TABLE transactions (
     transaction_type VARCHAR(15) NOT NULL,
     transaction_date TIMESTAMP NOT NULL DEFAULT (DATE_TRUNC('day', NOW() AT TIME ZONE 'utc')),
     payee_id UUID NOT NULL,
-    notes TEXT NOT NULL,
+    notes TEXT NOT NULL DEFAULT '',
     cleared BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (budget_id) REFERENCES budgets(id)
       ON DELETE CASCADE,

@@ -7,7 +7,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -31,7 +30,7 @@ type AddAccountParams struct {
 	BudgetID    uuid.UUID
 	AccountType string
 	Name        string
-	Notes       sql.NullString
+	Notes       string
 }
 
 func (q *Queries) AddAccount(ctx context.Context, arg AddAccountParams) (Account, error) {

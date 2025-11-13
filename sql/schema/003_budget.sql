@@ -5,7 +5,7 @@ CREATE TABLE budgets (
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     admin_id UUID NOT NULL,
     name VARCHAR(30) NOT NULL,
-    notes TEXT,
+    notes TEXT NOT NULL DEFAULT '',
     FOREIGN KEY (admin_id) REFERENCES users(id)
         ON DELETE CASCADE
 );

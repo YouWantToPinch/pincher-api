@@ -29,10 +29,7 @@ func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 		BudgetID:    pathBudgetID,
 		AccountType: params.AccountType,
 		Name:        params.Name,
-		Notes: sql.NullString{
-			String: params.Notes,
-			Valid:  true,
-		},
+		Notes:       params.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create account", err)
@@ -45,7 +42,7 @@ func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:   dbAccount.UpdatedAt,
 		AccountType: dbAccount.AccountType,
 		Name:        dbAccount.Name,
-		Notes:       dbAccount.Notes.String,
+		Notes:       dbAccount.Notes,
 		IsDeleted:   dbAccount.IsDeleted,
 	}
 
@@ -74,7 +71,7 @@ func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt:   account.UpdatedAt,
 			AccountType: account.AccountType,
 			Name:        account.Name,
-			Notes:       account.Notes.String,
+			Notes:       account.Notes,
 			IsDeleted:   account.IsDeleted,
 		}
 		respBody = append(respBody, addAccount)
@@ -104,7 +101,7 @@ func (cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:   dbAccount.UpdatedAt,
 		AccountType: dbAccount.AccountType,
 		Name:        dbAccount.Name,
-		Notes:       dbAccount.Notes.String,
+		Notes:       dbAccount.Notes,
 		IsDeleted:   dbAccount.IsDeleted,
 	}
 

@@ -7,7 +7,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -90,7 +89,7 @@ RETURNING id, created_at, updated_at, admin_id, name, notes
 type CreateBudgetParams struct {
 	AdminID uuid.UUID
 	Name    string
-	Notes   sql.NullString
+	Notes   string
 }
 
 // BUDGET CRUD

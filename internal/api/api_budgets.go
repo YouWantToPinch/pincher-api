@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"log/slog"
 	"net/http"
 
@@ -29,10 +28,7 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 	dbBudget, err := cfg.db.CreateBudget(r.Context(), database.CreateBudgetParams{
 		AdminID: validatedUserID,
 		Name:    params.Name,
-		Notes: sql.NullString{
-			String: params.Notes,
-			Valid:  true,
-		},
+		Notes:   params.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create budget", err)
@@ -62,7 +58,7 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: dbBudget.UpdatedAt,
 		AdminID:   dbBudget.AdminID,
 		Name:      dbBudget.Name,
-		Notes:     dbBudget.Notes.String,
+		Notes:     dbBudget.Notes,
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
@@ -84,7 +80,7 @@ func (cfg *apiConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: dbBudget.UpdatedAt,
 		AdminID:   dbBudget.AdminID,
 		Name:      dbBudget.Name,
-		Notes:     dbBudget.Notes.String,
+		Notes:     dbBudget.Notes,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
@@ -125,7 +121,7 @@ func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 			UpdatedAt: dbBudget.UpdatedAt,
 			AdminID:   dbBudget.AdminID,
 			Name:      dbBudget.Name,
-			Notes:     dbBudget.Notes.String,
+			Notes:     dbBudget.Notes,
 		}
 		respBody = append(respBody, addBudget)
 	}

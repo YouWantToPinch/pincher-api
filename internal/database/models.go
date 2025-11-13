@@ -19,7 +19,7 @@ type Account struct {
 	BudgetID    uuid.UUID
 	AccountType string
 	Name        string
-	Notes       sql.NullString
+	Notes       string
 	IsDeleted   bool
 }
 
@@ -41,7 +41,7 @@ type Budget struct {
 	UpdatedAt time.Time
 	AdminID   uuid.UUID
 	Name      string
-	Notes     sql.NullString
+	Notes     string
 }
 
 type BudgetsUser struct {
