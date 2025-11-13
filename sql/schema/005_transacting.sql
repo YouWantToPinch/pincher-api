@@ -46,6 +46,7 @@ CREATE TABLE payees (
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     budget_id UUID NOT NULL,
     name VARCHAR(32) NOT NULL,
+    notes TEXT NOT NULL DEFAULT '',
     UNIQUE(budget_id, name),
     FOREIGN KEY (budget_id) REFERENCES budgets(id)
       ON DELETE CASCADE

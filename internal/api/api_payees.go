@@ -11,7 +11,8 @@ import (
 func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
-		Name string `json:"name"`
+		Name  string `json:"name"`
+		Notes string `json:"notes"`
 	}
 
 	params, err := decodeParams[parameters](r)
@@ -25,6 +26,7 @@ func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 	dbPayee, err := cfg.db.CreatePayee(r.Context(), database.CreatePayeeParams{
 		BudgetID: pathBudgetID,
 		Name:     params.Name,
+		Notes:    params.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create payee", err)
@@ -37,6 +39,7 @@ func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: dbPayee.UpdatedAt,
 		BudgetID:  dbPayee.BudgetID,
 		Name:      dbPayee.Name,
+		Notes:     dbPayee.Notes,
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)
@@ -59,6 +62,7 @@ func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt: payee.UpdatedAt,
 			BudgetID:  payee.BudgetID,
 			Name:      payee.Name,
+			Notes:     payee.Notes,
 		}
 		respBody = append(respBody, addPayee)
 	}
@@ -87,6 +91,7 @@ func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: dbPayee.UpdatedAt,
 		BudgetID:  dbPayee.BudgetID,
 		Name:      dbPayee.Name,
+		Notes:     dbPayee.Notes,
 	}
 
 	respondWithJSON(w, http.StatusCreated, respBody)

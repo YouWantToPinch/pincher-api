@@ -1,11 +1,12 @@
 -- name: CreatePayee :one
-INSERT INTO payees (id, created_at, updated_at, budget_id, name)
+INSERT INTO payees (id, created_at, updated_at, budget_id, name, notes)
 VALUES (
     gen_random_uuid(),
     DEFAULT,
     DEFAULT,
     $1,
-    $2
+    $2,
+    $3
 )
 RETURNING *;
 
