@@ -14,10 +14,10 @@ import (
 
 // NOTE: This integration testing has two optional implementations.
 // Firstly, the conventional one; a more stateful approach recording variables for use in further mock requests.
-// But secondly, in an effort to make the tests more readable, a test-case slice approach was implemented.
+// But secondly, in an effort to make the tests more readable, a table-driven approach was implemented.
 // Far too late, it appeared that this second implementation may only make things more readable for those
 // 	tests which don't demand very detailed requests, and may otherwise be an overengineered solution to
-// 	running others.
+// 	running others that demand resources to be evaluated at runtime rather than compile time.
 // Both implementations are left here for developer use.
 // When in doubt: loop through a slice of httpTestCase structs for lighter tests,
 // 	but use the more traditional, stateful approach for anything else.
