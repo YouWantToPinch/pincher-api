@@ -99,7 +99,7 @@ ORDER BY t.transaction_date DESC;
 -- name: GetSplitsByTransactionID :many
 SELECT *
 FROM transaction_splits
-WHERE transaction_splits.id = $1;
+WHERE transaction_splits.transaction_id = $1;
 
 -- name: GetTransactionByID :one
 SELECT *
