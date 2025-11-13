@@ -46,7 +46,6 @@ func (q *Queries) AssignBudgetMemberWithRole(ctx context.Context, arg AssignBudg
 }
 
 const createBudget = `-- name: CreateBudget :one
-
 INSERT INTO budgets (id, created_at, updated_at, admin_id, name, notes)
 VALUES (
     gen_random_uuid(),
@@ -65,7 +64,6 @@ type CreateBudgetParams struct {
 	Notes   string
 }
 
-// BUDGET CRUD
 func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Budget, error) {
 	row := q.db.QueryRowContext(ctx, createBudget, arg.AdminID, arg.Name, arg.Notes)
 	var i Budget
@@ -80,84 +78,6 @@ func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Bud
 	return i, err
 }
 
-const createCategory = `-- name: CreateCategory :one
-
-INSERT INTO categories (id, created_at, updated_at, budget_id, group_id, name, notes)
-VALUES (
-    gen_random_uuid(),
-    NOW(),
-    NOW(),
-    $1,
-    $2,
-    $3,
-    $4
-)
-RETURNING id, created_at, updated_at, budget_id, name, group_id, notes
-`
-
-type CreateCategoryParams struct {
-	BudgetID uuid.UUID
-	GroupID  uuid.NullUUID
-	Name     string
-	Notes    string
-}
-
-// CATEGORY CRUD
-func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
-	row := q.db.QueryRowContext(ctx, createCategory,
-		arg.BudgetID,
-		arg.GroupID,
-		arg.Name,
-		arg.Notes,
-	)
-	var i Category
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.BudgetID,
-		&i.Name,
-		&i.GroupID,
-		&i.Notes,
-	)
-	return i, err
-}
-
-const createGroup = `-- name: CreateGroup :one
-
-INSERT INTO groups (id, created_at, updated_at, budget_id, name, notes)
-VALUES (
-    gen_random_uuid(),
-    NOW(),
-    NOW(),
-    $1,
-    $2,
-    $3
-)
-RETURNING id, created_at, updated_at, budget_id, name, notes
-`
-
-type CreateGroupParams struct {
-	BudgetID uuid.UUID
-	Name     string
-	Notes    string
-}
-
-// GROUP CRUD
-func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error) {
-	row := q.db.QueryRowContext(ctx, createGroup, arg.BudgetID, arg.Name, arg.Notes)
-	var i Group
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.BudgetID,
-		&i.Name,
-		&i.Notes,
-	)
-	return i, err
-}
-
 const deleteBudget = `-- name: DeleteBudget :exec
 DELETE
 FROM budgets
@@ -166,28 +86,6 @@ WHERE budgets.id = $1
 
 func (q *Queries) DeleteBudget(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteBudget, id)
-	return err
-}
-
-const deleteCategoryByID = `-- name: DeleteCategoryByID :exec
-DELETE
-FROM categories
-WHERE categories.id = $1
-`
-
-func (q *Queries) DeleteCategoryByID(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteCategoryByID, id)
-	return err
-}
-
-const deleteGroupByID = `-- name: DeleteGroupByID :exec
-DELETE
-FROM groups
-WHERE groups.id = $1
-`
-
-func (q *Queries) DeleteGroupByID(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteGroupByID, id)
 	return err
 }
 
@@ -240,160 +138,6 @@ func (q *Queries) GetBudgetMemberRole(ctx context.Context, arg GetBudgetMemberRo
 	var member_role string
 	err := row.Scan(&member_role)
 	return member_role, err
-}
-
-const getCategories = `-- name: GetCategories :many
-SELECT id, created_at, updated_at, budget_id, name, group_id, notes
-FROM categories c
-WHERE c.budget_id = $1
-  AND (
-    $2::uuid IS NULL
-    OR c.group_id = $2
-  )
-`
-
-type GetCategoriesParams struct {
-	BudgetID uuid.UUID
-	GroupID  uuid.UUID
-}
-
-func (q *Queries) GetCategories(ctx context.Context, arg GetCategoriesParams) ([]Category, error) {
-	rows, err := q.db.QueryContext(ctx, getCategories, arg.BudgetID, arg.GroupID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Category
-	for rows.Next() {
-		var i Category
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.BudgetID,
-			&i.Name,
-			&i.GroupID,
-			&i.Notes,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getCategoryByID = `-- name: GetCategoryByID :one
-SELECT id, created_at, updated_at, budget_id, name, group_id, notes
-FROM categories
-WHERE categories.id = $1
-`
-
-func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, error) {
-	row := q.db.QueryRowContext(ctx, getCategoryByID, id)
-	var i Category
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.BudgetID,
-		&i.Name,
-		&i.GroupID,
-		&i.Notes,
-	)
-	return i, err
-}
-
-const getGroupByBudgetIDAndName = `-- name: GetGroupByBudgetIDAndName :one
-SELECT id, created_at, updated_at, budget_id, name, notes
-FROM groups
-WHERE groups.name = $1 AND groups.budget_id = $2
-`
-
-type GetGroupByBudgetIDAndNameParams struct {
-	Name     string
-	BudgetID uuid.UUID
-}
-
-func (q *Queries) GetGroupByBudgetIDAndName(ctx context.Context, arg GetGroupByBudgetIDAndNameParams) (Group, error) {
-	row := q.db.QueryRowContext(ctx, getGroupByBudgetIDAndName, arg.Name, arg.BudgetID)
-	var i Group
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.BudgetID,
-		&i.Name,
-		&i.Notes,
-	)
-	return i, err
-}
-
-const getGroupByID = `-- name: GetGroupByID :one
-SELECT id, created_at, updated_at, budget_id, name, notes
-FROM groups
-WHERE groups.budget_id = $1
-    AND groups.id = $2
-`
-
-type GetGroupByIDParams struct {
-	BudgetID uuid.UUID
-	ID       uuid.UUID
-}
-
-func (q *Queries) GetGroupByID(ctx context.Context, arg GetGroupByIDParams) (Group, error) {
-	row := q.db.QueryRowContext(ctx, getGroupByID, arg.BudgetID, arg.ID)
-	var i Group
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.BudgetID,
-		&i.Name,
-		&i.Notes,
-	)
-	return i, err
-}
-
-const getGroupsByBudgetID = `-- name: GetGroupsByBudgetID :many
-SELECT id, created_at, updated_at, budget_id, name, notes
-FROM groups
-WHERE groups.budget_id = $1
-`
-
-func (q *Queries) GetGroupsByBudgetID(ctx context.Context, budgetID uuid.UUID) ([]Group, error) {
-	rows, err := q.db.QueryContext(ctx, getGroupsByBudgetID, budgetID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Group
-	for rows.Next() {
-		var i Group
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.BudgetID,
-			&i.Name,
-			&i.Notes,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getUserBudgets = `-- name: GetUserBudgets :many
@@ -486,67 +230,6 @@ func (q *Queries) UpdateBudget(ctx context.Context, arg UpdateBudgetParams) (Bud
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.AdminID,
-		&i.Name,
-		&i.Notes,
-	)
-	return i, err
-}
-
-const updateCategory = `-- name: UpdateCategory :one
-UPDATE categories
-SET updated_at = NOW(), group_id = $2, name = $3, notes = $4
-WHERE id = $1
-RETURNING id, created_at, updated_at, budget_id, name, group_id, notes
-`
-
-type UpdateCategoryParams struct {
-	ID      uuid.UUID
-	GroupID uuid.NullUUID
-	Name    string
-	Notes   string
-}
-
-func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
-	row := q.db.QueryRowContext(ctx, updateCategory,
-		arg.ID,
-		arg.GroupID,
-		arg.Name,
-		arg.Notes,
-	)
-	var i Category
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.BudgetID,
-		&i.Name,
-		&i.GroupID,
-		&i.Notes,
-	)
-	return i, err
-}
-
-const updateGroup = `-- name: UpdateGroup :one
-UPDATE groups
-SET updated_at = NOW(), name = $2, notes = $3
-WHERE id = $1
-RETURNING id, created_at, updated_at, budget_id, name, notes
-`
-
-type UpdateGroupParams struct {
-	ID    uuid.UUID
-	Name  string
-	Notes string
-}
-
-func (q *Queries) UpdateGroup(ctx context.Context, arg UpdateGroupParams) (Group, error) {
-	row := q.db.QueryRowContext(ctx, updateGroup, arg.ID, arg.Name, arg.Notes)
-	var i Group
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.BudgetID,
 		&i.Name,
 		&i.Notes,
 	)
