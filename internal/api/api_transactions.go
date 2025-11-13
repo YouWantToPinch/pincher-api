@@ -471,7 +471,7 @@ func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 			Splits:          respSplits,
 		}
 
-		respondWithJSON(w, http.StatusCreated, respBody)
+		respondWithJSON(w, http.StatusOK, respBody)
 		return
 	}
 
