@@ -116,7 +116,7 @@ func (cfg *apiConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = cfg.db.UpdateGroup(r.Context(), database.UpdateGroupParams{
+	_, err = cfg.db.UpdatePayee(r.Context(), database.UpdatePayeeParams{
 		ID:    pathPayeeID,
 		Name:  params.Name,
 		Notes: params.Notes,
