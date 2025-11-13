@@ -23,18 +23,18 @@ UNION
 (
   SELECT budgets.*
   FROM budgets
-  WHERE budgets.admin_id = $1
+  WHERE admin_id = $1
 );
 
 -- name: GetBudgetByID :one
 SELECT *
 FROM budgets
-WHERE budgets.id = $1;
+WHERE id = $1;
 
 -- name: GetBudgetMemberRole :one
 SELECT member_role
 FROM budgets_users
-WHERE budgets_users.budget_id = $1 AND budgets_users.user_id = $2;
+WHERE budget_id = $1 AND user_id = $2;
 
 -- name: AssignBudgetMemberWithRole :one
 INSERT INTO budgets_users (created_at, updated_at, budget_id, user_id, member_role)
@@ -69,5 +69,5 @@ WHERE budget_id = $1
 -- name: DeleteBudget :exec
 DELETE
 FROM budgets
-WHERE budgets.id = $1;
+WHERE id = $1;
 

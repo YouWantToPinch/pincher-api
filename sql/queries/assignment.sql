@@ -26,5 +26,5 @@ WHERE cr.month = $1 AND cr.category_id = $2;
 
 -- name: DeleteMonthAssignmentForCat :exec
 DELETE FROM assignments
-WHERE $1 = assignments.month AND $2 = assignments.category_id;
+WHERE $1 = month AND $2 = category_id;
 

@@ -57,8 +57,8 @@ func (q *Queries) AddAccount(ctx context.Context, arg AddAccountParams) (Account
 const deleteAccountHard = `-- name: DeleteAccountHard :exec
 DELETE
 FROM accounts
-WHERE accounts.id = $1
-    AND accounts.is_deleted = TRUE
+WHERE id = $1
+    AND is_deleted = TRUE
 `
 
 func (q *Queries) DeleteAccountHard(ctx context.Context, id uuid.UUID) error {
@@ -68,8 +68,8 @@ func (q *Queries) DeleteAccountHard(ctx context.Context, id uuid.UUID) error {
 
 const deleteAccountSoft = `-- name: DeleteAccountSoft :exec
 UPDATE accounts
-SET accounts.is_deleted = TRUE
-WHERE accounts.id = $1
+SET is_deleted = TRUE
+WHERE id = $1
 `
 
 func (q *Queries) DeleteAccountSoft(ctx context.Context, id uuid.UUID) error {
@@ -80,7 +80,7 @@ func (q *Queries) DeleteAccountSoft(ctx context.Context, id uuid.UUID) error {
 const getAccountByID = `-- name: GetAccountByID :one
 SELECT id, created_at, updated_at, budget_id, account_type, name, notes, is_deleted
 FROM accounts
-WHERE accounts.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) GetAccountByID(ctx context.Context, id uuid.UUID) (Account, error) {
@@ -102,7 +102,7 @@ func (q *Queries) GetAccountByID(ctx context.Context, id uuid.UUID) (Account, er
 const getAccountsFromBudget = `-- name: GetAccountsFromBudget :many
 SELECT id, created_at, updated_at, budget_id, account_type, name, notes, is_deleted
 FROM accounts
-WHERE accounts.budget_id = $1
+WHERE budget_id = $1
 `
 
 func (q *Queries) GetAccountsFromBudget(ctx context.Context, budgetID uuid.UUID) ([]Account, error) {
@@ -152,8 +152,8 @@ func (q *Queries) GetBudgetAccountCapital(ctx context.Context, accountID uuid.UU
 
 const restoreAccount = `-- name: RestoreAccount :exec
 UPDATE accounts
-SET accounts.is_deleted = FALSE
-WHERE accounts.id = $1
+SET is_deleted = FALSE
+WHERE id = $1
 `
 
 func (q *Queries) RestoreAccount(ctx context.Context, id uuid.UUID) error {

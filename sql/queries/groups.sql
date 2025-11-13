@@ -15,18 +15,18 @@ RETURNING *;
 -- name: GetGroupByID :one
 SELECT *
 FROM groups
-WHERE groups.budget_id = $1
-    AND groups.id = $2;
+WHERE budget_id = $1
+    AND id = $2;
 
 -- name: GetGroupsByBudgetID :many
 SELECT *
 FROM groups
-WHERE groups.budget_id = $1;
+WHERE budget_id = $1;
 
 -- name: GetGroupByBudgetIDAndName :one
 SELECT *
 FROM groups
-WHERE groups.name = $1 AND groups.budget_id = $2;
+WHERE name = $1 AND budget_id = $2;
 
 -- name: UpdateGroup :one
 UPDATE groups
@@ -37,5 +37,5 @@ RETURNING *;
 -- name: DeleteGroupByID :exec
 DELETE
 FROM groups
-WHERE groups.id = $1;
+WHERE id = $1;
 

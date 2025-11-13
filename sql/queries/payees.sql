@@ -13,12 +13,12 @@ RETURNING *;
 -- name: GetBudgetPayees :many
 SELECT *
 FROM payees
-WHERE payees.budget_id = $1;
+WHERE budget_id = $1;
 
 -- name: GetPayeeByID :one
 SELECT *
 FROM payees
-WHERE payees.id = $1;
+WHERE id = $1;
 
 -- name: UpdatePayee :one
 UPDATE payees
@@ -29,4 +29,4 @@ RETURNING *;
 -- name: DeletePayee :exec
 DELETE
 FROM payees
-WHERE payees.id = $1;
+WHERE id = $1;

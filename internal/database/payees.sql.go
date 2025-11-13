@@ -47,7 +47,7 @@ func (q *Queries) CreatePayee(ctx context.Context, arg CreatePayeeParams) (Payee
 const deletePayee = `-- name: DeletePayee :exec
 DELETE
 FROM payees
-WHERE payees.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) DeletePayee(ctx context.Context, id uuid.UUID) error {
@@ -58,7 +58,7 @@ func (q *Queries) DeletePayee(ctx context.Context, id uuid.UUID) error {
 const getBudgetPayees = `-- name: GetBudgetPayees :many
 SELECT id, created_at, updated_at, budget_id, name, notes
 FROM payees
-WHERE payees.budget_id = $1
+WHERE budget_id = $1
 `
 
 func (q *Queries) GetBudgetPayees(ctx context.Context, budgetID uuid.UUID) ([]Payee, error) {
@@ -94,7 +94,7 @@ func (q *Queries) GetBudgetPayees(ctx context.Context, budgetID uuid.UUID) ([]Pa
 const getPayeeByID = `-- name: GetPayeeByID :one
 SELECT id, created_at, updated_at, budget_id, name, notes
 FROM payees
-WHERE payees.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) GetPayeeByID(ctx context.Context, id uuid.UUID) (Payee, error) {

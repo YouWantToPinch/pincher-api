@@ -56,7 +56,7 @@ func (q *Queries) DeleteUserByID(ctx context.Context, id uuid.UUID) error {
 
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT id, created_at, updated_at, username, hashed_password FROM users
-WHERE users.username = $1
+WHERE username = $1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {

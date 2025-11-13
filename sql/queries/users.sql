@@ -13,7 +13,7 @@ RETURNING *;
 
 -- name: GetUserByUsername :one
 SELECT * FROM users
-WHERE users.username = $1;
+WHERE username = $1;
 
 -- name: UpdateUserCredentials :one
 UPDATE users

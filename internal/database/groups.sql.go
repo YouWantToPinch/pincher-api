@@ -49,7 +49,7 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 const deleteGroupByID = `-- name: DeleteGroupByID :exec
 DELETE
 FROM groups
-WHERE groups.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) DeleteGroupByID(ctx context.Context, id uuid.UUID) error {
@@ -60,7 +60,7 @@ func (q *Queries) DeleteGroupByID(ctx context.Context, id uuid.UUID) error {
 const getGroupByBudgetIDAndName = `-- name: GetGroupByBudgetIDAndName :one
 SELECT id, created_at, updated_at, budget_id, name, notes
 FROM groups
-WHERE groups.name = $1 AND groups.budget_id = $2
+WHERE name = $1 AND budget_id = $2
 `
 
 type GetGroupByBudgetIDAndNameParams struct {
@@ -85,8 +85,8 @@ func (q *Queries) GetGroupByBudgetIDAndName(ctx context.Context, arg GetGroupByB
 const getGroupByID = `-- name: GetGroupByID :one
 SELECT id, created_at, updated_at, budget_id, name, notes
 FROM groups
-WHERE groups.budget_id = $1
-    AND groups.id = $2
+WHERE budget_id = $1
+    AND id = $2
 `
 
 type GetGroupByIDParams struct {
@@ -111,7 +111,7 @@ func (q *Queries) GetGroupByID(ctx context.Context, arg GetGroupByIDParams) (Gro
 const getGroupsByBudgetID = `-- name: GetGroupsByBudgetID :many
 SELECT id, created_at, updated_at, budget_id, name, notes
 FROM groups
-WHERE groups.budget_id = $1
+WHERE budget_id = $1
 `
 
 func (q *Queries) GetGroupsByBudgetID(ctx context.Context, budgetID uuid.UUID) ([]Group, error) {

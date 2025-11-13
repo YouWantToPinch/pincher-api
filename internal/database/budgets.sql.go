@@ -81,7 +81,7 @@ func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Bud
 const deleteBudget = `-- name: DeleteBudget :exec
 DELETE
 FROM budgets
-WHERE budgets.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) DeleteBudget(ctx context.Context, id uuid.UUID) error {
@@ -92,7 +92,7 @@ func (q *Queries) DeleteBudget(ctx context.Context, id uuid.UUID) error {
 const getBudgetByID = `-- name: GetBudgetByID :one
 SELECT id, created_at, updated_at, admin_id, name, notes
 FROM budgets
-WHERE budgets.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) GetBudgetByID(ctx context.Context, id uuid.UUID) (Budget, error) {
@@ -125,7 +125,7 @@ func (q *Queries) GetBudgetCapital(ctx context.Context, budgetID uuid.UUID) (int
 const getBudgetMemberRole = `-- name: GetBudgetMemberRole :one
 SELECT member_role
 FROM budgets_users
-WHERE budgets_users.budget_id = $1 AND budgets_users.user_id = $2
+WHERE budget_id = $1 AND user_id = $2
 `
 
 type GetBudgetMemberRoleParams struct {
@@ -153,7 +153,7 @@ UNION
 (
   SELECT budgets.id, budgets.created_at, budgets.updated_at, budgets.admin_id, budgets.name, budgets.notes
   FROM budgets
-  WHERE budgets.admin_id = $1
+  WHERE admin_id = $1
 )
 `
 

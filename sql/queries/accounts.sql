@@ -15,12 +15,12 @@ RETURNING *;
 -- name: GetAccountsFromBudget :many
 SELECT *
 FROM accounts
-WHERE accounts.budget_id = $1;
+WHERE budget_id = $1;
 
 -- name: GetAccountByID :one
 SELECT *
 FROM accounts
-WHERE accounts.id = $1;
+WHERE id = $1;
 
 -- name: GetBudgetAccountCapital :one
 SELECT CAST(COALESCE(SUM(transactions_view.total_amount), 0) AS BIGINT) AS total
@@ -29,8 +29,8 @@ WHERE transactions_view.account_id = $1;
 
 -- name: RestoreAccount :exec
 UPDATE accounts
-SET accounts.is_deleted = FALSE
-WHERE accounts.id = $1;
+SET is_deleted = FALSE
+WHERE id = $1;
 
 -- name: UpdateAccount :one
 UPDATE accounts
@@ -40,11 +40,11 @@ RETURNING *;
 
 -- name: DeleteAccountSoft :exec
 UPDATE accounts
-SET accounts.is_deleted = TRUE
-WHERE accounts.id = $1;
+SET is_deleted = TRUE
+WHERE id = $1;
 
 -- name: DeleteAccountHard :exec
 DELETE
 FROM accounts
-WHERE accounts.id = $1
-    AND accounts.is_deleted = TRUE;
+WHERE id = $1
+    AND is_deleted = TRUE;

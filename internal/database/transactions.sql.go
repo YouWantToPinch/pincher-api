@@ -16,7 +16,7 @@ import (
 const deleteTransaction = `-- name: DeleteTransaction :exec
 DELETE
 FROM transactions
-WHERE transactions.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) DeleteTransaction(ctx context.Context, id uuid.UUID) error {
@@ -27,11 +27,11 @@ func (q *Queries) DeleteTransaction(ctx context.Context, id uuid.UUID) error {
 const getSplitsByTransactionID = `-- name: GetSplitsByTransactionID :many
 SELECT id, transaction_id, category_id, amount
 FROM transaction_splits
-WHERE transaction_splits.id = $1
+WHERE transaction_id = $1
 `
 
-func (q *Queries) GetSplitsByTransactionID(ctx context.Context, id uuid.UUID) ([]TransactionSplit, error) {
-	rows, err := q.db.QueryContext(ctx, getSplitsByTransactionID, id)
+func (q *Queries) GetSplitsByTransactionID(ctx context.Context, transactionID uuid.UUID) ([]TransactionSplit, error) {
+	rows, err := q.db.QueryContext(ctx, getSplitsByTransactionID, transactionID)
 	if err != nil {
 		return nil, err
 	}

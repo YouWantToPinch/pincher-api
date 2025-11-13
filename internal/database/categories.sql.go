@@ -55,7 +55,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 const deleteCategoryByID = `-- name: DeleteCategoryByID :exec
 DELETE
 FROM categories
-WHERE categories.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) DeleteCategoryByID(ctx context.Context, id uuid.UUID) error {
@@ -112,7 +112,7 @@ func (q *Queries) GetCategories(ctx context.Context, arg GetCategoriesParams) ([
 const getCategoryByID = `-- name: GetCategoryByID :one
 SELECT id, created_at, updated_at, budget_id, name, group_id, notes
 FROM categories
-WHERE categories.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, error) {

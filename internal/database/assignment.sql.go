@@ -40,7 +40,7 @@ func (q *Queries) AssignAmountToCategory(ctx context.Context, arg AssignAmountTo
 
 const deleteMonthAssignmentForCat = `-- name: DeleteMonthAssignmentForCat :exec
 DELETE FROM assignments
-WHERE $1 = assignments.month AND $2 = assignments.category_id
+WHERE $1 = month AND $2 = category_id
 `
 
 type DeleteMonthAssignmentForCatParams struct {

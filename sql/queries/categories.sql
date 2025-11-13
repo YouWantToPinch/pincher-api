@@ -14,7 +14,7 @@ RETURNING *;
 -- name: GetCategoryByID :one
 SELECT *
 FROM categories
-WHERE categories.id = $1;
+WHERE id = $1;
 
 -- name: GetCategories :many
 SELECT *
@@ -34,4 +34,4 @@ RETURNING *;
 -- name: DeleteCategoryByID :exec
 DELETE
 FROM categories
-WHERE categories.id = $1;
+WHERE id = $1;
