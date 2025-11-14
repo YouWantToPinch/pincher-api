@@ -44,14 +44,6 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(dat)
 }
 
-func respondWithHTML(w http.ResponseWriter, code int, msg string) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(code)
-	if _, err := w.Write([]byte(msg)); err != nil {
-		slog.Error(err.Error())
-	}
-}
-
 func respondWithText(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(code)

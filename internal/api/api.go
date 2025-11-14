@@ -19,18 +19,14 @@ func SetupMux(cfg *apiConfig) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// middleware
-	mdMetrics := cfg.middlewareMetricsInc
 	mdAuth := cfg.middlewareAuthenticate
 	mdClear := cfg.middlewareCheckClearance
-
-	mux.Handle("/app/", mdMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
 
 	// REGISTER API HANDLERS
 	// ======================
 
 	// Admin & State
 	mux.HandleFunc("GET /api/healthz", endpReadiness)
-	mux.HandleFunc("GET /admin/metrics", cfg.endpFileserverHitCountGet)
 	mux.HandleFunc("POST /admin/reset", cfg.endpDeleteAllUsers)
 	mux.HandleFunc("GET /admin/users", cfg.endpGetAllUsers)
 	mux.HandleFunc("GET /admin/users/count", cfg.endpGetTotalUserCount)
