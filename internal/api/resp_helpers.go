@@ -18,16 +18,17 @@ func decodeParams[T any](r *http.Request) (T, error) {
 
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 
+	errorMessage := msg
 	if err != nil {
-		slog.Error(err.Error())
+		errorMessage += "; " + err.Error()
 	}
 
 	type errorResponse struct {
 		Error string `json:"error"`
 	}
-	slog.Error(msg)
+	slog.Error(errorMessage)
 	respondWithJSON(w, code, errorResponse{
-		Error: msg,
+		Error: errorMessage,
 	})
 }
 
