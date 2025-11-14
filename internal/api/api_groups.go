@@ -119,10 +119,10 @@ func (cfg *apiConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("group_id")
-	pathGroupID, err := uuid.Parse(idString)
+	var pathGroupID uuid.UUID
+	err := parseUUIDFromPath("group_id", r, &pathGroupID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
 		return
 	}
 

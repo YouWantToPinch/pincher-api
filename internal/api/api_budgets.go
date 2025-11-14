@@ -213,8 +213,8 @@ func (cfg *apiConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	idString := r.PathValue("user_id")
-	pathUserID, err := uuid.Parse(idString)
+	var pathUserID uuid.UUID
+	err := parseUUIDFromPath("user_id", r, &pathUserID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
 		slog.Error("Could not parse user_id")

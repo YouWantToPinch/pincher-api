@@ -55,11 +55,10 @@ func (cfg *apiConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		validatedUserID := getContextKeyValue(r.Context(), "user_id")
 
-		idString := r.PathValue("budget_id")
-		pathBudgetID, err := uuid.Parse(idString)
+		var pathBudgetID uuid.UUID
+		err := parseUUIDFromPath("budget_id", r, &pathBudgetID)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
-			slog.Debug("Could not parse budget_id")
+			respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
 			return
 		}
 

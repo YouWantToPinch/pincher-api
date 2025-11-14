@@ -54,11 +54,11 @@ func respondWithText(w http.ResponseWriter, code int, msg string) {
 
 // Try to parse input path parameter; store uuid.Nil into 'parse' on failure
 func parseUUIDFromPath(pathParam string, r *http.Request, parse *uuid.UUID) error {
-	idString := r.PathValue(pathParam)
-	if idString != "" {
-		parsedID, err := uuid.Parse(idString)
+	uuidString := r.PathValue(pathParam)
+	if uuidString != "" {
+		parsedID, err := uuid.Parse(uuidString)
 		if err != nil {
-			return fmt.Errorf("Parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", idString, pathParam)
+			return fmt.Errorf("Parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", uuidString, pathParam)
 		}
 		*parse = parsedID
 	} else {

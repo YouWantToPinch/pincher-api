@@ -400,12 +400,13 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 }
 
 func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("transaction_id")
-	pathTransactionID, err := uuid.Parse(idString)
+	var pathTransactionID uuid.UUID
+	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
 		return
 	}
+
 	dbSplits, err := cfg.db.GetSplitsByTransactionID(r.Context(), pathTransactionID)
 
 	var respBody []TransactionSplit
@@ -423,10 +424,10 @@ func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 }
 
 func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("transaction_id")
-	pathTransactionID, err := uuid.Parse(idString)
+	var pathTransactionID uuid.UUID
+	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
 		return
 	}
 
@@ -595,10 +596,10 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 }
 
 func (cfg *apiConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("transaction_id")
-	pathTransactionID, err := uuid.Parse(idString)
+	var pathTransactionID uuid.UUID
+	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
 		return
 	}
 

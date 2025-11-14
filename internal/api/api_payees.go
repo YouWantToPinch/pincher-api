@@ -79,10 +79,10 @@ func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 
 func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 
-	idString := r.PathValue("payee_id")
-	pathPayeeID, err := uuid.Parse(idString)
+	var pathPayeeID uuid.UUID
+	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
 		return
 	}
 
@@ -137,10 +137,10 @@ func (cfg *apiConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("payee_id")
-	pathPayeeID, err := uuid.Parse(idString)
+	var pathPayeeID uuid.UUID
+	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
 		return
 	}
 
