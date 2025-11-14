@@ -25,21 +25,29 @@ func (cfg *apiConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 		respondWithText(w, 403, "403 Forbidden")
 	}
 
-	users, err := cfg.db.GetAllUsers(r.Context())
+	dbUsers, err := cfg.db.GetAllUsers(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Could not find any users", err)
 		return
 	}
 
-	var respBody []User
-	for _, user := range users {
-		respBody = append(respBody, User{
-			ID:             user.ID,
-			CreatedAt:      user.CreatedAt,
-			UpdatedAt:      user.UpdatedAt,
-			Username:       user.Username,
-			HashedPassword: user.HashedPassword,
+	users := []User{}
+	for _, dbUser := range dbUsers {
+		users = append(users, User{
+			ID:             dbUser.ID,
+			CreatedAt:      dbUser.CreatedAt,
+			UpdatedAt:      dbUser.UpdatedAt,
+			Username:       dbUser.Username,
+			HashedPassword: dbUser.HashedPassword,
 		})
+	}
+
+	type resp struct {
+		Users []User `json:"users"`
+	}
+
+	respBody := resp{
+		Users: users,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)

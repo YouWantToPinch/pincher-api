@@ -51,7 +51,7 @@ func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
-	accounts, err := cfg.db.GetAccountsFromBudget(r.Context(), pathBudgetID)
+	dbAccounts, err := cfg.db.GetAccountsFromBudget(r.Context(), pathBudgetID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get budget accounts", err)
 		return
@@ -59,12 +59,12 @@ func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 
 	queryInclude := r.URL.Query().Get("include")
 
-	var respBody []Account
-	for _, account := range accounts {
+	var accounts []Account
+	for _, account := range dbAccounts {
 		if account.IsDeleted && queryInclude != "deleted" {
 			continue
 		}
-		addAccount := Account{
+		accounts = append(accounts, Account{
 			ID:          account.ID,
 			CreatedAt:   account.CreatedAt,
 			UpdatedAt:   account.UpdatedAt,
@@ -72,8 +72,15 @@ func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 			Name:        account.Name,
 			Notes:       account.Notes,
 			IsDeleted:   account.IsDeleted,
-		}
-		respBody = append(respBody, addAccount)
+		})
+	}
+
+	type resp struct {
+		Accounts []Account `json:"accounts"`
+	}
+
+	respBody := resp{
+		Accounts: accounts,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)

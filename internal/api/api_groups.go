@@ -63,17 +63,24 @@ func (cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var respBody []Group
-	for _, group := range dbGroups {
-		addGroup := Group{
-			ID:        group.ID,
-			CreatedAt: group.CreatedAt,
-			UpdatedAt: group.UpdatedAt,
-			BudgetID:  group.BudgetID,
-			Name:      group.Name,
-			Notes:     group.Notes,
-		}
-		respBody = append(respBody, addGroup)
+	var groups []Group
+	for _, dbGroup := range dbGroups {
+		groups = append(groups, Group{
+			ID:        dbGroup.ID,
+			CreatedAt: dbGroup.CreatedAt,
+			UpdatedAt: dbGroup.UpdatedAt,
+			BudgetID:  dbGroup.BudgetID,
+			Name:      dbGroup.Name,
+			Notes:     dbGroup.Notes,
+		})
+	}
+
+	type resp struct {
+		Groups []Group `json:"groups"`
+	}
+
+	respBody := resp{
+		Groups: groups,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)

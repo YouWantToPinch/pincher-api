@@ -92,7 +92,7 @@ func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 
 	var respCategories []Category
 	for _, category := range categories {
-		addCategory := Category{
+		respCategories = append(respCategories, Category{
 			ID:        category.ID,
 			CreatedAt: category.CreatedAt,
 			UpdatedAt: category.UpdatedAt,
@@ -100,8 +100,7 @@ func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 			BudgetID:  category.BudgetID,
 			GroupID:   category.GroupID,
 			Notes:     category.Notes,
-		}
-		respCategories = append(respCategories, addCategory)
+		})
 	}
 
 	type resp struct {

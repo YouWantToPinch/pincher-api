@@ -48,23 +48,30 @@ func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
-	payees, err := cfg.db.GetBudgetPayees(r.Context(), pathBudgetID)
+	dbPayees, err := cfg.db.GetBudgetPayees(r.Context(), pathBudgetID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get budget payees", err)
 		return
 	}
 
-	var respBody []Payee
-	for _, payee := range payees {
-		addPayee := Payee{
-			ID:        payee.ID,
-			CreatedAt: payee.CreatedAt,
-			UpdatedAt: payee.UpdatedAt,
-			BudgetID:  payee.BudgetID,
-			Name:      payee.Name,
-			Notes:     payee.Notes,
-		}
-		respBody = append(respBody, addPayee)
+	var payees []Payee
+	for _, dbPayee := range dbPayees {
+		payees = append(payees, Payee{
+			ID:        dbPayee.ID,
+			CreatedAt: dbPayee.CreatedAt,
+			UpdatedAt: dbPayee.UpdatedAt,
+			BudgetID:  dbPayee.BudgetID,
+			Name:      dbPayee.Name,
+			Notes:     dbPayee.Notes,
+		})
+	}
+
+	type resp struct {
+		Payees []Payee `json:"payees"`
+	}
+
+	respBody := resp{
+		Payees: payees,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)

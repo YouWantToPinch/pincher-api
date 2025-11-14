@@ -536,12 +536,8 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// user4 should be assigned to only 1 budget
 	c.Request(pt.GetUserBudgets(jwt4.(string)))
-	var gotBudgets []Budget
-	err := json.NewDecoder(c.W.Body).Decode(&gotBudgets)
-	if err != nil {
-		t.Fatalf("failed to decode response body as slice of budgets: %v", err)
-	}
-	assert.Equal(t, 1, len(gotBudgets))
+	gotBudgets, _ := GetJSONField(c.W, "budgets")
+	assert.Len(t, gotBudgets.([]any), 1)
 
 	// Try adding user2 as MANAGER using u4. Should fail auth check.
 	c.Request(pt.AssignMemberToBudget(jwt4.(string), budget1.(string), user2.(string), "MANAGER"))
@@ -561,12 +557,8 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// user1 should be assigned to 2 budgets: Webflyx Org & their personal budget
 	c.Request(pt.GetUserBudgets(jwt1.(string)))
-	gotBudgets = []Budget{}
-	err = json.NewDecoder(c.W.Body).Decode(&gotBudgets)
-	if err != nil {
-		t.Fatalf("failed to decode response body as slice of budgets: %v", err)
-	}
-	assert.Equal(t, 2, len(gotBudgets))
+	gotBudgets, _ = GetJSONField(c.W, "budgets")
+	assert.Len(t, gotBudgets.([]any), 2)
 
 	// Attempt deletion of Webflyx Org budget as user1. Should succeed.
 	c.Request(pt.DeleteUserBudget(jwt1.(string), budget1.(string)))
@@ -574,21 +566,13 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// user1 should be assigned to only 1 budget now: their personal budget.
 	c.Request(pt.GetUserBudgets(jwt1.(string)))
-	gotBudgets = []Budget{}
-	err = json.NewDecoder(c.W.Body).Decode(&gotBudgets)
-	if err != nil {
-		t.Fatalf("failed to decode response body as slice of budgets: %v", err)
-	}
-	assert.Equal(t, 1, len(gotBudgets))
+	gotBudgets, _ = GetJSONField(c.W, "budgets")
+	assert.Len(t, gotBudgets.([]any), 1)
 
 	// user4 should be assigned to NO budgets, now.
 	c.Request(pt.GetUserBudgets(jwt4.(string)))
-	gotBudgets = []Budget{}
-	err = json.NewDecoder(c.W.Body).Decode(&gotBudgets)
-	if err != nil {
-		t.Fatalf("failed to decode response body as slice of budgets: %v", err)
-	}
-	assert.Equal(t, 0, len(gotBudgets))
+	gotBudgets, _ = GetJSONField(c.W, "budgets")
+	assert.Empty(t, gotBudgets)
 }
 
 // Build a small organizational budget system.

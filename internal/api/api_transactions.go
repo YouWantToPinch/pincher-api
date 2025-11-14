@@ -309,9 +309,9 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		var respBody []Transaction
+		var transactions []Transaction
 		for _, transaction := range dbTransactions {
-			addTransaction := Transaction{
+			transactions = append(transactions, Transaction{
 				ID:              transaction.ID,
 				CreatedAt:       transaction.CreatedAt,
 				UpdatedAt:       transaction.UpdatedAt,
@@ -323,11 +323,18 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 				PayeeID:         transaction.PayeeID,
 				Notes:           transaction.Notes,
 				Cleared:         transaction.Cleared,
-			}
-			respBody = append(respBody, addTransaction)
+			})
 		}
 
-		slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody)))
+		type resp struct {
+			Transactions []Transaction `json:"transactions"`
+		}
+
+		respBody := resp{
+			Transactions: transactions,
+		}
+
+		//slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody.Transactions)))
 
 		respondWithJSON(w, http.StatusOK, respBody)
 		return
@@ -346,7 +353,7 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		var respBody []TransactionView
+		var transactions []TransactionView
 		for _, viewTransaction := range viewTransactions {
 
 			respSplits := make(map[string]int)
@@ -360,7 +367,7 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 				}
 			}
 
-			addTransaction := TransactionView{
+			transactions = append(transactions, TransactionView{
 				ID:              viewTransaction.ID,
 				BudgetID:        viewTransaction.BudgetID,
 				LoggerID:        viewTransaction.LoggerID,
@@ -373,11 +380,18 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 				Notes:           viewTransaction.Notes,
 				Cleared:         viewTransaction.Cleared,
 				Splits:          respSplits,
-			}
-			respBody = append(respBody, addTransaction)
+			})
 		}
 
-		slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody)))
+		type resp struct {
+			Transactions []TransactionView `json:"transactions"`
+		}
+
+		respBody := resp{
+			Transactions: transactions,
+		}
+
+		//slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody.Transactions)))
 
 		respondWithJSON(w, http.StatusOK, respBody)
 		return

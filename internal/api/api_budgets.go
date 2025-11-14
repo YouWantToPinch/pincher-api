@@ -113,7 +113,7 @@ func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	var respBody []Budget
+	var budgets []Budget
 	for _, dbBudget := range dbBudgets {
 		addBudget := Budget{
 			ID:        dbBudget.ID,
@@ -123,7 +123,15 @@ func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 			Name:      dbBudget.Name,
 			Notes:     dbBudget.Notes,
 		}
-		respBody = append(respBody, addBudget)
+		budgets = append(budgets, addBudget)
+	}
+
+	type resp struct {
+		Budgets []Budget `json:"budgets"`
+	}
+
+	respBody := resp{
+		Budgets: budgets,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)
