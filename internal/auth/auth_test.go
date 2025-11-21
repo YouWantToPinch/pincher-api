@@ -10,26 +10,26 @@ import (
 
 // HASH TESTS
 
+const testPassword = "cheetohDeadbolt123"
+const altPassword = "cheetohDeadbolt124"
+
 func WasHashed(t *testing.T) {
 	// passes if hashed password is indeed different from original password
-	password := "cheetohDeadbolt123"
-	hashedPass, err := HashPassword(password)
+	hashedPass, err := HashPassword(testPassword)
 	if err != nil {
 		t.Error(err)
 	}
-	if password == hashedPass {
+	if hashedPass == testPassword {
 		t.Error("password was not hashed")
 	}
 }
 
 func TestHashUnequal(t *testing.T) {
 	// passes if CheckPasswordHash returns not nil as expected
-	password := "cheetohDeadbolt123"
-	hashedPass, err := HashPassword(password)
+	hashedPass, err := HashPassword(testPassword)
 	if err != nil {
 		t.Error(err)
 	}
-	altPassword := "cheetohDeadbolt124"
 	err = CheckPasswordHash(altPassword, hashedPass)
 	if err == nil {
 		t.Error("password should not have matched, but did")
@@ -38,16 +38,14 @@ func TestHashUnequal(t *testing.T) {
 
 func TestHashEqual(t *testing.T) {
 	// passes if CheckPasswordHash returns nil as expected
-	password := "cheetohDeadbolt123"
-	hashedPass, err := HashPassword(password)
+	hashedPass, err := HashPassword(testPassword)
 	if err != nil {
 		t.Error(err)
 	}
-	err = CheckPasswordHash(password, hashedPass)
+	err = CheckPasswordHash(testPassword, hashedPass)
 	if err != nil {
 		t.Error("password should have matched, but did not")
 	}
-
 }
 
 // JWT TESTS
@@ -110,6 +108,12 @@ func TestCheckPasswordHash(t *testing.T) {
 			password: password1,
 			hash:     "invalidhash",
 			wantErr:  true,
+		},
+		{
+			name:     "Password compares to pre-generated plaintext hash",
+			password: password1,
+			hash:     "$2a$13$.d44OR/1LwSszdlHab/dN.CCt46f5xi7yx41ToFfeCKWn.Kq2MBZ6",
+			wantErr:  false,
 		},
 	}
 
