@@ -35,7 +35,7 @@ func (cfg *apiConfig) endpCreateUser(w http.ResponseWriter, r *http.Request) {
 		HashedPassword: hashedPass,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure processing request to create user", err)
+		respondWithError(w, http.StatusConflict, "Failure processing request to create user", err)
 		return
 	}
 	respBody := User{
