@@ -20,15 +20,20 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if params.Username == "" || params.Password == "" {
+		respondWithError(w, http.StatusBadRequest, "Missing credential(s)", nil)
+		return
+	}
+
 	dbUser, err := cfg.db.GetUserByUsername(r.Context(), params.Username)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		respondWithError(w, http.StatusUnauthorized, "Incorrect username or password", err)
 		return
 	}
 
 	err = auth.CheckPasswordHash(params.Password, dbUser.HashedPassword)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		respondWithError(w, http.StatusUnauthorized, "Incorrect username or password", err)
 		return
 	}
 

@@ -22,6 +22,11 @@ func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if params.Name == "" {
+		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
+		return
+	}
+
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	dbAccount, err := cfg.db.AddAccount(r.Context(), database.AddAccountParams{

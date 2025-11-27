@@ -25,6 +25,11 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if params.Name == "" {
+		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
+		return
+	}
+
 	dbBudget, err := cfg.db.CreateBudget(r.Context(), database.CreateBudgetParams{
 		AdminID: validatedUserID,
 		Name:    params.Name,

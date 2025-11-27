@@ -21,6 +21,11 @@ func (cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if params.Name == "" {
+		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
+		return
+	}
+
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	_, err = cfg.db.GetGroupByBudgetIDAndName(r.Context(), database.GetGroupByBudgetIDAndNameParams{

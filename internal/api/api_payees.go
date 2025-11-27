@@ -21,6 +21,11 @@ func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if params.Name == "" {
+		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
+		return
+	}
+
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	dbPayee, err := cfg.db.CreatePayee(r.Context(), database.CreatePayeeParams{
