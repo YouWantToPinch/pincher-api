@@ -11,10 +11,13 @@ import (
 )
 
 func decodeParams[T any](r *http.Request) (T, error) {
-	defer r.Body.Close()
 	var v T
-	err := json.NewDecoder(r.Body).Decode(&v)
-	return v, err
+	decodeErr := json.NewDecoder(r.Body).Decode(&v)
+	err := r.Body.Close()
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	return v, decodeErr
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
@@ -41,7 +44,10 @@ func respondWithJSON(w http.ResponseWriter, code int, payload any) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		slog.Error("Could not write to header from JSON payload; " + err.Error())
+	}
 }
 
 func respondWithText(w http.ResponseWriter, code int, msg string) {

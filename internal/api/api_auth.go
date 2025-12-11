@@ -84,7 +84,7 @@ func (cfg *apiConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
 		return
-	} else if dbRefreshToken.ExpiresAt.Before(time.Now()) || dbRefreshToken.RevokedAt.Valid == true {
+	} else if dbRefreshToken.ExpiresAt.Before(time.Now()) || dbRefreshToken.RevokedAt.Valid {
 		respondWithError(w, http.StatusUnauthorized, "Invalid or missing token", nil)
 		return
 	}
@@ -109,7 +109,6 @@ func (cfg *apiConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Reque
 }
 
 func (cfg *apiConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
-
 	rTokenString, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
@@ -122,7 +121,10 @@ func (cfg *apiConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	cfg.db.RevokeUserRefreshToken(r.Context(), dbUser.ID)
+	err = cfg.db.RevokeUserRefreshToken(r.Context(), dbUser.ID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Refresh Token not found", err)
+	}
 
 	respMsg := "Revoked refresh token for user: " + dbUser.Username
 	respondWithText(w, http.StatusNoContent, respMsg)

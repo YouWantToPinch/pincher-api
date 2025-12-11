@@ -405,6 +405,9 @@ func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 	}
 
 	dbSplits, err := cfg.db.GetSplitsByTransactionID(r.Context(), pathTransactionID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Found no splits associated with this transaction", err)
+	}
 
 	var respBody []TransactionSplit
 	for _, split := range dbSplits {
