@@ -1,14 +1,13 @@
+// Package auth handles password hashing and JWT authentication
 package auth
 
 import (
-	"time"
-	//"log"
-	"errors"
-	"strings"
-
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -56,7 +55,7 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.Nil, err
 	} else if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok {
-		//log.Printf("Returning ID: %s", claims.Subject)
+		// log.Printf("Returning ID: %s", claims.Subject)
 		id, err := uuid.Parse(claims.Subject)
 		if err != nil {
 			return uuid.Nil, err
@@ -70,15 +69,15 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 func GetBearerToken(headers http.Header) (tokenString string, returnErr error) {
 	authSlice, ok := headers["Authorization"]
 	if !ok || len(authSlice) == 0 {
-		return "", errors.New("Authorization header missing or empty")
+		return "", errors.New("authorization header missing or empty")
 	}
 	authHeaderVal := authSlice[0]
 	if !strings.HasPrefix(strings.ToLower(authHeaderVal), "bearer ") {
-		return "", errors.New("No token string found")
+		return "", errors.New("no token string found")
 	}
 	tokenElements := strings.SplitN(authHeaderVal, " ", 2)
 	if len(tokenElements) != 2 || strings.TrimSpace(tokenElements[1]) == "" {
-		return "", errors.New("Bearer presented without token")
+		return "", errors.New("bearer presented without token")
 	}
 	return tokenElements[1], nil
 }
@@ -97,15 +96,15 @@ func MakeRefreshToken() (string, error) {
 func GetAPIKey(headers http.Header) (string, error) {
 	authSlice, ok := headers["Authorization"]
 	if !ok || len(authSlice) == 0 {
-		return "", errors.New("Authorization header missing or empty")
+		return "", errors.New("authorization header missing or empty")
 	}
 	authHeaderVal := authSlice[0]
 	if !strings.HasPrefix(strings.ToLower(authHeaderVal), "apikey ") {
-		return "", errors.New("No key string found")
+		return "", errors.New("no key string found")
 	}
 	tokenElements := strings.SplitN(authHeaderVal, " ", 2)
 	if len(tokenElements) != 2 || strings.TrimSpace(tokenElements[1]) == "" {
-		return "", errors.New("ApiKey string missing")
+		return "", errors.New("apiKey string missing")
 	}
 	return tokenElements[1], nil
 }

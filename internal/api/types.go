@@ -40,7 +40,7 @@ func BMRFromString(s string) (BudgetMemberRole, error) {
 	if val, ok := bmrFromString[s]; ok {
 		return val, nil
 	}
-	return -1, fmt.Errorf("Invalid role: %s", s)
+	return -1, fmt.Errorf("invalid role: %s", s)
 }
 
 type User struct {

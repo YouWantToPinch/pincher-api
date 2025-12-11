@@ -33,7 +33,6 @@ func signByType(transactionType string, i int64) (int64, error) {
 }
 
 func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
-
 	checkIsTransfer := func(txnType string) bool {
 		return txnType == "TRANSFER_TO" || txnType == "TRANSFER_FROM"
 	}
@@ -91,7 +90,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			return
 		}
 	}
-	amountsJsonBytes, err := json.Marshal(parsedAmounts)
+	amountsJSONBytes, err := json.Marshal(parsedAmounts)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
 		return
@@ -109,7 +108,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		PayeeID:         parsedPayeeID,
 		Notes:           params.Notes,
 		Cleared:         parsedCleared,
-		Amounts:         json.RawMessage(amountsJsonBytes),
+		Amounts:         json.RawMessage(amountsJSONBytes),
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't log transaction", err)
@@ -130,7 +129,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		for k, v := range parsedAmounts {
 			invertedAmounts[k] = -1 * v
 		}
-		invertedAmountsJsonBytes, err := json.Marshal(invertedAmounts)
+		invertedAmountsJSONBytes, err := json.Marshal(invertedAmounts)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error(), err)
 			return
@@ -151,7 +150,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			PayeeID:         parsedPayeeID,
 			Notes:           params.Notes,
 			Cleared:         parsedCleared,
-			Amounts:         json.RawMessage(invertedAmountsJsonBytes),
+			Amounts:         json.RawMessage(invertedAmountsJSONBytes),
 		})
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "Couldn't log corresponding transfer transaction", err)
@@ -178,10 +177,9 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	}
 
 	getTransactionView := func(transactionToViewID uuid.UUID) (TransactionView, error) {
-
 		viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), transactionToViewID)
 		if err != nil {
-			return TransactionView{}, fmt.Errorf("Couldn't get transaction from view using id %v; %v", transactionToViewID.String(), err.Error())
+			return TransactionView{}, fmt.Errorf("couldn't get transaction from view using id %v; %v", transactionToViewID.String(), err.Error())
 		}
 
 		respSplits := make(map[string]int)
@@ -190,7 +188,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			source := (*json.RawMessage)(&data)
 			err := json.Unmarshal(*source, &respSplits)
 			if err != nil {
-				return TransactionView{}, errors.New("Failure unmarshalling transaction splits into map[string]int64")
+				return TransactionView{}, errors.New("failure unmarshalling transaction splits into map[string]int64")
 			}
 		}
 
@@ -334,7 +332,7 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			Transactions: transactions,
 		}
 
-		//slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody.Transactions)))
+		// slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody.Transactions)))
 
 		respondWithJSON(w, http.StatusOK, respBody)
 		return
@@ -391,12 +389,11 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			Transactions: transactions,
 		}
 
-		//slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody.Transactions)))
+		// slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody.Transactions)))
 
 		respondWithJSON(w, http.StatusOK, respBody)
 		return
 	}
-
 }
 
 func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Request) {
@@ -489,11 +486,9 @@ func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 		respondWithJSON(w, http.StatusOK, respBody)
 		return
 	}
-
 }
 
 func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Request) {
-
 	checkIsTransfer := func(txnType string) bool {
 		return txnType == "TRANSFER_TO" || txnType == "TRANSFER_FROM"
 	}
@@ -571,7 +566,7 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 			return
 		}
 	}
-	amountsJsonBytes, err := json.Marshal(parsedAmounts)
+	amountsJSONBytes, err := json.Marshal(parsedAmounts)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
 		return
@@ -585,7 +580,7 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		PayeeID:         parsedPayeeID,
 		Notes:           params.Notes,
 		Cleared:         parsedCleared,
-		Amounts:         json.RawMessage(amountsJsonBytes),
+		Amounts:         json.RawMessage(amountsJSONBytes),
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to update transaction", err)

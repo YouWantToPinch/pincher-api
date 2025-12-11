@@ -3,10 +3,11 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func decodeParams[T any](r *http.Request) (T, error) {
@@ -17,7 +18,6 @@ func decodeParams[T any](r *http.Request) (T, error) {
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
-
 	errorMessage := msg
 	if err != nil {
 		errorMessage += "; " + err.Error()
@@ -58,7 +58,7 @@ func parseUUIDFromPath(pathParam string, r *http.Request, parse *uuid.UUID) erro
 	if uuidString != "" {
 		parsedID, err := uuid.Parse(uuidString)
 		if err != nil {
-			return fmt.Errorf("Parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", uuidString, pathParam)
+			return fmt.Errorf("parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", uuidString, pathParam)
 		}
 		*parse = parsedID
 	} else {
@@ -92,7 +92,7 @@ func parseDateFromQuery(queryParam string, r *http.Request, parse *time.Time) er
 		}
 	}
 
-	return fmt.Errorf("Query value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, queryParam)
+	return fmt.Errorf("query value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, queryParam)
 }
 
 // Try to parse input path parameter; store time.Time{} into 'parse' on failure
@@ -119,5 +119,5 @@ func parseDateFromPath(pathParam string, r *http.Request, parse *time.Time) erro
 		}
 	}
 
-	return fmt.Errorf("Path value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, pathParam)
+	return fmt.Errorf("path value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, pathParam)
 }
