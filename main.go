@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-	_ "github.com/lib/pq"
 	"log"
 	"log/slog"
 	"net/http"
+
+	_ "github.com/lib/pq"
 
 	"github.com/YouWantToPinch/pincher-api/internal/api"
 )
 
 func main() {
-	const filepathRoot = "."
 	const port = "8080"
 
 	cfg := api.LoadEnvConfig(".env")
@@ -21,8 +21,7 @@ func main() {
 		Handler: api.SetupMux(cfg),
 	}
 
-	addr := ":8080"
-	url := "http://localhost" + addr
+	url := "http://localhost" + pincher.Addr
 	slog.Info(fmt.Sprintf("Server listening at: %s", url))
 
 	// start server
