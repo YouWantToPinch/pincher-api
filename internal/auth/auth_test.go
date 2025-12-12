@@ -5,13 +5,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
 // HASH TESTS
 
-const testPassword = "cheetohDeadbolt123"
-const altPassword = "cheetohDeadbolt124"
+const (
+	testPassword = "cheetohDeadbolt123"
+	altPassword  = "cheetohDeadbolt124"
+)
 
 func WasHashed(t *testing.T) {
 	// passes if hashed password is indeed different from original password
@@ -55,12 +58,12 @@ func JWTRejectExpired(t *testing.T) {
 	userID := uuid.New()
 	tokenSecret := "very-secret-secret"
 	expiration := time.Second * 2
-	token, err := MakeJWT(userID, tokenSecret, expiration)
+	token, err := MakeJWT(userID, jwt.SigningMethodHS512, tokenSecret, expiration)
 	if err != nil {
 		t.Error(err)
 	}
 	time.Sleep(2 * time.Second)
-	_, err = ValidateJWT(token, "very-secret-secret")
+	_, err = ValidateJWT(token, "very-secret-secret", "HS256")
 	if err == nil {
 		t.Error("expired JWT not rejected")
 	}
@@ -129,7 +132,8 @@ func TestCheckPasswordHash(t *testing.T) {
 
 func TestValidateJWT(t *testing.T) {
 	userID := uuid.New()
-	validToken, _ := MakeJWT(userID, "secret", time.Hour)
+	validToken, _ := MakeJWT(userID, jwt.SigningMethodHS256, "secret", time.Hour)
+	invalidToken, _ := MakeJWT(userID, jwt.SigningMethodHS384, "secret", time.Hour)
 
 	tests := []struct {
 		name        string
@@ -159,11 +163,18 @@ func TestValidateJWT(t *testing.T) {
 			wantUserID:  uuid.Nil,
 			wantErr:     true,
 		},
+		{
+			name:        "Wrong algorithm",
+			tokenString: invalidToken,
+			tokenSecret: "wrong_secret",
+			wantUserID:  uuid.Nil,
+			wantErr:     true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotUserID, err := ValidateJWT(tt.tokenString, tt.tokenSecret)
+			gotUserID, err := ValidateJWT(tt.tokenString, tt.tokenSecret, "HS256")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateJWT() error = %v, wantErr %v", err, tt.wantErr)
 				return

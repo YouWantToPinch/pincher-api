@@ -7,21 +7,18 @@ VALUES (
     NOW(),
     NOW(),
     $2,
-    NOW() + INTERVAL '60 days',
+    NOW() + INTERVAL '30 days',
     NULL
 )
 RETURNING *;
-
--- name: GetRefreshToken :one
-SELECT *
-FROM refresh_tokens
-WHERE refresh_tokens.token = $1;
 
 -- name: GetUserByRefreshToken :one
 SELECT users.*
 FROM users
 JOIN refresh_tokens ON users.id = refresh_tokens.user_id
-WHERE refresh_tokens.token = $1;
+WHERE refresh_tokens.token = $1
+AND revoked_at IS NULL
+AND expires_at > NOW();
 
 -- name: RevokeUserRefreshToken :exec
 UPDATE refresh_tokens

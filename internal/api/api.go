@@ -1,13 +1,14 @@
+// Package api handles routes and their associated handlers
 package api
 
 import (
-	_ "github.com/lib/pq"
-
 	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+
+	_ "github.com/lib/pq"
 
 	"github.com/joho/godotenv"
 
@@ -15,7 +16,6 @@ import (
 )
 
 func SetupMux(cfg *apiConfig) *http.ServeMux {
-
 	mux := http.NewServeMux()
 
 	// middleware

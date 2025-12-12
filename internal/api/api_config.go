@@ -3,9 +3,8 @@ package api
 import (
 	"context"
 	"log/slog"
-	"os"
-
 	"net/http"
+	"os"
 
 	"github.com/google/uuid"
 
@@ -18,7 +17,7 @@ type apiConfig struct {
 	platform string
 	secret   string
 	logger   *slog.Logger
-	apiKeys  *map[string]string
+	// apiKeys  *map[string]string
 }
 
 func (cfg *apiConfig) Init(level slog.Level) {
@@ -39,7 +38,7 @@ func (cfg *apiConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 			slog.Error("Couldn't get bearer token")
 			return
 		}
-		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret)
+		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret, "HS256")
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", nil)
 			slog.Error("Failed validation for JWT: " + tokenString)

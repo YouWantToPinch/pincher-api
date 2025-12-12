@@ -6,6 +6,7 @@ import (
 
 	"github.com/YouWantToPinch/pincher-api/internal/auth"
 	"github.com/YouWantToPinch/pincher-api/internal/database"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +52,7 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := auth.MakeJWT(dbUser.ID, cfg.secret, time.Hour)
+	accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.secret, time.Hour)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Trouble logging in", err)
 		return
@@ -70,39 +71,30 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Request) {
-	type returnVals struct {
+	refreshToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Couldn't find refresh token", err)
+		return
+	}
+
+	dbUser, err := cfg.db.GetUserByRefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't get user for refresh token", err)
+		return
+	}
+
+	accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.secret, time.Hour)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't validate token", err)
+		return
+	}
+
+	type resp struct {
 		NewAccessToken string `json:"token"`
 	}
 
-	rTokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
-		return
-	}
-
-	dbRefreshToken, err := cfg.db.GetRefreshToken(r.Context(), rTokenString)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
-		return
-	} else if dbRefreshToken.ExpiresAt.Before(time.Now()) || dbRefreshToken.RevokedAt.Valid {
-		respondWithError(w, http.StatusUnauthorized, "Invalid or missing token", nil)
-		return
-	}
-
-	dbUser, err := cfg.db.GetUserByRefreshToken(r.Context(), rTokenString)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid or missing token", err)
-		return
-	}
-
-	newJWTToken, err := auth.MakeJWT(dbUser.ID, cfg.secret, time.Hour)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
-		return
-	}
-
-	respBody := returnVals{
-		NewAccessToken: newJWTToken,
+	respBody := resp{
+		NewAccessToken: accessToken,
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody)

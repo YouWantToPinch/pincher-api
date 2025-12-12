@@ -1,4 +1,4 @@
-// Package auth handles password hashing and JWT authentication
+// Package auth provides functions for handling password hashing and JWT authentication
 package auth
 
 import (
@@ -30,7 +30,7 @@ func CheckPasswordHash(password, hash string) error {
 	return nil
 }
 
-func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
+func MakeJWT(userID uuid.UUID, method *jwt.SigningMethodHMAC, tokenSecret string, expiresIn time.Duration) (string, error) {
 	claims := jwt.RegisteredClaims{
 		Issuer:    "pincher",
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
@@ -38,7 +38,7 @@ func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 		Subject:   userID.String(),
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(method, claims)
 	signed, err := token.SignedString([]byte(tokenSecret))
 	if err != nil {
 		return "", err
@@ -47,15 +47,20 @@ func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 	return signed, nil
 }
 
-func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
+func ValidateJWT(tokenString, tokenSecret, algorithm string) (uuid.UUID, error) {
 	jwtClaims := jwt.RegisteredClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, &jwtClaims, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method: " + token.Method.Alg())
+		}
+		if algorithm != token.Method.Alg() {
+			return nil, errors.New("unexpected signing method: " + token.Method.Alg())
+		}
 		return []byte(tokenSecret), nil
 	})
 	if err != nil {
 		return uuid.Nil, err
 	} else if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok {
-		// log.Printf("Returning ID: %s", claims.Subject)
 		id, err := uuid.Parse(claims.Subject)
 		if err != nil {
 			return uuid.Nil, err
