@@ -1,3 +1,5 @@
+// Package pinchertest provides functions for stateful integration tests
+// to call when requests are need to be sent
 package pinchertest
 
 import (
@@ -202,11 +204,10 @@ func DeleteBudgetGroup(token, budgetID, groupID string) *http.Request {
 
 // BUDGET -> TRANSACTION CRUD
 
-func LogTransaction(token, budgetID, accountID, transferAccountID, transactionType, transactionDate, payeeID, notes, isCleared string, amounts map[string]int64) *http.Request {
+func LogTransaction(token, budgetID, accountID, transferAccountID, transactionDate, payeeID, notes, isCleared string, amounts map[string]int64) *http.Request {
 	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/transactions", token, map[string]any{
 		"account_id":          accountID,
 		"transfer_account_id": transferAccountID,
-		"transaction_type":    transactionType,
 		"transaction_date":    transactionDate,
 		"payee_id":            payeeID,
 		"notes":               notes,

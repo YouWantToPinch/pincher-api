@@ -14,52 +14,86 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func abs(i int64) int64 {
-	if i < 0 {
-		return -1 * i
-	}
-	return i
+type LogTransactionParams struct {
+	AccountID         string    `json:"account_id"`
+	TransferAccountID string    `json:"transfer_account_id"`
+	TransactionDate   time.Time `json:"transaction_date"`
+	PayeeID           string    `json:"payee_id"`
+	Notes             string    `json:"notes"`
+	Cleared           string    `json:"is_cleared"`
+	/* Map of category UUID strings to integers.
+	If there is only one entry in Amounts, the transaction is not truly split.
+	Nonetheless, all transactions record at least one corresponding split.
+	A 'split' reflects the sum of spending toward one particular category within the transaction.
+	*/
+	Amounts map[string]int64 `json:"amounts"`
 }
 
-func signByType(transactionType string, i int64) (int64, error) {
-	switch transactionType {
-	case "TRANSFER_TO", "DEPOSIT":
-		return (abs(i)), nil
-	case "TRANSFER_FROM", "WITHDRAWAL":
-		return -1 * (abs(i)), nil
-	default:
-		return i, (fmt.Errorf("transaction type \"%s\" not supported", transactionType))
+// Parses relevant input amounts, txnType, transfer status, or returns an error.
+// Any txn with no amount, or with amounts not matching in type, are rejected.
+func validateTxn(params *LogTransactionParams) (amounts map[string]int64, txnType string, isTransfer bool, err error) {
+	_, transferErr := uuid.Parse(params.TransferAccountID)
+	isTransfer = (transferErr == nil)
+	txnType = "NONE"
+
+	setTxnType := func(ptr *string, val string) error {
+		switch *ptr {
+		case "NONE":
+			*ptr = val
+			return nil
+		case val:
+			return nil
+		default:
+			return errors.New("one or more splits do not match expected type: " + *ptr)
+		}
 	}
+
+	parsedAmounts := params.Amounts
+	for k, v := range params.Amounts {
+		switch {
+		case v > 0:
+			if isTransfer {
+				err = setTxnType(&txnType, "TRANSFER_TO")
+			} else {
+				err = setTxnType(&txnType, "DEPOSIT")
+			}
+		case v < 0:
+			if isTransfer {
+				err = setTxnType(&txnType, "TRANSFER_FROM")
+			} else {
+				err = setTxnType(&txnType, "WITHDRAWAL")
+			}
+		default:
+			delete(parsedAmounts, k)
+		}
+		// return error on txnType mismatch
+		if err != nil {
+			return nil, txnType, isTransfer, err
+		}
+	}
+	// return error on txn amount of 0
+	if len(parsedAmounts) == 0 {
+		return nil, "NONE", false, errors.New("no amount values provided for transaction")
+	}
+	// sanity check
+	if txnType == "NONE" {
+		return nil, txnType, isTransfer, errors.New("found one or more amounts in txn, but could not interpret txn type (THIS SHOULD NEVER HAPPEN!)")
+	}
+
+	return parsedAmounts, txnType, isTransfer, nil
 }
 
 func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
-	checkIsTransfer := func(txnType string) bool {
-		return txnType == "TRANSFER_TO" || txnType == "TRANSFER_FROM"
-	}
-
-	type parameters struct {
-		AccountID         string    `json:"account_id"`
-		TransferAccountID string    `json:"transfer_account_id"`
-		TransactionType   string    `json:"transaction_type"`
-		TransactionDate   time.Time `json:"transaction_date"`
-		PayeeID           string    `json:"payee_id"`
-		Notes             string    `json:"notes"`
-		Cleared           string    `json:"is_cleared"`
-		/* Map of category UUID strings to integers.
-		   If there is only one entry in Amounts, the transaction is not truly split.
-		   Nonetheless, all transactions record at least one corresponding split.
-		   A 'split' reflects the sum of spending toward one particular category within the transaction.
-		*/
-		Amounts map[string]int64 `json:"amounts"`
-	}
-
-	params, err := decodeParams[parameters](r)
+	params, err := decodeParams[LogTransactionParams](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters when logging transaction", err)
 		return
 	}
 
-	isTransfer := checkIsTransfer(params.TransactionType)
+	parsedAmounts, txnType, isTransfer, err := validateTxn(&params)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Failure validating transaction", err)
+	}
 
 	parsedAccountID, err := uuid.Parse(params.AccountID)
 	if err != nil {
@@ -82,14 +116,6 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	parsedAmounts := make(map[string]int64)
-	for k, v := range params.Amounts {
-		parsedAmounts[k], err = signByType(params.TransactionType, v)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error(), err)
-			return
-		}
-	}
 	amountsJSONBytes, err := json.Marshal(parsedAmounts)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
@@ -103,7 +129,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		BudgetID:        pathBudgetID,
 		LoggerID:        validatedUserID,
 		AccountID:       parsedAccountID,
-		TransactionType: params.TransactionType,
+		TransactionType: txnType,
 		TransactionDate: params.TransactionDate,
 		PayeeID:         parsedPayeeID,
 		Notes:           params.Notes,
@@ -134,7 +160,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			respondWithError(w, http.StatusInternalServerError, err.Error(), err)
 			return
 		}
-		getOppositeType := func(s string) string {
+		invertTransferType := func(s string) string {
 			if s == "TRANSFER_TO" {
 				return "TRANSFER_FROM"
 			}
@@ -145,7 +171,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			BudgetID:        pathBudgetID,
 			LoggerID:        validatedUserID,
 			AccountID:       parsedTransferAccountID,
-			TransactionType: getOppositeType(params.TransactionType),
+			TransactionType: invertTransferType(txnType),
 			TransactionDate: params.TransactionDate,
 			PayeeID:         parsedPayeeID,
 			Notes:           params.Notes,
@@ -215,12 +241,12 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		var respBody response
 		t1, err := getTransactionView(dbTransaction.ID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error(), err)
+			respondWithError(w, http.StatusBadRequest, "", err)
 			return
 		}
 		t2, err := getTransactionView(transferTransactionID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error(), err)
+			respondWithError(w, http.StatusBadRequest, "", err)
 			return
 		}
 
@@ -233,7 +259,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 
 	respBody, err := getTransactionView(dbTransaction.ID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error(), err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
@@ -496,47 +522,31 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		return txnType == "TRANSFER_TO" || txnType == "TRANSFER_FROM"
 	}
 
-	var pathTransactionID uuid.UUID
-	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
-		return
-	}
-
-	type parameters struct {
-		AccountID         string `json:"account_id"`
-		TransferAccountID string `json:"transfer_account_id"`
-		// In updates, clients may change the Type in only these ways:
-		// WITHDRAWAL <-> DEPOSIT
-		// TRANSFER_TO <-> TRANSFER_TO
-		TransactionType string    `json:"transaction_type"`
-		TransactionDate time.Time `json:"transaction_date"`
-		PayeeID         string    `json:"payee_id"`
-		Notes           string    `json:"notes"`
-		Cleared         string    `json:"is_cleared"`
-		/* Map of category UUID strings to integers.
-		   If there is only one entry in Amounts, the transaction is not truly split.
-		   Nonetheless, all transactions record at least one corresponding split.
-		   A 'split' reflects the sum of spending toward one particular category within the transaction.
-		*/
-		Amounts map[string]int64 `json:"amounts"`
-	}
-
-	params, err := decodeParams[parameters](r)
+	params, err := decodeParams[LogTransactionParams](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
 	}
 
-	isTransfer := checkIsTransfer(params.TransactionType)
+	parsedAmounts, txnType, isTransfer, err := validateTxn(&params)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Failure validating transaction", err)
+	}
 
+	var pathTransactionID uuid.UUID
+	err = parseUUIDFromPath("transaction_id", r, &pathTransactionID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		return
+	}
+
+	// Non-transfer TXNs may not be updated as transfer TXNs, and vice versa
 	dbTransaction, err := cfg.db.GetTransactionByID(r.Context(), pathTransactionID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Couldn't find transaction with specified id", err)
 		return
 	}
-	swappable := (isTransfer && checkIsTransfer(dbTransaction.TransactionType)) || (!isTransfer && !checkIsTransfer(dbTransaction.TransactionType))
-	if !swappable {
+	if isTransfer != checkIsTransfer(dbTransaction.TransactionType) {
 		respondWithError(w, http.StatusBadRequest, "Transaction type cannot be changed!", nil)
 	}
 
@@ -550,25 +560,18 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		respondWithError(w, http.StatusBadRequest, "Provided payee_id string could not be parsed as UUID", err)
 		return
 	}
+
 	var parsedCleared bool
-	if params.Cleared == "true" || params.Cleared == "false" {
-		parsedCleared, err = strconv.ParseBool(params.Cleared)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Provided string value for 'Cleared' could not be parsed as boolean", err)
-		}
-	} else {
+	switch params.Cleared {
+	case "true":
+		parsedCleared = true
+	case "false":
+		parsedCleared = false
+	default:
 		respondWithError(w, http.StatusBadRequest, "Provided string value for 'Cleared' could not be parsed; must be 'true' or 'false'", nil)
 		return
 	}
 
-	parsedAmounts := make(map[string]int64)
-	for k, v := range params.Amounts {
-		parsedAmounts[k], err = signByType(params.TransactionType, v)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error(), err)
-			return
-		}
-	}
 	amountsJSONBytes, err := json.Marshal(parsedAmounts)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
@@ -578,7 +581,7 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 	_, err = cfg.db.UpdateTransaction(r.Context(), database.UpdateTransactionParams{
 		TransactionID:   pathTransactionID,
 		AccountID:       parsedAccountID,
-		TransactionType: params.TransactionType,
+		TransactionType: txnType,
 		TransactionDate: params.TransactionDate,
 		PayeeID:         parsedPayeeID,
 		Notes:           params.Notes,

@@ -171,7 +171,6 @@ func Test_CRUD(t *testing.T) {
 		// DELETE budget
 		c.Request(pt.DeleteUserBudget(jwt1.(string), budgetID1.(string)))
 		assert.Equal(t, http.StatusNoContent, c.W.Code)
-
 	})
 
 	// PREP: Create budget
@@ -282,14 +281,14 @@ func Test_CRUD(t *testing.T) {
 		transactionAmounts := map[string]int64{}
 		transactionAmounts[categoryID1.(string)] = -500
 
-		c.Request(pt.LogTransaction(jwt1.(string), budgetID1.(string), accountID1.(string), "NONE", "WITHDRAWAL", "2025-09-15T19:00:00Z", payeeID2.(string), "A transaction for testing.", "true", transactionAmounts))
+		c.Request(pt.LogTransaction(jwt1.(string), budgetID1.(string), accountID1.(string), "NONE", "2025-09-15T19:00:00Z", payeeID2.(string), "A transaction for testing.", "true", transactionAmounts))
 		assert.Equal(t, http.StatusCreated, c.W.Code)
 		transactionID1, _ := GetJSONField(c.W, "id")
 		// READ transaction
 		c.Request(pt.GetTransaction(jwt1.(string), budgetID1.(string), transactionID1.(string)))
 		assert.Equal(t, http.StatusOK, c.W.Code)
 		// UPDATE transaction
-		c.Request(pt.LogTransaction(jwt1.(string), budgetID1.(string), accountID1.(string), "NONE", "WITHDRAWAL", "2025-09-15T19:00:00Z", payeeID2.(string), "A transaction whose notes are now updated.", "true", transactionAmounts))
+		c.Request(pt.LogTransaction(jwt1.(string), budgetID1.(string), accountID1.(string), "NONE", "2025-09-15T19:00:00Z", payeeID2.(string), "A transaction whose notes are now updated.", "true", transactionAmounts))
 		assert.Equal(t, http.StatusCreated, c.W.Code)
 		// DELETE payee
 		c.Request(pt.DeletePayee(jwt1.(string), budgetID1.(string), payeeID2.(string), payeeID1.(string)))
@@ -297,9 +296,7 @@ func Test_CRUD(t *testing.T) {
 		// DELETE transaction
 		c.Request(pt.DeleteTransaction(jwt1.(string), budgetID1.(string), transactionID1.(string)))
 		assert.Equal(t, http.StatusNoContent, c.W.Code)
-
 	})
-
 }
 
 // Should properly make, count, and delete users
@@ -637,13 +634,13 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	payee1, _ := GetJSONField(c.W, "id")
 
 	transaction1Amounts := map[string]int64{}
-	transaction1Amounts[category2.(string)] = 1800
-	c.Request(pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "NONE", "WITHDRAWAL", "2025-09-15T23:17:00Z", payee1.(string), "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station.", "true", transaction1Amounts))
-	//transaction1, _ := GetJSONField(c.W, "id")
+	transaction1Amounts[category2.(string)] = -1800
+	c.Request(pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "NONE", "2025-09-15T23:17:00Z", payee1.(string), "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station.", "true", transaction1Amounts))
+	// transaction1, _ := GetJSONField(c.W, "id")
 
 	transaction2Amounts := map[string]int64{}
 	transaction2Amounts[category1.(string)] = -400
-	c.Request(pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "NONE", "WITHDRAWAL", "2025-09-15T23:22:00Z", payee1.(string), "Yeah, I got a drink in the convenience store too; sue me. Take it out of my bonus or whatever.", "true", transaction2Amounts))
+	c.Request(pt.LogTransaction(jwt3.(string), budget1.(string), account2.(string), "NONE", "2025-09-15T23:22:00Z", payee1.(string), "Yeah, I got a drink in the convenience store too; sue me. Take it out of my bonus or whatever.", "true", transaction2Amounts))
 	// transaction2, _ := GetJSONField(c.W, "id")
 
 	// user4 VIEWER: Works for accounting; reading transactions from employees.
@@ -703,7 +700,7 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	// deposit some money into checking account, allocated (but not explicitly assigned) to the DINING OUT category
 	depositAmount := map[string]int64{}
 	depositAmount[category1.(string)] = 10000
-	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", "true", depositAmount))
+	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", "true", depositAmount))
 
 	c.Request(pt.GetBudgetCapital(jwt1.(string), budget1.(string), account1.(string)))
 	budgetCheckingCapital, _ := GetJSONField(c.W, "capital")
@@ -719,8 +716,8 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 
 	// spend money out of a credit account
 	spendAmount := map[string]int64{}
-	spendAmount[category1.(string)] = 5000
-	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account2.(string), "NONE", "WITHDRAWAL", "2025-09-15T18:00:00Z", payee2.(string), "$50 dinner at a restaurant", "true", spendAmount))
+	spendAmount[category1.(string)] = -5000
+	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account2.(string), "NONE", "2025-09-15T18:00:00Z", payee2.(string), "$50 dinner at a restaurant", "true", spendAmount))
 
 	c.Request(pt.GetBudgetCapital(jwt1.(string), budget1.(string), account2.(string)))
 	budgetCreditCapital, _ = GetJSONField(c.W, "capital")
@@ -732,8 +729,8 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 
 	// pay off credit account, using the checking account, using a transfer transaction
 	transferAmount := map[string]int64{}
-	transferAmount["TRANSFER AMOUNT"] = 5000
-	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), account2.(string), "TRANSFER_FROM", "2025-09-15T19:00:00Z", "ACCOUNT TRANSFER", "Pay off credit account balance", "true", transferAmount))
+	transferAmount["TRANSFER AMOUNT"] = -5000
+	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), account2.(string), "2025-09-15T19:00:00Z", "ACCOUNT TRANSFER", "Pay off credit account balance", "true", transferAmount))
 
 	c.Request(pt.GetBudgetCapital(jwt1.(string), budget1.(string), account2.(string)))
 	budgetCreditCapital, _ = GetJSONField(c.W, "capital")
@@ -803,12 +800,12 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	// deposit some money into the checking account, allocated (but not explicitly assigned) to the Dining Out category
 	depositAmount := map[string]int64{}
 	depositAmount[category1.(string)] = 10000
-	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", "true", depositAmount))
+	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "2025-09-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", "true", depositAmount))
 
 	// spend money out of Dining Out category
 	spendAmount := map[string]int64{}
-	spendAmount[category1.(string)] = 5000
-	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "WITHDRAWAL", "2025-09-15T18:00:00Z", payee2.(string), "$50 dinner at a restaurant", "true", spendAmount))
+	spendAmount[category1.(string)] = -5000
+	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "2025-09-15T18:00:00Z", payee2.(string), "$50 dinner at a restaurant", "true", spendAmount))
 
 	// we expect that there's 5000 in capital remaining, and NO assignable money.
 	// 5000 in Dining Out; 0 in Savings.
@@ -829,15 +826,15 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	// Assign some (but not all of it, to test for underassignment) to each of two categories.
 	clear(depositAmount)
 	depositAmount["UNCATEGORIZED"] = 10000
-	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "DEPOSIT", "2025-10-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", "true", depositAmount))
+	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "2025-10-15T17:00:00Z", payee1.(string), "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", "true", depositAmount))
 
 	c.Request(pt.AssignMoneyToCategory(jwt1.(string), budget1.(string), "2025-10-01", category1.(string), 4000))
 	c.Request(pt.AssignMoneyToCategory(jwt1.(string), budget1.(string), "2025-10-01", category2.(string), 5000))
 
 	// spend money out of Dining Out category
 	clear(spendAmount)
-	spendAmount[category1.(string)] = 4000
-	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "WITHDRAWAL", "2025-10-15T18:00:00Z", payee2.(string), "I was very busy having fun, fun, fun!", "true", spendAmount))
+	spendAmount[category1.(string)] = -4000
+	c.Request(pt.LogTransaction(jwt1.(string), budget1.(string), account1.(string), "NONE", "2025-10-15T18:00:00Z", payee2.(string), "I was very busy having fun, fun, fun!", "true", spendAmount))
 
 	// we expect that there's 11000 in capital remaining, and 1000 in assignable money.
 	// 5000 in Dining Out; 5000 in Savings.
@@ -884,6 +881,6 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	assert.Equal(t, int64(-1000), (budgetTotalCapital.(int64) - budgetTotalBalance.(int64)))
 
 	// Delete all users
-	//c.Request(pt.DeleteAllUsers())
-	//assert.Equal(t, 200, c.W.Code)
+	// c.Request(pt.DeleteAllUsers())
+	// assert.Equal(t, 200, c.W.Code)
 }
