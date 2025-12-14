@@ -9,7 +9,6 @@ import (
 )
 
 func (cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request) {
-
 	type parameters struct {
 		Name    string `json:"name"`
 		Notes   string `json:"notes"`
@@ -73,7 +72,6 @@ func (cfg *apiConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
-
 	queryGroupID := r.URL.Query().Get("group_id")
 	var parsedGroupID uuid.UUID
 	if queryGroupID != "" {
@@ -120,7 +118,6 @@ func (cfg *apiConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 }
 
 func (cfg *apiConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request) {
-
 	var pathCategoryID uuid.UUID
 	err := parseUUIDFromPath("category_id", r, &pathCategoryID)
 	if err != nil {
@@ -163,12 +160,16 @@ func (cfg *apiConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 		assignedGroup.Valid = false
 	}
 
-	cfg.db.UpdateCategory(r.Context(), database.UpdateCategoryParams{
+	_, err = cfg.db.UpdateCategory(r.Context(), database.UpdateCategoryParams{
 		ID:      pathCategoryID,
 		GroupID: assignedGroup,
 		Name:    params.Name,
 		Notes:   params.Notes,
 	})
+	if err != nil {
+		respondWithError(w, http.StatusNotModified, "Failed to update category", err)
+		return
+	}
 
 	respondWithText(w, http.StatusNoContent, "Category '"+params.Name+"' updated successfully!")
 }
