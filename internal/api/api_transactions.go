@@ -14,7 +14,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-type LogTransactionParams struct {
+type LogTransactionrqSchema struct {
 	AccountID         string    `json:"account_id"`
 	TransferAccountID string    `json:"transfer_account_id"`
 	TransactionDate   time.Time `json:"transaction_date"`
@@ -31,8 +31,8 @@ type LogTransactionParams struct {
 
 // Parses relevant input amounts, txnType, transfer status, or returns an error.
 // Any txn with no amount, or with amounts not matching in type, are rejected.
-func validateTxn(params *LogTransactionParams) (amounts map[string]int64, txnType string, isTransfer bool, err error) {
-	_, transferErr := uuid.Parse(params.TransferAccountID)
+func validateTxn(rqPayload *LogTransactionrqSchema) (amounts map[string]int64, txnType string, isTransfer bool, err error) {
+	_, transferErr := uuid.Parse(rqPayload.TransferAccountID)
 	isTransfer = (transferErr == nil)
 	txnType = "NONE"
 
@@ -48,8 +48,8 @@ func validateTxn(params *LogTransactionParams) (amounts map[string]int64, txnTyp
 		}
 	}
 
-	parsedAmounts := params.Amounts
-	for k, v := range params.Amounts {
+	parsedAmounts := rqPayload.Amounts
+	for k, v := range rqPayload.Amounts {
 		switch {
 		case v > 0:
 			if isTransfer {
@@ -84,30 +84,30 @@ func validateTxn(params *LogTransactionParams) (amounts map[string]int64, txnTyp
 }
 
 func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
-	params, err := decodeParams[LogTransactionParams](r)
+	rqPayload, err := decodePayload[LogTransactionrqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters when logging transaction", err)
 		return
 	}
 
-	parsedAmounts, txnType, isTransfer, err := validateTxn(&params)
+	parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failure validating transaction", err)
 	}
 
-	parsedAccountID, err := uuid.Parse(params.AccountID)
+	parsedAccountID, err := uuid.Parse(rqPayload.AccountID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Provided account_id string could not be parsed as UUID", err)
 		return
 	}
-	parsedPayeeID, err := uuid.Parse(params.PayeeID)
+	parsedPayeeID, err := uuid.Parse(rqPayload.PayeeID)
 	if err != nil && !isTransfer {
 		respondWithError(w, http.StatusBadRequest, "Provided payee_id string could not be parsed as UUID", err)
 		return
 	}
 	var parsedCleared bool
-	if params.Cleared == "true" || params.Cleared == "false" {
-		parsedCleared, err = strconv.ParseBool(params.Cleared)
+	if rqPayload.Cleared == "true" || rqPayload.Cleared == "false" {
+		parsedCleared, err = strconv.ParseBool(rqPayload.Cleared)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "Provided string value for 'Cleared' could not be parsed as boolean", err)
 		}
@@ -130,9 +130,9 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		LoggerID:        validatedUserID,
 		AccountID:       parsedAccountID,
 		TransactionType: txnType,
-		TransactionDate: params.TransactionDate,
+		TransactionDate: rqPayload.TransactionDate,
 		PayeeID:         parsedPayeeID,
-		Notes:           params.Notes,
+		Notes:           rqPayload.Notes,
 		Cleared:         parsedCleared,
 		Amounts:         json.RawMessage(amountsJSONBytes),
 	})
@@ -145,7 +145,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	var parsedTransferAccountID uuid.UUID
 	if isTransfer {
 		// parse transfer_account_id
-		parsedTransferAccountID, err = uuid.Parse(params.TransferAccountID)
+		parsedTransferAccountID, err = uuid.Parse(rqPayload.TransferAccountID)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "Provided transfer_account_id string could not be parsed as UUID", err)
 			return
@@ -172,9 +172,9 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			LoggerID:        validatedUserID,
 			AccountID:       parsedTransferAccountID,
 			TransactionType: invertTransferType(txnType),
-			TransactionDate: params.TransactionDate,
+			TransactionDate: rqPayload.TransactionDate,
 			PayeeID:         parsedPayeeID,
-			Notes:           params.Notes,
+			Notes:           rqPayload.Notes,
 			Cleared:         parsedCleared,
 			Amounts:         json.RawMessage(invertedAmountsJSONBytes),
 		})
@@ -235,10 +235,10 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	}
 
 	if isTransfer {
-		type response struct {
+		type rspSchema struct {
 			Transactions []TransactionView `json:"transactions"`
 		}
-		var respBody response
+		var rspPayload rspSchema
 		t1, err := getTransactionView(dbTransaction.ID)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "", err)
@@ -250,20 +250,20 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		respBody.Transactions = append(respBody.Transactions, t1)
-		respBody.Transactions = append(respBody.Transactions, t2)
+		rspPayload.Transactions = append(rspPayload.Transactions, t1)
+		rspPayload.Transactions = append(rspPayload.Transactions, t2)
 
-		respondWithJSON(w, http.StatusCreated, respBody)
+		respondWithJSON(w, http.StatusCreated, rspPayload)
 		return
 	}
 
-	respBody, err := getTransactionView(dbTransaction.ID)
+	rspPayload, err := getTransactionView(dbTransaction.ID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
@@ -350,17 +350,17 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			})
 		}
 
-		type resp struct {
+		type rspSchema struct {
 			Transactions []Transaction `json:"transactions"`
 		}
 
-		respBody := resp{
+		rspPayload := rspSchema{
 			Transactions: transactions,
 		}
 
-		// slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody.Transactions)))
+		// slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(rspPayload.Transactions)))
 
-		respondWithJSON(w, http.StatusOK, respBody)
+		respondWithJSON(w, http.StatusOK, rspPayload)
 		return
 	default: // or case "view"
 
@@ -407,17 +407,17 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			})
 		}
 
-		type resp struct {
+		type rspSchema struct {
 			Transactions []TransactionView `json:"transactions"`
 		}
 
-		respBody := resp{
+		rspPayload := rspSchema{
 			Transactions: transactions,
 		}
 
-		// slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(respBody.Transactions)))
+		// slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(rspPayload.Transactions)))
 
-		respondWithJSON(w, http.StatusOK, respBody)
+		respondWithJSON(w, http.StatusOK, rspPayload)
 		return
 	}
 }
@@ -435,7 +435,7 @@ func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 		respondWithError(w, http.StatusNotFound, "Found no splits associated with this transaction", err)
 	}
 
-	var respBody []TransactionSplit
+	var rspPayload []TransactionSplit
 	for _, split := range dbSplits {
 		addSplit := TransactionSplit{
 			ID:            split.ID,
@@ -443,10 +443,10 @@ func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 			CategoryID:    split.CategoryID,
 			Amount:        split.Amount,
 		}
-		respBody = append(respBody, addSplit)
+		rspPayload = append(rspPayload, addSplit)
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request) {
@@ -466,7 +466,7 @@ func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		respBody := Transaction{
+		rspPayload := Transaction{
 			ID:              dbTransaction.ID,
 			CreatedAt:       dbTransaction.CreatedAt,
 			UpdatedAt:       dbTransaction.UpdatedAt,
@@ -479,7 +479,7 @@ func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 			Cleared:         dbTransaction.Cleared,
 		}
 
-		respondWithJSON(w, http.StatusCreated, respBody)
+		respondWithJSON(w, http.StatusCreated, rspPayload)
 		return
 	default: // or case "view"
 		viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), pathTransactionID)
@@ -499,7 +499,7 @@ func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 			}
 		}
 
-		respBody := TransactionView{
+		rspPayload := TransactionView{
 			ID:              viewTransaction.ID,
 			BudgetID:        viewTransaction.BudgetID,
 			LoggerID:        viewTransaction.LoggerID,
@@ -512,7 +512,7 @@ func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 			Splits:          respSplits,
 		}
 
-		respondWithJSON(w, http.StatusOK, respBody)
+		respondWithJSON(w, http.StatusOK, rspPayload)
 		return
 	}
 }
@@ -522,13 +522,13 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		return txnType == "TRANSFER_TO" || txnType == "TRANSFER_FROM"
 	}
 
-	params, err := decodeParams[LogTransactionParams](r)
+	rqPayload, err := decodePayload[LogTransactionrqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
 	}
 
-	parsedAmounts, txnType, isTransfer, err := validateTxn(&params)
+	parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failure validating transaction", err)
 	}
@@ -550,19 +550,19 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		respondWithError(w, http.StatusBadRequest, "Transaction type cannot be changed!", nil)
 	}
 
-	parsedAccountID, err := uuid.Parse(params.AccountID)
+	parsedAccountID, err := uuid.Parse(rqPayload.AccountID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Provided account_id string could not be parsed as UUID", err)
 		return
 	}
-	parsedPayeeID, err := uuid.Parse(params.PayeeID)
+	parsedPayeeID, err := uuid.Parse(rqPayload.PayeeID)
 	if err != nil && !isTransfer {
 		respondWithError(w, http.StatusBadRequest, "Provided payee_id string could not be parsed as UUID", err)
 		return
 	}
 
 	var parsedCleared bool
-	switch params.Cleared {
+	switch rqPayload.Cleared {
 	case "true":
 		parsedCleared = true
 	case "false":
@@ -582,9 +582,9 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		TransactionID:   pathTransactionID,
 		AccountID:       parsedAccountID,
 		TransactionType: txnType,
-		TransactionDate: params.TransactionDate,
+		TransactionDate: rqPayload.TransactionDate,
 		PayeeID:         parsedPayeeID,
-		Notes:           params.Notes,
+		Notes:           rqPayload.Notes,
 		Cleared:         parsedCleared,
 		Amounts:         json.RawMessage(amountsJSONBytes),
 	})

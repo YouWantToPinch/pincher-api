@@ -10,17 +10,17 @@ import (
 )
 
 func (cfg *apiConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
+	type rqSchema struct {
 		Amount int64 `json:"amount"`
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
 	}
 
-	if params.Amount == 0 {
+	if rqPayload.Amount == 0 {
 		respondWithError(w, http.StatusBadRequest, "Input a non-zero amount to modify the budget assignment for the given month", err)
 		return
 	}
@@ -42,7 +42,7 @@ func (cfg *apiConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 	dbAssignment, err := cfg.db.AssignAmountToCategory(r.Context(), database.AssignAmountToCategoryParams{
 		MonthID:    parsedMonth,
 		CategoryID: parsedCategoryID,
-		Amount:     params.Amount,
+		Amount:     rqPayload.Amount,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't assign amount to category for month specified", err)
@@ -55,13 +55,13 @@ func (cfg *apiConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 		Amount     int64     `json:"amount"`
 	}
 
-	respBody := Assignment{
+	rspPayload := Assignment{
 		MonthID:    dbAssignment.Month,
 		CategoryID: dbAssignment.CategoryID,
 		Amount:     dbAssignment.Assigned,
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request) {
@@ -78,17 +78,16 @@ func (cfg *apiConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respBody := MonthReport{
+	rspPayload := MonthReport{
 		Assigned: monthReport.Assigned,
 		Activity: monthReport.Activity,
 		Balance:  monthReport.Balance,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Request) {
-
 	var parsedMonth time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonth)
 	if err != nil {
@@ -102,7 +101,7 @@ func (cfg *apiConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var respBody []CategoryReport
+	var rspPayload []CategoryReport
 	for _, report := range dbCategoryReports {
 
 		newReport := CategoryReport{
@@ -114,14 +113,13 @@ func (cfg *apiConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 			Balance:    report.Balance,
 		}
 
-		respBody = append(respBody, newReport)
+		rspPayload = append(rspPayload, newReport)
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.Request) {
-
 	var parsedMonth time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonth)
 	if err != nil {
@@ -144,7 +142,7 @@ func (cfg *apiConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.
 		return
 	}
 
-	respBody := CategoryReport{
+	rspPayload := CategoryReport{
 		MonthID:    dbCategoryReport.Month,
 		CategoryID: dbCategoryReport.CategoryID,
 		Name:       dbCategoryReport.CategoryName,
@@ -152,5 +150,5 @@ func (cfg *apiConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.
 		Activity:   dbCategoryReport.Activity,
 		Balance:    dbCategoryReport.Balance,
 	}
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }

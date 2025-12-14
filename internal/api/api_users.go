@@ -8,64 +8,64 @@ import (
 )
 
 func (cfg *apiConfig) endpCreateUser(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
+	type rqSchema struct {
 		Password string `json:"password"`
 		Username string `json:"username"`
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
 	}
 
-	if params.Username == "" || params.Password == "" {
+	if rqPayload.Username == "" || rqPayload.Password == "" {
 		respondWithError(w, http.StatusBadRequest, "Missing username or password", nil)
 		return
 	}
 
-	hashedPass, err := auth.HashPassword(params.Password)
+	hashedPass, err := auth.HashPassword(rqPayload.Password)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure processing request to create user", err)
 		return
 	}
 
 	dbUser, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
-		Username:       params.Username,
+		Username:       rqPayload.Username,
 		HashedPassword: hashedPass,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusConflict, "Failure processing request to create user", err)
 		return
 	}
-	respBody := User{
+	rspPayload := User{
 		ID:        dbUser.ID,
 		CreatedAt: dbUser.CreatedAt,
 		UpdatedAt: dbUser.UpdatedAt,
 		Username:  dbUser.Username,
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
+	type rqSchema struct {
 		Password string `json:"password"`
 		Username string `json:"username"`
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters", err)
 		return
 	}
 
-	if params.Username == "" || params.Password == "" {
+	if rqPayload.Username == "" || rqPayload.Password == "" {
 		respondWithError(w, http.StatusBadRequest, "Missing username or password", nil)
 		return
 	}
 
-	hashedPass, err := auth.HashPassword(params.Password)
+	hashedPass, err := auth.HashPassword(rqPayload.Password)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure processing request to create user", err)
 		return
@@ -75,36 +75,36 @@ func (cfg *apiConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 
 	_, err = cfg.db.UpdateUserCredentials(r.Context(), database.UpdateUserCredentialsParams{
 		ID:             validatedUserID,
-		Username:       params.Username,
+		Username:       rqPayload.Username,
 		HashedPassword: hashedPass,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusNotModified, "Couldn't modify user credentials", err)
 	}
 
-	respondWithText(w, http.StatusNoContent, "User '"+params.Username+"' updated successfully!")
+	respondWithText(w, http.StatusNoContent, "User '"+rqPayload.Username+"' updated successfully!")
 }
 
 func (cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
+	type rqSchema struct {
 		Password string `json:"password"`
 		Username string `json:"username"`
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters", err)
 		return
 	}
 
-	if params.Username == "" || params.Password == "" {
+	if rqPayload.Username == "" || rqPayload.Password == "" {
 		respondWithError(w, http.StatusBadRequest, "Missing username or password", nil)
 		return
 	}
 
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
 
-	dbUser, err := cfg.db.GetUserByUsername(r.Context(), params.Username)
+	dbUser, err := cfg.db.GetUserByUsername(r.Context(), rqPayload.Username)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
 		return
@@ -114,7 +114,7 @@ func (cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = auth.CheckPasswordHash(params.Password, dbUser.HashedPassword)
+	err = auth.CheckPasswordHash(rqPayload.Password, dbUser.HashedPassword)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
 		return

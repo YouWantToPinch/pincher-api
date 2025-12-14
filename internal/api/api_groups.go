@@ -9,13 +9,11 @@ import (
 )
 
 func (cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
-
-	type parameters struct {
-		Name  string `json:"name"`
-		Notes string `json:"notes"`
+	type rqSchema struct {
+		Meta
 	}
 
-	params, err := decodeParams[parameters](r)
+	params, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -46,20 +44,21 @@ func (cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create group", err)
 		return
 	}
-	respBody := Group{
+	rspPayload := Group{
 		ID:        dbGroup.ID,
 		CreatedAt: dbGroup.CreatedAt,
 		UpdatedAt: dbGroup.UpdatedAt,
 		BudgetID:  dbGroup.BudgetID,
-		Name:      dbGroup.Name,
-		Notes:     dbGroup.Notes,
+		Meta: Meta{
+			Name:  dbGroup.Name,
+			Notes: dbGroup.Notes,
+		},
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
-
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	dbGroups, err := cfg.db.GetGroupsByBudgetID(r.Context(), pathBudgetID)
@@ -75,20 +74,22 @@ func (cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: dbGroup.CreatedAt,
 			UpdatedAt: dbGroup.UpdatedAt,
 			BudgetID:  dbGroup.BudgetID,
-			Name:      dbGroup.Name,
-			Notes:     dbGroup.Notes,
+			Meta: Meta{
+				Name:  dbGroup.Name,
+				Notes: dbGroup.Notes,
+			},
 		})
 	}
 
-	type resp struct {
+	type rspSchema struct {
 		Groups []Group `json:"groups"`
 	}
 
-	respBody := resp{
+	rspPayload := rspSchema{
 		Groups: groups,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
@@ -99,12 +100,11 @@ func (cfg *apiConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type parameters struct {
-		Name  string `json:"name"`
-		Notes string `json:"notes"`
+	type rqSchema struct {
+		Meta
 	}
 
-	params, err := decodeParams[parameters](r)
+	params, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return

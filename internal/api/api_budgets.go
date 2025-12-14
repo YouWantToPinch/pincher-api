@@ -10,30 +10,28 @@ import (
 )
 
 func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
-
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
 	slog.Debug("user_id is " + validatedUserID.String())
 
-	type parameters struct {
-		Name  string `json:"name"`
-		Notes string `json:"notes"`
+	type rqSchema struct {
+		Meta
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
 	}
 
-	if params.Name == "" {
+	if rqPayload.Name == "" {
 		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
 		return
 	}
 
 	dbBudget, err := cfg.db.CreateBudget(r.Context(), database.CreateBudgetParams{
 		AdminID: validatedUserID,
-		Name:    params.Name,
-		Notes:   params.Notes,
+		Name:    rqPayload.Name,
+		Notes:   rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create budget", err)
@@ -57,20 +55,17 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respBody := Budget{
+	rspPayload := Budget{
 		ID:        dbBudget.ID,
 		CreatedAt: dbBudget.CreatedAt,
 		UpdatedAt: dbBudget.UpdatedAt,
 		AdminID:   dbBudget.AdminID,
-		Name:      dbBudget.Name,
-		Notes:     dbBudget.Notes,
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
-
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	dbBudget, err := cfg.db.GetBudgetByID(r.Context(), pathBudgetID)
@@ -79,20 +74,21 @@ func (cfg *apiConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respBody := Budget{
+	rspPayload := Budget{
 		ID:        dbBudget.ID,
 		CreatedAt: dbBudget.CreatedAt,
 		UpdatedAt: dbBudget.UpdatedAt,
 		AdminID:   dbBudget.AdminID,
-		Name:      dbBudget.Name,
-		Notes:     dbBudget.Notes,
+		Meta: Meta{
+			Name:  dbBudget.Name,
+			Notes: dbBudget.Notes,
+		},
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request) {
-
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
 
 	roleFilters := r.URL.Query()["role"]
@@ -125,21 +121,23 @@ func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 			CreatedAt: dbBudget.CreatedAt,
 			UpdatedAt: dbBudget.UpdatedAt,
 			AdminID:   dbBudget.AdminID,
-			Name:      dbBudget.Name,
-			Notes:     dbBudget.Notes,
+			Meta: Meta{
+				Name:  dbBudget.Name,
+				Notes: dbBudget.Notes,
+			},
 		}
 		budgets = append(budgets, addBudget)
 	}
 
-	type resp struct {
+	type rspSchema struct {
 		Budgets []Budget `json:"budgets"`
 	}
 
-	respBody := resp{
+	rspPayload := rspSchema{
 		Budgets: budgets,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Request) {
@@ -150,41 +148,39 @@ func (cfg *apiConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	type response struct {
+	type rspSchema struct {
 		Capital int64 `json:"capital"`
 	}
 
-	respBody := response{
+	rspPayload := rspSchema{
 		Capital: capitalAmount,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http.Request) {
-
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	type parameters struct {
+	type rqSchema struct {
 		UserID     string `json:"user_id"`
 		MemberRole string `json:"member_role"`
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
 	}
 
-	parsedUserID, err := uuid.Parse(params.UserID)
-
+	parsedUserID, err := uuid.Parse(rqPayload.UserID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
 		slog.Error("Could not parse user_id")
 		return
 	}
 
-	newMemberRole, err := BMRFromString(params.MemberRole)
+	newMemberRole, err := BMRFromString(rqPayload.MemberRole)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error(), err)
 		return
@@ -204,18 +200,16 @@ func (cfg *apiConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 		return
 	}
 
-	respBody := BudgetMembership{
+	rspPayload := BudgetMembership{
 		BudgetID:   dbBudgetMembership.BudgetID,
 		UserID:     dbBudgetMembership.UserID,
 		MemberRole: newMemberRole,
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
-
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Request) {
-
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	var pathUserID uuid.UUID
@@ -238,15 +232,13 @@ func (cfg *apiConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 }
 
 func (cfg *apiConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
-
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	type parameters struct {
-		Name  string `json:"name"`
-		Notes string `json:"notes"`
+	type rqSchema struct {
+		Meta
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -254,19 +246,18 @@ func (cfg *apiConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
 
 	_, err = cfg.db.UpdateBudget(r.Context(), database.UpdateBudgetParams{
 		ID:    pathBudgetID,
-		Name:  params.Name,
-		Notes: params.Notes,
+		Name:  rqPayload.Name,
+		Notes: rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to update budget", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Budget '"+params.Name+"' updated successfully!")
+	respondWithText(w, http.StatusNoContent, "Budget '"+rqPayload.Name+"' updated successfully!")
 }
 
 func (cfg *apiConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
-
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	err := cfg.db.DeleteBudget(r.Context(), pathBudgetID)

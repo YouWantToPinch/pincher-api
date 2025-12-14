@@ -43,6 +43,11 @@ func BMRFromString(s string) (BudgetMemberRole, error) {
 	return -1, fmt.Errorf("invalid role: %s", s)
 }
 
+type Meta struct {
+	Name  string `json:"name"`
+	Notes string `json:"notes"`
+}
+
 type User struct {
 	ID             uuid.UUID `json:"id"`
 	CreatedAt      time.Time `json:"created_at"`
@@ -64,8 +69,7 @@ type Budget struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	AdminID   uuid.UUID `json:"admin_id"`
-	Name      string    `json:"name"`
-	Notes     string    `json:"notes"`
+	Meta
 }
 
 type Group struct {
@@ -73,8 +77,7 @@ type Group struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	BudgetID  uuid.UUID `json:"user_id"`
-	Name      string    `json:"name"`
-	Notes     string    `json:"notes"`
+	Meta
 }
 
 type Category struct {
@@ -82,9 +85,8 @@ type Category struct {
 	CreatedAt time.Time     `json:"created_at"`
 	UpdatedAt time.Time     `json:"updated_at"`
 	BudgetID  uuid.UUID     `json:"user_id"`
-	Name      string        `json:"name"`
 	GroupID   uuid.NullUUID `json:"group_id"`
-	Notes     string        `json:"notes"`
+	Meta
 }
 
 type Account struct {
@@ -93,9 +95,8 @@ type Account struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 	BudgetID    uuid.UUID `json:"budget_id"`
 	AccountType string    `json:"account_type"`
-	Name        string    `json:"name"`
-	Notes       string    `json:"notes"`
 	IsDeleted   bool      `json:"is_deleted"`
+	Meta
 }
 
 type Transaction struct {
@@ -141,8 +142,7 @@ type Payee struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	BudgetID  uuid.UUID `json:"budget_id"`
-	Name      string    `json:"name"`
-	Notes     string    `json:"notes"`
+	Meta
 }
 
 type CategoryReport struct {

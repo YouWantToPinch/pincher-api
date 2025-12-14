@@ -10,29 +10,29 @@ import (
 )
 
 func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
+	type rqSchema struct {
 		Password string `json:"password"`
 		Username string `json:"username"`
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not log in user", err)
 		return
 	}
 
-	if params.Username == "" || params.Password == "" {
+	if rqPayload.Username == "" || rqPayload.Password == "" {
 		respondWithError(w, http.StatusBadRequest, "Missing credential(s)", nil)
 		return
 	}
 
-	dbUser, err := cfg.db.GetUserByUsername(r.Context(), params.Username)
+	dbUser, err := cfg.db.GetUserByUsername(r.Context(), rqPayload.Username)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect username or password", err)
 		return
 	}
 
-	err = auth.CheckPasswordHash(params.Password, dbUser.HashedPassword)
+	err = auth.CheckPasswordHash(rqPayload.Password, dbUser.HashedPassword)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect username or password", err)
 		return
@@ -58,7 +58,7 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respBody := User{
+	rspPayload := User{
 		ID:           dbUser.ID,
 		CreatedAt:    dbUser.CreatedAt,
 		UpdatedAt:    dbUser.UpdatedAt,
@@ -67,7 +67,7 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		RefreshToken: refreshToken,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Request) {
@@ -89,15 +89,15 @@ func (cfg *apiConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	type resp struct {
+	type rspSchema struct {
 		NewAccessToken string `json:"token"`
 	}
 
-	respBody := resp{
+	rspPayload := rspSchema{
 		NewAccessToken: accessToken,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {

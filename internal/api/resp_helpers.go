@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func decodeParams[T any](r *http.Request) (T, error) {
+func decodePayload[T any](r *http.Request) (T, error) {
 	var v T
 	decodeErr := json.NewDecoder(r.Body).Decode(&v)
 	err := r.Body.Close()
@@ -26,11 +26,11 @@ func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 		errorMessage += "; " + err.Error()
 	}
 
-	type errorResponse struct {
+	type rspSchema struct {
 		Error string `json:"error"`
 	}
 	slog.Error(errorMessage, slog.Int("Code", code))
-	respondWithJSON(w, code, errorResponse{
+	respondWithJSON(w, code, rspSchema{
 		Error: errorMessage,
 	})
 }

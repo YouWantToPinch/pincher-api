@@ -42,15 +42,15 @@ func (cfg *apiConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	type resp struct {
+	type rspSchema struct {
 		Users []User `json:"users"`
 	}
 
-	respBody := resp{
+	rspPayload := rspSchema{
 		Users: users,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
@@ -65,13 +65,13 @@ func (cfg *apiConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	type resp struct {
+	type rspSchema struct {
 		Count int64 `json:"count"`
 	}
 
-	respBody := resp{
+	rspPayload := rspSchema{
 		Count: count,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }

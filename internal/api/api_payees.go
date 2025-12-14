@@ -9,19 +9,17 @@ import (
 )
 
 func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
-
-	type parameters struct {
-		Name  string `json:"name"`
-		Notes string `json:"notes"`
+	type rqSchema struct {
+		Meta
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
 	}
 
-	if params.Name == "" {
+	if rqPayload.Name == "" {
 		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
 		return
 	}
@@ -30,28 +28,29 @@ func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 
 	dbPayee, err := cfg.db.CreatePayee(r.Context(), database.CreatePayeeParams{
 		BudgetID: pathBudgetID,
-		Name:     params.Name,
-		Notes:    params.Notes,
+		Name:     rqPayload.Name,
+		Notes:    rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create payee", err)
 		return
 	}
 
-	respBody := Payee{
+	rspPayload := Payee{
 		ID:        dbPayee.ID,
 		CreatedAt: dbPayee.CreatedAt,
 		UpdatedAt: dbPayee.UpdatedAt,
 		BudgetID:  dbPayee.BudgetID,
-		Name:      dbPayee.Name,
-		Notes:     dbPayee.Notes,
+		Meta: Meta{
+			Name:  dbPayee.Name,
+			Notes: dbPayee.Notes,
+		},
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
-
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	dbPayees, err := cfg.db.GetBudgetPayees(r.Context(), pathBudgetID)
 	if err != nil {
@@ -66,24 +65,25 @@ func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: dbPayee.CreatedAt,
 			UpdatedAt: dbPayee.UpdatedAt,
 			BudgetID:  dbPayee.BudgetID,
-			Name:      dbPayee.Name,
-			Notes:     dbPayee.Notes,
+			Meta: Meta{
+				Name:  dbPayee.Name,
+				Notes: dbPayee.Notes,
+			},
 		})
 	}
 
-	type resp struct {
+	type rspSchema struct {
 		Payees []Payee `json:"payees"`
 	}
 
-	respBody := resp{
+	rspPayload := rspSchema{
 		Payees: payees,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
-
 	var pathPayeeID uuid.UUID
 	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
 	if err != nil {
@@ -97,16 +97,18 @@ func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respBody := Payee{
+	rspPayload := Payee{
 		ID:        dbPayee.ID,
 		CreatedAt: dbPayee.CreatedAt,
 		UpdatedAt: dbPayee.UpdatedAt,
 		BudgetID:  dbPayee.BudgetID,
-		Name:      dbPayee.Name,
-		Notes:     dbPayee.Notes,
+		Meta: Meta{
+			Name:  dbPayee.Name,
+			Notes: dbPayee.Notes,
+		},
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
@@ -117,12 +119,11 @@ func (cfg *apiConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type parameters struct {
-		Name  string `json:"name"`
-		Notes string `json:"notes"`
+	type rqSchema struct {
+		Meta
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -130,15 +131,15 @@ func (cfg *apiConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 
 	_, err = cfg.db.UpdatePayee(r.Context(), database.UpdatePayeeParams{
 		ID:    pathPayeeID,
-		Name:  params.Name,
-		Notes: params.Notes,
+		Name:  rqPayload.Name,
+		Notes: rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to update payee", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Payee '"+params.Name+"' updated successfully!")
+	respondWithText(w, http.StatusNoContent, "Payee '"+rqPayload.Name+"' updated successfully!")
 }
 
 func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
@@ -161,11 +162,11 @@ func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type parameters struct {
+	type rqSchema struct {
 		NewPayeeID string `json:"new_payee_id"`
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -177,11 +178,11 @@ func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if payeeInUse {
-		if params.NewPayeeID == "" {
+		if rqPayload.NewPayeeID == "" {
 			respondWithError(w, http.StatusBadRequest, "No Payee ID provided to reassign transactions to", err)
 			return
 		}
-		parsedNewPayeeID, err := uuid.Parse(params.NewPayeeID)
+		parsedNewPayeeID, err := uuid.Parse(rqPayload.NewPayeeID)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "invalid id", err)
 			return

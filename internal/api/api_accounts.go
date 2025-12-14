@@ -9,20 +9,18 @@ import (
 )
 
 func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
-
-	type parameters struct {
+	type rqSchema struct {
 		AccountType string `json:"account_type"`
-		Name        string `json:"name"`
-		Notes       string `json:"notes"`
+		Meta
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
 	}
 
-	if params.Name == "" {
+	if rqPayload.Name == "" {
 		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
 		return
 	}
@@ -31,30 +29,31 @@ func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 
 	dbAccount, err := cfg.db.AddAccount(r.Context(), database.AddAccountParams{
 		BudgetID:    pathBudgetID,
-		AccountType: params.AccountType,
-		Name:        params.Name,
-		Notes:       params.Notes,
+		AccountType: rqPayload.AccountType,
+		Name:        rqPayload.Name,
+		Notes:       rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create account", err)
 		return
 	}
 
-	respBody := Account{
+	rspPayload := Account{
 		ID:          dbAccount.ID,
 		CreatedAt:   dbAccount.CreatedAt,
 		UpdatedAt:   dbAccount.UpdatedAt,
 		AccountType: dbAccount.AccountType,
-		Name:        dbAccount.Name,
-		Notes:       dbAccount.Notes,
 		IsDeleted:   dbAccount.IsDeleted,
+		Meta: Meta{
+			Name:  dbAccount.Name,
+			Notes: dbAccount.Notes,
+		},
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
-
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	dbAccounts, err := cfg.db.GetAccountsFromBudget(r.Context(), pathBudgetID)
 	if err != nil {
@@ -74,25 +73,26 @@ func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:   account.CreatedAt,
 			UpdatedAt:   account.UpdatedAt,
 			AccountType: account.AccountType,
-			Name:        account.Name,
-			Notes:       account.Notes,
 			IsDeleted:   account.IsDeleted,
+			Meta: Meta{
+				Name:  account.Name,
+				Notes: account.Notes,
+			},
 		})
 	}
 
-	type resp struct {
+	type rspSchema struct {
 		Accounts []Account `json:"accounts"`
 	}
 
-	respBody := resp{
+	rspPayload := rspSchema{
 		Accounts: accounts,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
-
 	idString := r.PathValue("account_id")
 	pathAccountID, err := uuid.Parse(idString)
 	if err != nil {
@@ -106,21 +106,22 @@ func (cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respBody := Account{
+	rspPayload := Account{
 		ID:          dbAccount.ID,
 		CreatedAt:   dbAccount.CreatedAt,
 		UpdatedAt:   dbAccount.UpdatedAt,
 		AccountType: dbAccount.AccountType,
-		Name:        dbAccount.Name,
-		Notes:       dbAccount.Notes,
 		IsDeleted:   dbAccount.IsDeleted,
+		Meta: Meta{
+			Name:  dbAccount.Name,
+			Notes: dbAccount.Notes,
+		},
 	}
 
-	respondWithJSON(w, http.StatusCreated, respBody)
+	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
 func (cfg *apiConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http.Request) {
-
 	idString := r.PathValue("account_id")
 	pathAccountID, err := uuid.Parse(idString)
 	if err != nil {
@@ -134,15 +135,15 @@ func (cfg *apiConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http
 		return
 	}
 
-	type response struct {
+	type rspSchema struct {
 		Capital int64 `json:"capital"`
 	}
 
-	respBody := response{
+	rspPayload := rspSchema{
 		Capital: capitalAmount,
 	}
 
-	respondWithJSON(w, http.StatusOK, respBody)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *apiConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) {
@@ -153,13 +154,12 @@ func (cfg *apiConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	type parameters struct {
+	type rqSchema struct {
 		AccountType string `json:"account_type"`
-		Name        string `json:"name"`
-		Notes       string `json:"notes"`
+		Meta
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -167,25 +167,25 @@ func (cfg *apiConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 
 	_, err = cfg.db.UpdateAccount(r.Context(), database.UpdateAccountParams{
 		ID:          pathAccountID,
-		AccountType: params.AccountType,
-		Name:        params.Name,
-		Notes:       params.Notes,
+		AccountType: rqPayload.AccountType,
+		Name:        rqPayload.Name,
+		Notes:       rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to update account", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Account '"+params.Name+"' updated successfully!")
+	respondWithText(w, http.StatusNoContent, "Account '"+rqPayload.Name+"' updated successfully!")
 }
 
 func (cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
+	type rqSchema struct {
 		Name       string `json:"name"`
 		DeleteHard bool   `json:"delete_hard"`
 	}
 
-	params, err := decodeParams[parameters](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
 		return
@@ -210,7 +210,7 @@ func (cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if !params.DeleteHard {
+	if !rqPayload.DeleteHard {
 		err = cfg.db.DeleteAccountSoft(r.Context(), pathAccountID)
 		if err != nil {
 			respondWithError(w, http.StatusNotFound, "Account with id specified not found", nil)
@@ -223,7 +223,7 @@ func (cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 			respondWithError(w, http.StatusBadRequest, "Request for hard delete ignored; a soft delete is required first", nil)
 			return
 		}
-		if params.Name != dbAccount.Name {
+		if rqPayload.Name != dbAccount.Name {
 			respondWithError(w, http.StatusBadRequest, "Request for hard delete ignored; input name does not match name within database", nil)
 			return
 		}
