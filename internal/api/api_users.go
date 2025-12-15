@@ -114,8 +114,8 @@ func (cfg *apiConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = auth.CheckPasswordHash(rqPayload.Password, dbUser.HashedPassword)
-	if err != nil {
+	match, err := auth.CheckPasswordHash(rqPayload.Password, dbUser.HashedPassword)
+	if err != nil || !match {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
 		return
 	}

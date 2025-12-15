@@ -32,8 +32,8 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = auth.CheckPasswordHash(rqPayload.Password, dbUser.HashedPassword)
-	if err != nil {
+	match, err := auth.CheckPasswordHash(rqPayload.Password, dbUser.HashedPassword)
+	if err != nil || !match {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect username or password", err)
 		return
 	}

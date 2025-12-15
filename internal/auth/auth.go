@@ -9,25 +9,31 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alexedwards/argon2id"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 13)
+	hash, err := argon2id.CreateHash(password, &argon2id.Params{
+		Memory:      64 * 1024,
+		Iterations:  3,
+		Parallelism: 1,
+		SaltLength:  16,
+		KeyLength:   32,
+	})
 	if err != nil {
 		return "", err
 	}
 	return string(hash), nil
 }
 
-func CheckPasswordHash(password, hash string) error {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+func CheckPasswordHash(password, hash string) (bool, error) {
+	match, err := argon2id.ComparePasswordAndHash(password, hash)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return nil
+	return match, nil
 }
 
 func MakeJWT(userID uuid.UUID, method *jwt.SigningMethodHMAC, tokenSecret string, expiresIn time.Duration) (string, error) {

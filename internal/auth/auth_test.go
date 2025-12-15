@@ -33,8 +33,8 @@ func TestHashUnequal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = CheckPasswordHash(altPassword, hashedPass)
-	if err == nil {
+	match, _ := CheckPasswordHash(altPassword, hashedPass)
+	if match {
 		t.Error("password should not have matched, but did")
 	}
 }
@@ -45,8 +45,8 @@ func TestHashEqual(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = CheckPasswordHash(testPassword, hashedPass)
-	if err != nil {
+	match, _ := CheckPasswordHash(testPassword, hashedPass)
+	if !match {
 		t.Error("password should have matched, but did not")
 	}
 }
@@ -74,57 +74,68 @@ func TestCheckPasswordHash(t *testing.T) {
 	password1 := "correctPassword123!"
 	password2 := "anotherPassword456!"
 	hash1, _ := HashPassword(password1)
+	hash1Plaintext := "$argon2id$v=19$m=65536,t=3,p=1$4XBycjFNyGzPuTk203FltA$Cw0x4cICG21uRv9zUHi+Gi7ygneSYO2+mmzc9a4EDSI"
 	hash2, _ := HashPassword(password2)
 
 	tests := []struct {
-		name     string
-		password string
-		hash     string
-		wantErr  bool
+		name          string
+		password      string
+		hash          string
+		wantErr       bool
+		matchPassword bool
 	}{
 		{
-			name:     "Correct password",
-			password: password1,
-			hash:     hash1,
-			wantErr:  false,
+			name:          "Correct password",
+			password:      password1,
+			hash:          hash1,
+			wantErr:       false,
+			matchPassword: true,
 		},
 		{
-			name:     "Incorrect password",
-			password: "wrongPassword",
-			hash:     hash1,
-			wantErr:  true,
+			name:          "Incorrect password",
+			password:      "wrongPassword",
+			hash:          hash1,
+			wantErr:       false,
+			matchPassword: false,
 		},
 		{
-			name:     "Password doesn't match different hash",
-			password: password1,
-			hash:     hash2,
-			wantErr:  true,
+			name:          "Password doesn't match different hash",
+			password:      password1,
+			hash:          hash2,
+			wantErr:       false,
+			matchPassword: false,
 		},
 		{
-			name:     "Empty password",
-			password: "",
-			hash:     hash1,
-			wantErr:  true,
+			name:          "Empty password",
+			password:      "",
+			hash:          hash1,
+			wantErr:       false,
+			matchPassword: false,
 		},
 		{
-			name:     "Invalid hash",
-			password: password1,
-			hash:     "invalidhash",
-			wantErr:  true,
+			name:          "Invalid hash",
+			password:      password1,
+			hash:          "invalidhash",
+			wantErr:       true,
+			matchPassword: false,
 		},
 		{
-			name:     "Password compares to pre-generated plaintext hash",
-			password: password1,
-			hash:     "$2a$13$.d44OR/1LwSszdlHab/dN.CCt46f5xi7yx41ToFfeCKWn.Kq2MBZ6",
-			wantErr:  false,
+			name:          "Password compares to pre-generated plaintext hash",
+			password:      password1,
+			hash:          hash1Plaintext,
+			wantErr:       false,
+			matchPassword: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CheckPasswordHash(tt.password, tt.hash)
+			match, err := CheckPasswordHash(tt.password, tt.hash)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CheckPasswordHash() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && match != tt.matchPassword {
+				t.Errorf("CheckPasswordHash() expects %v, got %v; here's hash: %v", tt.matchPassword, match, hash1)
 			}
 		})
 	}
