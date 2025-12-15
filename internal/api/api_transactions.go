@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,7 +30,12 @@ type LogTransactionrqSchema struct {
 
 // Parses relevant input amounts, txnType, transfer status, or returns an error.
 // Any txn with no amount, or with amounts not matching in type, are rejected.
-func validateTxn(rqPayload *LogTransactionrqSchema) (amounts map[string]int64, txnType string, isTransfer bool, err error) {
+func validateTxn(rqPayload *LogTransactionrqSchema) (isCleared bool, amounts map[string]int64, txnType string, isTransfer bool, err error) {
+	isCleared, err = parseBoolFromString(rqPayload.Cleared)
+	if err != nil {
+		return false, nil, "NONE", false, err
+	}
+
 	_, transferErr := uuid.Parse(rqPayload.TransferAccountID)
 	isTransfer = (transferErr == nil)
 	txnType = "NONE"
@@ -68,19 +72,19 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (amounts map[string]int64, t
 		}
 		// return error on txnType mismatch
 		if err != nil {
-			return nil, txnType, isTransfer, err
+			return isCleared, nil, txnType, isTransfer, err
 		}
 	}
 	// return error on txn amount of 0
 	if len(parsedAmounts) == 0 {
-		return nil, "NONE", false, errors.New("no amount values provided for transaction")
+		return isCleared, nil, "NONE", false, errors.New("no amount values provided for transaction")
 	}
 	// sanity check
 	if txnType == "NONE" {
-		return nil, txnType, isTransfer, errors.New("found one or more amounts in txn, but could not interpret txn type (THIS SHOULD NEVER HAPPEN!)")
+		return isCleared, nil, txnType, isTransfer, errors.New("found one or more amounts in txn, but could not interpret txn type (THIS SHOULD NEVER HAPPEN!)")
 	}
 
-	return parsedAmounts, txnType, isTransfer, nil
+	return isCleared, parsedAmounts, txnType, isTransfer, nil
 }
 
 func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +94,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
+	parsedCleared, parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failure validating transaction", err)
 	}
@@ -103,16 +107,6 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	parsedPayeeID, err := uuid.Parse(rqPayload.PayeeID)
 	if err != nil && !isTransfer {
 		respondWithError(w, http.StatusBadRequest, "Provided payee_id string could not be parsed as UUID", err)
-		return
-	}
-	var parsedCleared bool
-	if rqPayload.Cleared == "true" || rqPayload.Cleared == "false" {
-		parsedCleared, err = strconv.ParseBool(rqPayload.Cleared)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Provided string value for 'Cleared' could not be parsed as boolean", err)
-		}
-	} else {
-		respondWithError(w, http.StatusBadRequest, "Provided string value for 'Cleared' could not be parsed; must be 'true' or 'false'", nil)
 		return
 	}
 
@@ -528,7 +522,7 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
+	parsedCleared, parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failure validating transaction", err)
 	}
@@ -561,17 +555,6 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var parsedCleared bool
-	switch rqPayload.Cleared {
-	case "true":
-		parsedCleared = true
-	case "false":
-		parsedCleared = false
-	default:
-		respondWithError(w, http.StatusBadRequest, "Provided string value for 'Cleared' could not be parsed; must be 'true' or 'false'", nil)
-		return
-	}
-
 	amountsJSONBytes, err := json.Marshal(parsedAmounts)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
@@ -589,7 +572,7 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		Amounts:         json.RawMessage(amountsJSONBytes),
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to update transaction", err)
+		respondWithError(w, http.StatusNotModified, "Failed to update transaction", err)
 		return
 	}
 

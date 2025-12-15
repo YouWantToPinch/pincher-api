@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -126,4 +127,15 @@ func parseDateFromPath(pathParam string, r *http.Request, parse *time.Time) erro
 	}
 
 	return fmt.Errorf("path value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, pathParam)
+}
+
+func parseBoolFromString(s string) (bool, error) {
+	switch s {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, errors.New("provided string value for 'Cleared' could not be parsed; must be 'true' or 'false'")
+	}
 }
