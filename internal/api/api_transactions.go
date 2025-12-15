@@ -72,7 +72,7 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (isCleared bool, amounts map
 		}
 		// return error on txnType mismatch
 		if err != nil {
-			return isCleared, nil, txnType, isTransfer, err
+			return isCleared, nil, "NONE", false, err
 		}
 	}
 	// return error on txn amount of 0
