@@ -1,0 +1,33 @@
+name: pincher
+services:
+  db:
+    image: postgres:18.1-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pincher
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - pincher-network
+  api:
+    build: .
+    image: pincher-api:latest
+    ports:
+      - "8080:8080"
+    networks:
+      - pincher-network
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: pincher
+
+networks:
+  pincher-network:
+
+volumes:
+  pg-data:

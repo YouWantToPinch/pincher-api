@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 type apiConfig struct {
 	db       *database.Queries
+	dbURL    string
 	platform string
 	secret   string
 	logger   *slog.Logger
@@ -24,6 +26,17 @@ func (cfg *apiConfig) Init(level slog.Level) {
 	cfg.logger = slog.New(slog.NewJSONHandler(os.Stdout,
 		&slog.HandlerOptions{Level: level}))
 	slog.SetDefault(cfg.logger)
+}
+
+func (cfg *apiConfig) GenerateDBConnectionString() *string {
+	cfg.dbURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"),
+	)
+	return &cfg.dbURL
 }
 
 // ================= MIDDLEWARE ================= //

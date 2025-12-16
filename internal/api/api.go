@@ -87,15 +87,18 @@ func SetupMux(cfg *apiConfig) *http.ServeMux {
 }
 
 func LoadEnvConfig(path string) *apiConfig {
-	_ = godotenv.Load(path)
-	dbURL := os.Getenv("DB_URL")
-	db, err := sql.Open("postgres", dbURL)
+	if len(path) != 0 {
+		_ = godotenv.Load(path)
+	}
+
+	cfg := apiConfig{}
+	dbURL := cfg.GenerateDBConnectionString()
+	db, err := sql.Open("postgres", *dbURL)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	cfg := apiConfig{}
 	dbQueries := database.New(db)
 	cfg.db = dbQueries
 

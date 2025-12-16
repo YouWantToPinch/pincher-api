@@ -1,8 +1,12 @@
 version: "2"
 sql:
-  - schema: "sql/schema"
+  - engine: "postgresql"
+    schema: "sql/schema"
     queries: "sql/queries"
-    engine: "postgresql"
+    database:
+      uri: postgresql://postgres:admin@localhost:5432/pincher
     gen:
       go:
+        package: "database"
         out: "internal/database"
+        sql_package: "database/sql"
