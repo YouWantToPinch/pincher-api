@@ -2,20 +2,12 @@
 package api
 
 import (
-	"database/sql"
-	"fmt"
-	"log/slog"
 	"net/http"
-	"os"
 
 	_ "github.com/lib/pq"
-
-	"github.com/joho/godotenv"
-
-	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func SetupMux(cfg *apiConfig) *http.ServeMux {
+func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// middleware
@@ -84,39 +76,4 @@ func SetupMux(cfg *apiConfig) *http.ServeMux {
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(MANAGER, cfg.endpGetMonthCategories)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}", mdAuth(mdClear(MANAGER, cfg.endpGetMonthReport)))
 	return mux
-}
-
-func LoadEnvConfig(path string) *apiConfig {
-	if len(path) != 0 {
-		_ = godotenv.Load(path)
-	}
-
-	cfg := apiConfig{}
-	dbURL := cfg.GenerateDBConnectionString()
-	db, err := sql.Open("postgres", *dbURL)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	dbQueries := database.New(db)
-	cfg.db = dbQueries
-
-	cfg.platform = os.Getenv("PLATFORM")
-	cfg.secret = os.Getenv("SECRET")
-	{
-		slogLevel := os.Getenv("SLOG_LEVEL")
-		switch slogLevel {
-		case "DEBUG":
-			cfg.Init(slog.LevelDebug)
-		case "WARN":
-			cfg.Init(slog.LevelWarn)
-		case "ERROR":
-			cfg.Init(slog.LevelError)
-		default:
-			cfg.Init(slog.LevelInfo)
-		}
-	}
-
-	return &cfg
 }

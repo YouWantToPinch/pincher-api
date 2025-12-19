@@ -8,7 +8,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		AccountType string `json:"account_type"`
 		Meta
@@ -53,7 +53,7 @@ func (cfg *apiConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	dbAccounts, err := cfg.db.GetAccountsFromBudget(r.Context(), pathBudgetID)
 	if err != nil {
@@ -92,7 +92,7 @@ func (cfg *apiConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("account_id")
 	pathAccountID, err := uuid.Parse(idString)
 	if err != nil {
@@ -121,7 +121,7 @@ func (cfg *apiConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("account_id")
 	pathAccountID, err := uuid.Parse(idString)
 	if err != nil {
@@ -146,7 +146,7 @@ func (cfg *apiConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) {
 	var pathAccountID uuid.UUID
 	err := parseUUIDFromPath("account_id", r, &pathAccountID)
 	if err != nil {
@@ -179,7 +179,7 @@ func (cfg *apiConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 	respondWithText(w, http.StatusNoContent, "Account '"+rqPayload.Name+"' updated successfully!")
 }
 
-func (cfg *apiConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		Name       string `json:"name"`
 		DeleteHard bool   `json:"delete_hard"`

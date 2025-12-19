@@ -8,7 +8,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		Meta
 	}
@@ -50,7 +50,7 @@ func (cfg *apiConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	dbPayees, err := cfg.db.GetBudgetPayees(r.Context(), pathBudgetID)
 	if err != nil {
@@ -83,7 +83,7 @@ func (cfg *apiConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 	var pathPayeeID uuid.UUID
 	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
 	if err != nil {
@@ -111,7 +111,7 @@ func (cfg *apiConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *apiConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 	var pathPayeeID uuid.UUID
 	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
 	if err != nil {
@@ -142,7 +142,7 @@ func (cfg *apiConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 	respondWithText(w, http.StatusNoContent, "Payee '"+rqPayload.Name+"' updated successfully!")
 }
 
-func (cfg *apiConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 	var pathPayeeID uuid.UUID
 	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
 	if err != nil {

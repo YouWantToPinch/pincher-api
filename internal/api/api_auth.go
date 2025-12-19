@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		Password string `json:"password"`
 		Username string `json:"username"`
@@ -70,7 +70,7 @@ func (cfg *apiConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Couldn't find refresh token", err)
@@ -100,7 +100,7 @@ func (cfg *apiConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Reque
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
 	rTokenString, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, err.Error(), err)

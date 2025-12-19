@@ -87,7 +87,7 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (isCleared bool, amounts map
 	return isCleared, parsedAmounts, txnType, isTransfer, nil
 }
 
-func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
 	rqPayload, err := decodePayload[LogTransactionrqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters when logging transaction", err)
@@ -260,7 +260,7 @@ func (cfg *apiConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	var parsedAccountID uuid.UUID
@@ -416,7 +416,7 @@ func (cfg *apiConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Request) {
 	var pathTransactionID uuid.UUID
 	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
@@ -443,7 +443,7 @@ func (cfg *apiConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request) {
 	var pathTransactionID uuid.UUID
 	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
@@ -511,7 +511,7 @@ func (cfg *apiConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	checkIsTransfer := func(txnType string) bool {
 		return txnType == "TRANSFER_TO" || txnType == "TRANSFER_FROM"
 	}
@@ -579,7 +579,7 @@ func (cfg *apiConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 	respondWithText(w, http.StatusNoContent, "Transaction updated successfully!")
 }
 
-func (cfg *apiConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Request) {
 	var pathTransactionID uuid.UUID
 	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {

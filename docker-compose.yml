@@ -1,17 +1,5 @@
 name: pincher
 services:
-  db:
-    image: postgres:18.1-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: pincher
-    volumes:
-      - pg-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - pincher-network
   api:
     build: .
     image: pincher-api:latest
@@ -25,6 +13,28 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: pincher
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+  db:
+    image: postgres:18.1-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pincher
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - pincher-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
 
 networks:
   pincher-network:

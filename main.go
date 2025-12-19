@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"log"
 	"log/slog"
@@ -11,10 +12,15 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/api"
 )
 
+//go:embed sql/schema/*.sql
+var embedMigrations embed.FS
+
 func main() {
 	const port = "8080"
 
-	cfg := api.LoadEnvConfig(".env")
+	cfg := &api.APIConfig{}
+	cfg.Init(".env", "")
+	cfg.ConnectToDB(embedMigrations, "sql/schema")
 
 	pincher := &http.Server{
 		Addr:    ":" + port,

@@ -9,7 +9,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
 	slog.Debug("user_id is " + validatedUserID.String())
 
@@ -65,7 +65,7 @@ func (cfg *apiConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	dbBudget, err := cfg.db.GetBudgetByID(r.Context(), pathBudgetID)
@@ -88,7 +88,7 @@ func (cfg *apiConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request) {
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
 
 	roleFilters := r.URL.Query()["role"]
@@ -140,7 +140,7 @@ func (cfg *apiConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	capitalAmount, err := cfg.db.GetBudgetCapital(r.Context(), pathBudgetID)
 	if err != nil {
@@ -159,7 +159,7 @@ func (cfg *apiConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Reques
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	type rqSchema struct {
@@ -209,7 +209,7 @@ func (cfg *apiConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *apiConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	var pathUserID uuid.UUID
@@ -231,7 +231,7 @@ func (cfg *apiConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 	respondWithText(w, http.StatusNoContent, "Revoked membership successfully")
 }
 
-func (cfg *apiConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	type rqSchema struct {
@@ -257,7 +257,7 @@ func (cfg *apiConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
 	respondWithText(w, http.StatusNoContent, "Budget '"+rqPayload.Name+"' updated successfully!")
 }
 
-func (cfg *apiConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	err := cfg.db.DeleteBudget(r.Context(), pathBudgetID)

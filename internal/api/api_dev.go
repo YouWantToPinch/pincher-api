@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func (cfg *apiConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if cfg.platform != "dev" {
 		respondWithText(w, 403, "403 Forbidden")
@@ -19,7 +19,7 @@ func (cfg *apiConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request)
 	respondWithText(w, 200, "Successfully deleted all users.")
 }
 
-func (cfg *apiConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if cfg.platform != "dev" {
 		respondWithText(w, 403, "403 Forbidden")
@@ -53,7 +53,7 @@ func (cfg *apiConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if cfg.platform != "dev" {
 		respondWithText(w, 403, "403 Forbidden")

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -10,6 +11,7 @@ import (
 
 	pt "github.com/YouWantToPinch/pincher-api/internal/pinchertest"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // NOTE: This integration testing has two optional implementations.
@@ -124,12 +126,27 @@ func (tc *httpTestCase) getName() string {
 // INTEGRATION TESTING
 // --------------------
 
+// initialize a Postgres testcontainer and
+// return an APIClient for testing
+func doServerSetup(t *testing.T) *http.Server {
+	pgdb := SetupPostgres(t)
+	t.Cleanup(func() {
+		err := pgdb.Container.Restore(pgdb.Ctx)
+		require.NoError(t, err)
+	})
+	cfg := &APIConfig{}
+	cfg.Init("../../.env", pgdb.URI)
+	cfg.ConnectToDB(embed.FS{}, "")
+	return &http.Server{Handler: SetupMux(cfg)}
+}
+
 // Check CRUD for each resource exclusively, in order
 func Test_CRUD(t *testing.T) {
-	// SERVER SETUP
-	cfg := LoadEnvConfig("../../.env")
-	pincher := &http.Server{Handler: SetupMux(cfg)}
-	c := APIClient{Mux: pincher.Handler}
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	pincherServer := doServerSetup(t)
+	c := &APIClient{Mux: pincherServer.Handler}
 
 	// PREP: Delete all users
 	c.Request(pt.DeleteAllUsers())
@@ -301,10 +318,11 @@ func Test_CRUD(t *testing.T) {
 
 // Should properly make, count, and delete users
 func Test_MakeAndResetUsers(t *testing.T) {
-	// SERVER SETUP
-	cfg := LoadEnvConfig("../../.env")
-	pincher := &http.Server{Handler: SetupMux(cfg)}
-	c := APIClient{Mux: pincher.Handler, Resources: map[string]any{}}
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	pincherServer := doServerSetup(t)
+	c := APIClient{Mux: pincherServer.Handler, Resources: map[string]any{}}
 
 	// REQUESTS
 
@@ -374,10 +392,11 @@ func Test_MakeAndResetUsers(t *testing.T) {
 // Should make and log in 2 users, which should be able to then delete themselves,
 // but not each other
 func Test_MakeLoginDeleteUsers(t *testing.T) {
-	// SERVER SETUP
-	cfg := LoadEnvConfig("../../.env")
-	pincher := &http.Server{Handler: SetupMux(cfg)}
-	c := APIClient{Mux: pincher.Handler, Resources: map[string]any{}}
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	pincherServer := doServerSetup(t)
+	c := APIClient{Mux: pincherServer.Handler, Resources: map[string]any{}}
 
 	// REQUESTS
 
@@ -482,10 +501,11 @@ they should or should not be able to do; authorizations that
 should be verified.
 */
 func Test_BuildOrgDoAuthChecks(t *testing.T) {
-	// SERVER SETUP
-	cfg := LoadEnvConfig("../../.env")
-	pincher := &http.Server{Handler: SetupMux(cfg)}
-	c := APIClient{Mux: pincher.Handler}
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	pincherServer := doServerSetup(t)
+	c := APIClient{Mux: pincherServer.Handler}
 
 	// REQUESTS
 
@@ -576,10 +596,11 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 // make four users, each with a unique role,
 // and let them each perform authorized actions.
 func Test_BuildOrgLogTransaction(t *testing.T) {
-	/// SERVER SETUP
-	cfg := LoadEnvConfig("../../.env")
-	pincher := &http.Server{Handler: SetupMux(cfg)}
-	c := APIClient{Mux: pincher.Handler}
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	pincherServer := doServerSetup(t)
+	c := APIClient{Mux: pincherServer.Handler}
 
 	// REQUESTS
 
@@ -657,10 +678,11 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 // Build a budget and give it a predictable amount of money to operate with between 1-2 accounts.
 // Log transactions of each type, and check that the endpoint for getting budget capital responds with the right amount(s).
 func Test_TransactionTypesAndCapital(t *testing.T) {
-	/// SERVER SETUP
-	cfg := LoadEnvConfig("../../.env")
-	pincher := &http.Server{Handler: SetupMux(cfg)}
-	c := APIClient{Mux: pincher.Handler}
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	pincherServer := doServerSetup(t)
+	c := APIClient{Mux: pincherServer.Handler}
 
 	// REQUESTS
 
@@ -755,10 +777,11 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 //  2. Assignments are agnostic of whether or not there is an equal amount of money between the accounts they represent.
 //  3. For each month, we get the assignment, activity, and balance totals we would expect from the actions recorded within the budget.
 func Test_CategoryMoneyAssignment(t *testing.T) {
-	// SERVER SETUP
-	cfg := LoadEnvConfig("../../.env")
-	pincher := &http.Server{Handler: SetupMux(cfg)}
-	c := APIClient{Mux: pincher.Handler}
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	pincherServer := doServerSetup(t)
+	c := APIClient{Mux: pincherServer.Handler}
 
 	// REQUESTS
 

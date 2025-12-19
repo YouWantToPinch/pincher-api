@@ -8,7 +8,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		Meta
 	}
@@ -58,7 +58,7 @@ func (cfg *apiConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	dbGroups, err := cfg.db.GetGroupsByBudgetID(r.Context(), pathBudgetID)
@@ -92,7 +92,7 @@ func (cfg *apiConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *apiConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 	var pathGroupID uuid.UUID
 	err := parseUUIDFromPath("group_id", r, &pathGroupID)
 	if err != nil {
@@ -123,7 +123,7 @@ func (cfg *apiConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 	respondWithText(w, http.StatusNoContent, "Group '"+params.Name+"' updated successfully!")
 }
 
-func (cfg *apiConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	var pathGroupID uuid.UUID
 	err := parseUUIDFromPath("group_id", r, &pathGroupID)
 	if err != nil {
