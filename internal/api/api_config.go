@@ -122,14 +122,12 @@ func (cfg *APIConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenString, err := auth.GetBearerToken(r.Header)
 		if err != nil {
-			respondWithError(w, http.StatusUnauthorized, err.Error(), err)
-			slog.Error("Couldn't get bearer token")
+			respondWithError(w, http.StatusUnauthorized, "no token found: ", err)
 			return
 		}
 		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret, "HS256")
 		if err != nil {
-			respondWithError(w, http.StatusUnauthorized, "401 Unauthorized", nil)
-			slog.Error("Failed validation for JWT: " + tokenString)
+			respondWithError(w, http.StatusUnauthorized, "invalid token provided", nil)
 			return
 		}
 		ctxUserID := ctxKey("user_id")
@@ -145,7 +143,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 		var pathBudgetID uuid.UUID
 		err := parseUUIDFromPath("budget_id", r, &pathBudgetID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+			respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 			return
 		}
 
@@ -154,7 +152,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 			UserID:   validatedUserID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "User not listed as budget member", err)
+			respondWithError(w, http.StatusNotFound, "user not found as member: ", err)
 			return
 		}
 
@@ -165,7 +163,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 		}
 
 		if callerBudgetMemberRole > required {
-			respondWithError(w, http.StatusUnauthorized, "Member does not have clearance for action", err)
+			respondWithError(w, http.StatusUnauthorized, "user does not have clearance for action: ", err)
 			return
 		}
 		ctxBudgetID := ctxKey("budget_id")
@@ -179,7 +177,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 func getContextKeyValue(ctx context.Context, key string) uuid.UUID {
 	contextKeyValue, ok := ctx.Value(ctxKey(key)).(uuid.UUID)
 	if !ok {
-		slog.Info("Failed to retrieve key from context")
+		slog.Warn("failed to retrieve key from context")
 		return uuid.Nil
 	}
 	return contextKeyValue

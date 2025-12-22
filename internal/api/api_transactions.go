@@ -90,23 +90,23 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (isCleared bool, amounts map
 func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
 	rqPayload, err := decodePayload[LogTransactionrqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters when logging transaction", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload:  when logging transaction", err)
 		return
 	}
 
 	parsedCleared, parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Failure validating transaction", err)
+		respondWithError(w, http.StatusBadRequest, "failure validating transaction: ", err)
 	}
 
 	parsedAccountID, err := uuid.Parse(rqPayload.AccountID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Provided account_id string could not be parsed as UUID", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing account_id as UUID: ", err)
 		return
 	}
 	parsedPayeeID, err := uuid.Parse(rqPayload.PayeeID)
 	if err != nil && !isTransfer {
-		respondWithError(w, http.StatusBadRequest, "Provided payee_id string could not be parsed as UUID", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing payee_id as UUID: ", err)
 		return
 	}
 
@@ -131,7 +131,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		Amounts:         json.RawMessage(amountsJSONBytes),
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't log transaction", err)
+		respondWithError(w, http.StatusInternalServerError, "could not log transaction: ", err)
 		return
 	}
 
@@ -141,7 +141,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		// parse transfer_account_id
 		parsedTransferAccountID, err = uuid.Parse(rqPayload.TransferAccountID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Provided transfer_account_id string could not be parsed as UUID", err)
+			respondWithError(w, http.StatusBadRequest, "failure parsing transfer_account_id as UUID", err)
 			return
 		}
 		// prepare inverse amounts for corresponding transaction
@@ -173,7 +173,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			Amounts:         json.RawMessage(invertedAmountsJSONBytes),
 		})
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Couldn't log corresponding transfer transaction", err)
+			respondWithError(w, http.StatusInternalServerError, "could not log corresponding transfer transaction: ", err)
 			return
 		}
 		transferTransactionID = transferTransaction.ID
@@ -191,7 +191,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			ToTransactionID:   (*toPtr).ID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Couldn't link transfer transactions", err)
+			respondWithError(w, http.StatusInternalServerError, "could not link transfer transactions: ", err)
 			return
 		}
 	}
@@ -199,7 +199,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	getTransactionView := func(transactionToViewID uuid.UUID) (TransactionView, error) {
 		viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), transactionToViewID)
 		if err != nil {
-			return TransactionView{}, fmt.Errorf("couldn't get transaction from view using id %v; %v", transactionToViewID.String(), err.Error())
+			return TransactionView{}, fmt.Errorf("could not get transaction from view using id %v: %v", transactionToViewID.String(), err.Error())
 		}
 
 		respSplits := make(map[string]int)
@@ -208,7 +208,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			source := (*json.RawMessage)(&data)
 			err := json.Unmarshal(*source, &respSplits)
 			if err != nil {
-				return TransactionView{}, errors.New("failure unmarshalling transaction splits into map[string]int64")
+				return TransactionView{}, fmt.Errorf("failure unmarshalling transaction splits: %s", err.Error())
 			}
 		}
 
@@ -253,7 +253,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 
 	rspPayload, err := getTransactionView(dbTransaction.ID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "", err)
+		respondWithError(w, http.StatusBadRequest, "could not get transaction view: ", err)
 		return
 	}
 
@@ -266,32 +266,32 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 	var parsedAccountID uuid.UUID
 	err = parseUUIDFromPath("account_id", r, &parsedAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 	var parsedCategoryID uuid.UUID
 	err = parseUUIDFromPath("category_id", r, &parsedCategoryID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 	var parsedPayeeID uuid.UUID
 	err = parseUUIDFromPath("payee_id", r, &parsedPayeeID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
 	var parsedStartDate time.Time
 	err = parseDateFromQuery("start_date", r, &parsedStartDate)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing date: ", err)
 		return
 	}
 	var parsedEndDate time.Time
 	err = parseDateFromQuery("end_date", r, &parsedEndDate)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing date: ", err)
 		return
 	}
 
@@ -323,7 +323,7 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			BudgetID:   pathBudgetID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "No transactions found", err)
+			respondWithError(w, http.StatusNotFound, "could not find transactions: ", err)
 			return
 		}
 
@@ -367,7 +367,7 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			BudgetID:   pathBudgetID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "No transactions found", err)
+			respondWithError(w, http.StatusNotFound, "could not find transactions: ", err)
 			return
 		}
 
@@ -380,7 +380,7 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 				source := (*json.RawMessage)(&data)
 				err := json.Unmarshal(*source, &respSplits)
 				if err != nil {
-					respondWithError(w, http.StatusInternalServerError, "Failure decoding dbTransaction splits into map[string]int", err)
+					respondWithError(w, http.StatusInternalServerError, "failure unmarshalling transaction splits: ", err)
 					return
 				}
 			}
@@ -420,13 +420,13 @@ func (cfg *APIConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 	var pathTransactionID uuid.UUID
 	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
 	dbSplits, err := cfg.db.GetSplitsByTransactionID(r.Context(), pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Found no splits associated with this transaction", err)
+		respondWithError(w, http.StatusNotFound, "could not find splits associated with transaction: ", err)
 	}
 
 	var rspPayload []TransactionSplit
@@ -447,7 +447,7 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 	var pathTransactionID uuid.UUID
 	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
@@ -456,7 +456,7 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 	case "db":
 		dbTransaction, err := cfg.db.GetTransactionByID(r.Context(), pathTransactionID)
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "Couldn't find transaction with specified id", err)
+			respondWithError(w, http.StatusNotFound, "could not find transaction: ", err)
 			return
 		}
 
@@ -478,7 +478,7 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 	default: // or case "view"
 		viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), pathTransactionID)
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "Couldn't find transaction with specified id", err)
+			respondWithError(w, http.StatusNotFound, "could not find transaction view: ", err)
 			return
 		}
 
@@ -488,7 +488,7 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 			source := (*json.RawMessage)(&data)
 			err := json.Unmarshal(*source, &respSplits)
 			if err != nil {
-				respondWithError(w, http.StatusInternalServerError, "Failure decoding dbTransaction splits into map[string]int", err)
+				respondWithError(w, http.StatusInternalServerError, "failure unmarshalling transaction splits", err)
 				return
 			}
 		}
@@ -518,40 +518,40 @@ func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 
 	rqPayload, err := decodePayload[LogTransactionrqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
 	parsedCleared, parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Failure validating transaction", err)
+		respondWithError(w, http.StatusBadRequest, "failure validating transaction: ", err)
 	}
 
 	var pathTransactionID uuid.UUID
 	err = parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
 	// Non-transfer TXNs may not be updated as transfer TXNs, and vice versa
 	dbTransaction, err := cfg.db.GetTransactionByID(r.Context(), pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Couldn't find transaction with specified id", err)
+		respondWithError(w, http.StatusNotFound, "could not find transaction: ", err)
 		return
 	}
 	if isTransfer != checkIsTransfer(dbTransaction.TransactionType) {
-		respondWithError(w, http.StatusBadRequest, "Transaction type cannot be changed!", nil)
+		respondWithError(w, http.StatusBadRequest, "could not change transaction type (cannot change transfer txn to non-transfer txn, nor vice-versa)", nil)
 	}
 
 	parsedAccountID, err := uuid.Parse(rqPayload.AccountID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Provided account_id string could not be parsed as UUID", err)
+		respondWithError(w, http.StatusBadRequest, "failure parse account_id as UUID: ", err)
 		return
 	}
 	parsedPayeeID, err := uuid.Parse(rqPayload.PayeeID)
 	if err != nil && !isTransfer {
-		respondWithError(w, http.StatusBadRequest, "Provided payee_id string could not be parsed as UUID", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing payee_id as UUID: ", err)
 		return
 	}
 
@@ -572,24 +572,24 @@ func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		Amounts:         json.RawMessage(amountsJSONBytes),
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotModified, "Failed to update transaction", err)
+		respondWithError(w, http.StatusNotModified, "could not update transaction: ", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Transaction updated successfully!")
+	respondWithText(w, http.StatusNoContent, "Transaction updated successfully")
 }
 
 func (cfg *APIConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Request) {
 	var pathTransactionID uuid.UUID
 	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "could not parse UUID: ", err)
 		return
 	}
 
 	dbTransaction, err := cfg.db.GetTransactionByID(r.Context(), pathTransactionID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Couldn't find transaction with specified id", err)
+		respondWithError(w, http.StatusNotFound, "could not find transaction: ", err)
 		return
 	}
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
@@ -603,5 +603,5 @@ func (cfg *APIConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Reque
 		respondWithError(w, http.StatusNotFound, "404 Not Found", err)
 		return
 	}
-	respondWithText(w, http.StatusNoContent, "The transaction was deleted")
+	respondWithText(w, http.StatusNoContent, "Transaction deleted successfully")
 }

@@ -16,12 +16,12 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 
 	params, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
 	if params.Name == "" {
-		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
+		respondWithError(w, http.StatusBadRequest, "name not provided", nil)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 	if params.GroupID != "" {
 		parsedGroupID, err := uuid.Parse(params.GroupID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Provided group_id string could not be parsed as UUID", err)
+			respondWithError(w, http.StatusBadRequest, "provided group_id could not be parsed as UUID: ", err)
 			return
 		}
 		foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
@@ -39,7 +39,7 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 			ID:       parsedGroupID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Found no group with provided group_id", err)
+			respondWithError(w, http.StatusNotFound, "could not find group: ", err)
 			return
 		}
 		assignedGroup.UUID = foundGroup.ID
@@ -53,7 +53,7 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 		Notes:    params.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't create category", err)
+		respondWithError(w, http.StatusInternalServerError, "could not create category: ", err)
 		return
 	}
 
@@ -79,7 +79,7 @@ func (cfg *APIConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 		var err error
 		parsedGroupID, err = uuid.Parse(queryGroupID)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "invalid id", err)
+			respondWithError(w, http.StatusInternalServerError, "failure parsing group_id as UUID: ", err)
 		}
 	}
 
@@ -90,7 +90,7 @@ func (cfg *APIConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 		GroupID:  parsedGroupID,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Database error", err)
+		respondWithError(w, http.StatusNotFound, "no categories found: ", err)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 	var pathCategoryID uuid.UUID
 	err := parseUUIDFromPath("category_id", r, &pathCategoryID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
@@ -135,7 +135,7 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 
 	params, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 

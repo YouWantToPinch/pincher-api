@@ -15,12 +15,12 @@ func (cfg *APIConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 
 	params, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
 	if params.Name == "" {
-		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
+		respondWithError(w, http.StatusBadRequest, "name not provided", nil)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (cfg *APIConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 		BudgetID: pathBudgetID,
 	})
 	if err == nil {
-		respondWithError(w, http.StatusConflict, "Group already exists for user", err)
+		respondWithError(w, http.StatusConflict, "group already exists for user: ", err)
 		return
 	}
 
@@ -41,7 +41,7 @@ func (cfg *APIConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 		Notes:    params.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't create group", err)
+		respondWithError(w, http.StatusInternalServerError, "could not create group: ", err)
 		return
 	}
 	rspPayload := Group{
@@ -63,7 +63,7 @@ func (cfg *APIConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 
 	dbGroups, err := cfg.db.GetGroupsByBudgetID(r.Context(), pathBudgetID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get user category groups", err)
+		respondWithError(w, http.StatusInternalServerError, "could not get user category groups: ", err)
 		return
 	}
 
@@ -106,7 +106,7 @@ func (cfg *APIConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 
 	params, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
@@ -116,18 +116,18 @@ func (cfg *APIConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 		Notes: params.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to update group", err)
+		respondWithError(w, http.StatusNotModified, "could not update group: ", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Group '"+params.Name+"' updated successfully!")
+	respondWithText(w, http.StatusNoContent, "Group '"+params.Name+"' updated successfully")
 }
 
 func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	var pathGroupID uuid.UUID
 	err := parseUUIDFromPath("group_id", r, &pathGroupID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
@@ -138,7 +138,7 @@ func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 		ID:       pathGroupID,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Couldn't find group with specified id", err)
+		respondWithError(w, http.StatusNotFound, "could not find group: ", err)
 		return
 	}
 	if pathBudgetID != dbGroup.BudgetID {
@@ -148,8 +148,8 @@ func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 
 	err = cfg.db.DeleteGroupByID(r.Context(), pathGroupID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "404 Not Found", err)
+		respondWithError(w, http.StatusInternalServerError, "could not delete group: ", err)
 		return
 	}
-	respondWithText(w, http.StatusNoContent, "The group was deleted")
+	respondWithText(w, http.StatusNoContent, "Group deleted successfully")
 }

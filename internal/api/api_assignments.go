@@ -16,26 +16,26 @@ func (cfg *APIConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
 	if rqPayload.Amount == 0 {
-		respondWithError(w, http.StatusBadRequest, "Input a non-zero amount to modify the budget assignment for the given month", err)
+		respondWithError(w, http.StatusBadRequest, "failure making assignment (amount must be non-zero)", nil)
 		return
 	}
 
 	var parsedMonth time.Time
 	err = parseDateFromPath("month_id", r, &parsedMonth)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value input for month", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing date: ", err)
 		return
 	}
 
 	var parsedCategoryID uuid.UUID
 	err = parseUUIDFromPath("category_id", r, &parsedCategoryID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
@@ -45,7 +45,7 @@ func (cfg *APIConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 		Amount:     rqPayload.Amount,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't assign amount to category for month specified", err)
+		respondWithError(w, http.StatusInternalServerError, "could not assign amount to category for month specified: ", err)
 		return
 	}
 
@@ -68,13 +68,13 @@ func (cfg *APIConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request)
 	var parsedMonth time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonth)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value input for month", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing date: ", err)
 		return
 	}
 
 	monthReport, err := cfg.db.GetMonthReport(r.Context(), parsedMonth)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Failed to retrieve report for month specified", err)
+		respondWithError(w, http.StatusNotFound, "could not get report for month: ", err)
 		return
 	}
 
@@ -91,13 +91,13 @@ func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 	var parsedMonth time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonth)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value input for month", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing date: ", err)
 		return
 	}
 
 	dbCategoryReports, err := cfg.db.GetMonthCategoryReports(r.Context(), parsedMonth)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Failed to retrieve category reports for month specified", err)
+		respondWithError(w, http.StatusNotFound, "could not get category reports for month: ", err)
 		return
 	}
 
@@ -123,14 +123,14 @@ func (cfg *APIConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.
 	var parsedMonth time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonth)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value input for month", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing date: ", err)
 		return
 	}
 
-	pathCategoryString := r.PathValue("category_id")
-	pathCategoryID, err := uuid.Parse(pathCategoryString)
+	var pathCategoryID uuid.UUID
+	err = parseUUIDFromPath("category_id", r, &pathCategoryID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 	dbCategoryReport, err := cfg.db.GetMonthCategoryReport(r.Context(), database.GetMonthCategoryReportParams{
@@ -138,7 +138,7 @@ func (cfg *APIConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.
 		CategoryID: pathCategoryID,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Couldn't to retrieve category report for month specified", err)
+		respondWithError(w, http.StatusNotFound, "could not get category report for month: ", err)
 		return
 	}
 

@@ -65,7 +65,7 @@ func parseUUIDFromPath(pathParam string, r *http.Request, parse *uuid.UUID) erro
 	if uuidString != "" {
 		parsedID, err := uuid.Parse(uuidString)
 		if err != nil {
-			return fmt.Errorf("parameter value '%s' for provided path parameter '%s' could not be parsed as UUID", uuidString, pathParam)
+			return fmt.Errorf("value '%s' for provided path parameter '%s' could not be parsed as UUID: %s", uuidString, pathParam, err.Error())
 		}
 		*parse = parsedID
 	} else {
@@ -99,7 +99,7 @@ func parseDateFromQuery(queryParam string, r *http.Request, parse *time.Time) er
 		}
 	}
 
-	return fmt.Errorf("query value '%s' for provided parameter '%s' could not be parsed as DATE", dateString, queryParam)
+	return fmt.Errorf("value '%s' for provided query parameter '%s' could not be parsed as DATE", dateString, queryParam)
 }
 
 // Try to parse input path parameter; store time.Time{} into 'parse' on failure

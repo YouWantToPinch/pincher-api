@@ -15,12 +15,12 @@ func (cfg *APIConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
 	if rqPayload.Name == "" {
-		respondWithError(w, http.StatusBadRequest, "Name not provided", nil)
+		respondWithError(w, http.StatusBadRequest, "name not provided", nil)
 		return
 	}
 
@@ -32,7 +32,7 @@ func (cfg *APIConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 		Notes:    rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't create payee", err)
+		respondWithError(w, http.StatusInternalServerError, "could not create payee: ", err)
 		return
 	}
 
@@ -54,7 +54,7 @@ func (cfg *APIConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	dbPayees, err := cfg.db.GetBudgetPayees(r.Context(), pathBudgetID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get budget payees", err)
+		respondWithError(w, http.StatusInternalServerError, "could not get budget payees: ", err)
 		return
 	}
 
@@ -87,13 +87,13 @@ func (cfg *APIConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 	var pathPayeeID uuid.UUID
 	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid parameter value", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
 	dbPayee, err := cfg.db.GetPayeeByID(r.Context(), pathPayeeID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Couldn't find payee with specified id", err)
+		respondWithError(w, http.StatusNotFound, "could not find payee: ", err)
 		return
 	}
 
@@ -115,7 +115,7 @@ func (cfg *APIConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 	var pathPayeeID uuid.UUID
 	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
@@ -125,7 +125,7 @@ func (cfg *APIConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
@@ -135,11 +135,11 @@ func (cfg *APIConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 		Notes: rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to update payee", err)
+		respondWithError(w, http.StatusInternalServerError, "failed to update payee", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Payee '"+rqPayload.Name+"' updated successfully!")
+	respondWithText(w, http.StatusNoContent, "Payee '"+rqPayload.Name+"' updated successfully")
 }
 
 func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +152,7 @@ func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 
 	dbPayee, err := cfg.db.GetPayeeByID(r.Context(), pathPayeeID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Couldn't find payee with specified id", err)
+		respondWithError(w, http.StatusNotFound, "could not find payee: ", err)
 		return
 	}
 
@@ -168,23 +168,23 @@ func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
 	payeeInUse, err := cfg.db.IsPayeeInUse(r.Context(), pathPayeeID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Database error", err)
+		respondWithError(w, http.StatusInternalServerError, "could not determine whether payee in use: ", err)
 	}
 
 	if payeeInUse {
 		if rqPayload.NewPayeeID == "" {
-			respondWithError(w, http.StatusBadRequest, "No Payee ID provided to reassign transactions to", err)
+			respondWithError(w, http.StatusBadRequest, "payee_id not provided", nil)
 			return
 		}
 		parsedNewPayeeID, err := uuid.Parse(rqPayload.NewPayeeID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "invalid id", err)
+			respondWithError(w, http.StatusBadRequest, "failure parsing payee ID: ", err)
 			return
 		}
 		err = cfg.db.ReassignTransactions(r.Context(), database.ReassignTransactionsParams{
@@ -192,16 +192,16 @@ func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 			NewPayeeID: parsedNewPayeeID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Could not reassign payee for transactions", err)
+			respondWithError(w, http.StatusInternalServerError, "could not reassign payee for transactions", err)
 			return
 		}
 	}
 
 	err = cfg.db.DeletePayee(r.Context(), pathPayeeID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to delete payee from budget", err)
+		respondWithError(w, http.StatusInternalServerError, "failed to delete payee from budget", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "The payee was deleted.")
+	respondWithText(w, http.StatusNoContent, "Payee deleted successfully")
 }
