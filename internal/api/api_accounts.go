@@ -150,7 +150,7 @@ func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 	var pathAccountID uuid.UUID
 	err := parseUUIDFromPath("account_id", r, &pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
@@ -172,11 +172,28 @@ func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 		Notes:       rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not update account", err)
+		respondWithError(w, http.StatusInternalServerError, "could not update account: ", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Account '"+rqPayload.Name+"' updated successfully!")
+	respondWithText(w, http.StatusNoContent, "Account '"+rqPayload.Name+"' updated successfully")
+}
+
+func (cfg *APIConfig) endpRestoreAccount(w http.ResponseWriter, r *http.Request) {
+	var pathAccountID uuid.UUID
+	err := parseUUIDFromPath("account_id", r, &pathAccountID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
+		return
+	}
+
+	err = cfg.db.RestoreAccount(r.Context(), pathAccountID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not restore account: ", err)
+		return
+	}
+
+	respondWithText(w, http.StatusOK, "Account restored")
 }
 
 func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {

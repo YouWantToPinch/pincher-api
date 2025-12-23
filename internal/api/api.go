@@ -59,6 +59,7 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(VIEWER, cfg.endpGetAccount)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts/{account_id}/capital", mdAuth(mdClear(VIEWER, cfg.endpGetBudgetAccountCapital)))
 	mux.HandleFunc("PUT /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(MANAGER, cfg.endpUpdateAccount)))
+	mux.HandleFunc("PATCH /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(MANAGER, cfg.endpRestoreAccount)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.endpDeleteAccount)))
 	// Transactions
 	mux.HandleFunc("POST /api/budgets/{budget_id}/transactions", mdAuth(mdClear(CONTRIBUTOR, cfg.endpLogTransaction)))
