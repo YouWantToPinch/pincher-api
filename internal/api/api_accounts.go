@@ -211,7 +211,7 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 	idString := r.PathValue("account_id")
 	pathAccountID, err := uuid.Parse(idString)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
@@ -228,12 +228,16 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if !rqPayload.DeleteHard {
+		if dbAccount.IsDeleted {
+			respondWithText(w, http.StatusNoContent, "Account already deleted.")
+			return
+		}
 		err = cfg.db.DeleteAccountSoft(r.Context(), pathAccountID)
 		if err != nil {
 			respondWithError(w, http.StatusNotFound, "could not find account: ", nil)
 			return
 		}
-		respondWithText(w, http.StatusNoContent, "Account soft-deleted successfully; it may be restored")
+		respondWithText(w, http.StatusNoContent, "Account soft-deleted; it may be restored")
 		return
 	} else {
 		if !dbAccount.IsDeleted {
