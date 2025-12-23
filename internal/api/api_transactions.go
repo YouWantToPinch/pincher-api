@@ -14,13 +14,14 @@ import (
 )
 
 type LogTransactionrqSchema struct {
-	AccountID         string    `json:"account_id"`
-	TransferAccountID string    `json:"transfer_account_id"`
-	TransactionDate   time.Time `json:"transaction_date"`
-	PayeeID           string    `json:"payee_id"`
-	Notes             string    `json:"notes"`
-	Cleared           string    `json:"is_cleared"`
-	/* Map of category UUID strings to integers.
+	AccountID         string `json:"account_id"`
+	TransferAccountID string `json:"transfer_account_id"`
+	// TransactionDate is a full time string in time.RFC3339 format
+	TransactionDate string `json:"transaction_date"`
+	PayeeID         string `json:"payee_id"`
+	Notes           string `json:"notes"`
+	Cleared         string `json:"is_cleared"`
+	/* Amounts is a map of category UUID strings to integers.
 	If there is only one entry in Amounts, the transaction is not truly split.
 	Nonetheless, all transactions record at least one corresponding split.
 	A 'split' reflects the sum of spending toward one particular category within the transaction.
@@ -28,12 +29,17 @@ type LogTransactionrqSchema struct {
 	Amounts map[string]int64 `json:"amounts"`
 }
 
-// Parses relevant input amounts, txnType, transfer status, or returns an error.
+// Parses relevant input amounts, txnType, txnDate, and transfer status, or returns an error.
 // Any txn with no amount, or with amounts not matching in type, are rejected.
-func validateTxn(rqPayload *LogTransactionrqSchema) (isCleared bool, amounts map[string]int64, txnType string, isTransfer bool, err error) {
+func validateTxn(rqPayload *LogTransactionrqSchema) (isCleared bool, amounts map[string]int64, txnType string, txnDate time.Time, isTransfer bool, err error) {
 	isCleared, err = parseBoolFromString(rqPayload.Cleared)
 	if err != nil {
-		return false, nil, "NONE", false, err
+		return false, nil, "NONE", time.Time{}, false, err
+	}
+
+	txnDate, err = time.Parse(time.RFC3339, rqPayload.TransactionDate)
+	if err != nil {
+		return false, nil, "NONE", time.Time{}, false, err
 	}
 
 	_, transferErr := uuid.Parse(rqPayload.TransferAccountID)
@@ -72,19 +78,19 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (isCleared bool, amounts map
 		}
 		// return error on txnType mismatch
 		if err != nil {
-			return isCleared, nil, "NONE", false, err
+			return isCleared, nil, "NONE", txnDate, false, err
 		}
 	}
 	// return error on txn amount of 0
 	if len(parsedAmounts) == 0 {
-		return isCleared, nil, "NONE", false, errors.New("no amount values provided for transaction")
+		return isCleared, nil, "NONE", txnDate, false, errors.New("no amount values provided for transaction")
 	}
 	// sanity check
 	if txnType == "NONE" {
-		return isCleared, nil, txnType, isTransfer, errors.New("found one or more amounts in txn, but could not interpret txn type (THIS SHOULD NEVER HAPPEN!)")
+		return isCleared, nil, txnType, txnDate, isTransfer, errors.New("found one or more amounts in txn, but could not interpret txn type (THIS SHOULD NEVER HAPPEN!)")
 	}
 
-	return isCleared, parsedAmounts, txnType, isTransfer, nil
+	return isCleared, parsedAmounts, txnType, txnDate, isTransfer, nil
 }
 
 func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +100,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	parsedCleared, parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
+	parsedCleared, parsedAmounts, txnType, txnDate, isTransfer, err := validateTxn(&rqPayload)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "failure validating transaction: ", err)
 	}
@@ -124,7 +130,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		LoggerID:        validatedUserID,
 		AccountID:       parsedAccountID,
 		TransactionType: txnType,
-		TransactionDate: rqPayload.TransactionDate,
+		TransactionDate: txnDate,
 		PayeeID:         parsedPayeeID,
 		Notes:           rqPayload.Notes,
 		Cleared:         parsedCleared,
@@ -166,7 +172,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			LoggerID:        validatedUserID,
 			AccountID:       parsedTransferAccountID,
 			TransactionType: invertTransferType(txnType),
-			TransactionDate: rqPayload.TransactionDate,
+			TransactionDate: txnDate,
 			PayeeID:         parsedPayeeID,
 			Notes:           rqPayload.Notes,
 			Cleared:         parsedCleared,
@@ -522,7 +528,7 @@ func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	parsedCleared, parsedAmounts, txnType, isTransfer, err := validateTxn(&rqPayload)
+	parsedCleared, parsedAmounts, txnType, txnDate, isTransfer, err := validateTxn(&rqPayload)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "failure validating transaction: ", err)
 	}
@@ -565,7 +571,7 @@ func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		TransactionID:   pathTransactionID,
 		AccountID:       parsedAccountID,
 		TransactionType: txnType,
-		TransactionDate: rqPayload.TransactionDate,
+		TransactionDate: txnDate,
 		PayeeID:         parsedPayeeID,
 		Notes:           rqPayload.Notes,
 		Cleared:         parsedCleared,
