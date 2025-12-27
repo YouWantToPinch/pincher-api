@@ -13,13 +13,13 @@ func (cfg *APIConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 		Meta
 	}
 
-	params, err := decodePayload[rqSchema](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
-	if params.Name == "" {
+	if rqPayload.Name == "" {
 		respondWithError(w, http.StatusBadRequest, "name not provided", nil)
 		return
 	}
@@ -27,7 +27,7 @@ func (cfg *APIConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	_, err = cfg.db.GetGroupByBudgetIDAndName(r.Context(), database.GetGroupByBudgetIDAndNameParams{
-		Name:     params.Name,
+		Name:     rqPayload.Name,
 		BudgetID: pathBudgetID,
 	})
 	if err == nil {
@@ -37,8 +37,8 @@ func (cfg *APIConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 
 	dbGroup, err := cfg.db.CreateGroup(r.Context(), database.CreateGroupParams{
 		BudgetID: pathBudgetID,
-		Name:     params.Name,
-		Notes:    params.Notes,
+		Name:     rqPayload.Name,
+		Notes:    rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not create group: ", err)
@@ -104,7 +104,7 @@ func (cfg *APIConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 		Meta
 	}
 
-	params, err := decodePayload[rqSchema](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
@@ -112,15 +112,15 @@ func (cfg *APIConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 
 	_, err = cfg.db.UpdateGroup(r.Context(), database.UpdateGroupParams{
 		ID:    pathGroupID,
-		Name:  params.Name,
-		Notes: params.Notes,
+		Name:  rqPayload.Name,
+		Notes: rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusNotModified, "could not update group: ", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Group '"+params.Name+"' updated successfully")
+	respondWithText(w, http.StatusNoContent, "Group '"+rqPayload.Name+"' updated successfully")
 }
 
 func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
