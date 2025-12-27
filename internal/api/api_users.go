@@ -79,10 +79,10 @@ func (cfg *APIConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 		HashedPassword: hashedPass,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotModified, "Couldn't modify user credentials", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't modify user credentials", err)
 	}
 
-	respondWithText(w, http.StatusNoContent, "User '"+rqPayload.Username+"' updated successfully!")
+	respondWithText(w, http.StatusOK, "User '"+rqPayload.Username+"' updated successfully!")
 }
 
 func (cfg *APIConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +122,7 @@ func (cfg *APIConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	err = cfg.db.DeleteUserByID(r.Context(), validatedUserID)
 	if err != nil {
-		respondWithError(w, http.StatusNotModified, "Couldn't delete user", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't delete user: ", err)
 		return
 	}
 

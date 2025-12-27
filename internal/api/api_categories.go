@@ -169,11 +169,11 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 		Notes:   params.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotModified, "Failed to update category", err)
+		respondWithError(w, http.StatusInternalServerError, "Failed to update category", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Category '"+params.Name+"' updated successfully!")
+	respondWithText(w, http.StatusOK, "Category '"+params.Name+"' updated successfully!")
 }
 
 func (cfg *APIConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) {
@@ -200,5 +200,5 @@ func (cfg *APIConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusNotFound, "404 Not Found", err)
 		return
 	}
-	respondWithText(w, http.StatusNoContent, "The category was deleted")
+	respondWithText(w, http.StatusOK, "The category was deleted")
 }

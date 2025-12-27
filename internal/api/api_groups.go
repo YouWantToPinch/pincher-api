@@ -96,7 +96,7 @@ func (cfg *APIConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 	var pathGroupID uuid.UUID
 	err := parseUUIDFromPath("group_id", r, &pathGroupID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
 		return
 	}
 
@@ -116,11 +116,11 @@ func (cfg *APIConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 		Notes: rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotModified, "could not update group: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not update group: ", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Group '"+rqPayload.Name+"' updated successfully")
+	respondWithText(w, http.StatusOK, "Group '"+rqPayload.Name+"' updated successfully")
 }
 
 func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
@@ -151,5 +151,5 @@ func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "could not delete group: ", err)
 		return
 	}
-	respondWithText(w, http.StatusNoContent, "Group deleted successfully")
+	respondWithText(w, http.StatusOK, "Group deleted successfully")
 }

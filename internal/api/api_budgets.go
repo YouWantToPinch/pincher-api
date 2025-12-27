@@ -227,7 +227,7 @@ func (cfg *APIConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 		respondWithText(w, http.StatusNotFound, "No membership found to revoke")
 	}
 
-	respondWithText(w, http.StatusNoContent, "Revoked membership successfully")
+	respondWithText(w, http.StatusOK, "Revoked membership successfully")
 }
 
 func (cfg *APIConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +253,7 @@ func (cfg *APIConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Budget '"+rqPayload.Name+"' updated successfully!")
+	respondWithText(w, http.StatusOK, "Budget '"+rqPayload.Name+"' updated successfully!")
 }
 
 func (cfg *APIConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
@@ -265,5 +265,5 @@ func (cfg *APIConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Budget deleted successfully")
+	respondWithText(w, http.StatusOK, "Budget deleted successfully")
 }

@@ -139,7 +139,7 @@ func (cfg *APIConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Payee '"+rqPayload.Name+"' updated successfully")
+	respondWithText(w, http.StatusOK, "Payee '"+rqPayload.Name+"' updated successfully")
 }
 
 func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
@@ -203,5 +203,5 @@ func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Payee deleted successfully")
+	respondWithText(w, http.StatusOK, "Payee deleted successfully")
 }

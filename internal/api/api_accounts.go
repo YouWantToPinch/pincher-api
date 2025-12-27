@@ -176,7 +176,7 @@ func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Account '"+rqPayload.Name+"' updated successfully")
+	respondWithText(w, http.StatusOK, "Account '"+rqPayload.Name+"' updated successfully")
 }
 
 func (cfg *APIConfig) endpRestoreAccount(w http.ResponseWriter, r *http.Request) {
@@ -229,7 +229,7 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 
 	if !rqPayload.DeleteHard {
 		if dbAccount.IsDeleted {
-			respondWithText(w, http.StatusNoContent, "Account already deleted.")
+			respondWithText(w, http.StatusOK, "Account already deleted.")
 			return
 		}
 		err = cfg.db.DeleteAccountSoft(r.Context(), pathAccountID)
@@ -237,7 +237,7 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 			respondWithError(w, http.StatusNotFound, "could not find account: ", nil)
 			return
 		}
-		respondWithText(w, http.StatusNoContent, "Account soft-deleted; it may be restored")
+		respondWithText(w, http.StatusOK, "Account soft-deleted; it may be restored")
 		return
 	} else {
 		if !dbAccount.IsDeleted {
@@ -254,7 +254,7 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 			respondWithError(w, http.StatusInternalServerError, "could not delete account: ", err)
 			return
 		}
-		respondWithText(w, http.StatusNoContent, "Account hard-deleted successfully; it cannot be restored")
+		respondWithText(w, http.StatusOK, "Account hard-deleted successfully; it cannot be restored")
 		return
 	}
 }

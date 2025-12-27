@@ -572,11 +572,11 @@ func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		Amounts:         json.RawMessage(amountsJSONBytes),
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotModified, "could not update transaction: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not update transaction: ", err)
 		return
 	}
 
-	respondWithText(w, http.StatusNoContent, "Transaction updated successfully")
+	respondWithText(w, http.StatusOK, "Transaction updated successfully")
 }
 
 func (cfg *APIConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Request) {
@@ -603,5 +603,5 @@ func (cfg *APIConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Reque
 		respondWithError(w, http.StatusNotFound, "404 Not Found", err)
 		return
 	}
-	respondWithText(w, http.StatusNoContent, "Transaction deleted successfully")
+	respondWithText(w, http.StatusOK, "Transaction deleted successfully")
 }
