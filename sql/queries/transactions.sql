@@ -44,9 +44,8 @@ SELECT
 FROM tr1;
 
 -- name: LogAccountTransfer :one
-INSERT INTO account_transfers (id, from_transaction_id, to_transaction_id)
+INSERT INTO account_transfers (from_transaction_id, to_transaction_id)
 VALUES (
-    gen_random_uuid(),
     sqlc.arg('from_transaction_id'),
     sqlc.arg('to_transaction_id')
 )

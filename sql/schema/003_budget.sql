@@ -6,6 +6,7 @@ CREATE TABLE budgets (
     admin_id UUID NOT NULL,
     name VARCHAR(30) NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
+    UNIQUE(id, name),
     FOREIGN KEY (admin_id) REFERENCES users(id)
         ON DELETE CASCADE
 );

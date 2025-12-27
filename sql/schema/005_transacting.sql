@@ -5,9 +5,10 @@ CREATE TABLE accounts (
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     budget_id UUID NOT NULL,
     account_type TEXT NOT NULL,
-    name TEXT NOT NULL,
+    name VARCHAR(50) NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    UNIQUE(budget_id, name),
     FOREIGN KEY (budget_id) REFERENCES budgets(id)
         ON DELETE CASCADE
 );
@@ -30,14 +31,13 @@ CREATE TABLE transactions (
 );
 
 CREATE TABLE account_transfers (
-  id UUID PRIMARY KEY,
   from_transaction_id UUID NOT NULL,
   to_transaction_id UUID NOT NULL,
-  UNIQUE (from_transaction_id, to_transaction_id),
   FOREIGN KEY (from_transaction_id) REFERENCES transactions(id)
     ON DELETE CASCADE,
   FOREIGN KEY (to_transaction_id) REFERENCES transactions(id)
-    ON DELETE CASCADE
+    ON DELETE CASCADE,
+  PRIMARY KEY (from_transaction_id, to_transaction_id)
 );
 
 CREATE TABLE payees (
@@ -45,7 +45,7 @@ CREATE TABLE payees (
     created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     budget_id UUID NOT NULL,
-    name VARCHAR(32) NOT NULL,
+    name VARCHAR(50) NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
     UNIQUE(budget_id, name),
     FOREIGN KEY (budget_id) REFERENCES budgets(id)
@@ -60,7 +60,6 @@ CREATE TABLE transaction_splits (
   UNIQUE (transaction_id, category_id),
   FOREIGN KEY (transaction_id) REFERENCES transactions(id)
     ON DELETE CASCADE
-  -- FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
 CREATE VIEW transactions_view AS

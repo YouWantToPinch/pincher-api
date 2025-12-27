@@ -4,8 +4,9 @@ CREATE TABLE groups (
     created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     budget_id UUID NOT NULL,
-    name VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
+    UNIQUE(budget_id, name),
     FOREIGN KEY (budget_id) REFERENCES budgets(id)
         ON DELETE CASCADE
 );
@@ -18,6 +19,7 @@ CREATE TABLE categories (
     name VARCHAR(50) NOT NULL UNIQUE,
     group_id UUID,
     notes TEXT NOT NULL DEFAULT '',
+    UNIQUE(budget_id, name),
     FOREIGN KEY (budget_id) REFERENCES budgets(id)
         ON DELETE CASCADE,
     FOREIGN KEY (group_id) REFERENCES groups(id)
