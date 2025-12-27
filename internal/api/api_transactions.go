@@ -479,7 +479,7 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 			Cleared:         dbTransaction.Cleared,
 		}
 
-		respondWithJSON(w, http.StatusCreated, rspPayload)
+		respondWithJSON(w, http.StatusOK, rspPayload)
 		return
 	default: // or case "view"
 		viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), pathTransactionID)
