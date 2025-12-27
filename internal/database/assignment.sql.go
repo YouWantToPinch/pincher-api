@@ -113,7 +113,10 @@ func (q *Queries) GetMonthCategoryReports(ctx context.Context, month time.Time) 
 }
 
 const getMonthReport = `-- name: GetMonthReport :one
-SELECT SUM(assigned) AS assigned, SUM(activity) AS activity, SUM(balance) AS balance
+SELECT
+    COALESCE(SUM(assigned), 0)::bigint AS assigned,
+    COALESCE(SUM(activity), 0)::bigint AS activity,
+    COALESCE(SUM(balance), 0)::bigint AS balance
 FROM category_reports mr
 WHERE mr.month = $1
 `

@@ -59,7 +59,7 @@ SELECT
     category_id,
     assigned,
     activity,
-    SUM(assigned + activity) OVER (PARTITION BY category_id ORDER BY month) AS balance
+    (SUM(assigned + activity) OVER (PARTITION BY category_id ORDER BY month))::bigint AS balance
 FROM report
 ORDER BY month, category_name;
 
