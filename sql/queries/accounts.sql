@@ -23,9 +23,10 @@ FROM accounts
 WHERE id = $1;
 
 -- name: GetBudgetAccountCapital :one
-SELECT CAST(COALESCE(SUM(transactions_view.total_amount), 0) AS BIGINT) AS total
-FROM transactions_view
-WHERE transactions_view.account_id = $1;
+SELECT CAST(COALESCE(SUM(td.total_amount), 0) AS BIGINT) AS total
+FROM transaction_details td
+JOIN transactions t ON td.id = t.id
+WHERE t.account_id = $1;
 
 -- name: RestoreAccount :exec
 UPDATE accounts

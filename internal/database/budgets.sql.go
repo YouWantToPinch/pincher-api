@@ -110,9 +110,10 @@ func (q *Queries) GetBudgetByID(ctx context.Context, id uuid.UUID) (Budget, erro
 }
 
 const getBudgetCapital = `-- name: GetBudgetCapital :one
-SELECT CAST(COALESCE(SUM(transactions_view.total_amount), 0) AS BIGINT) AS total
-FROM transactions_view
-WHERE transactions_view.budget_id = $1
+SELECT CAST(COALESCE(SUM(td.total_amount), 0) AS BIGINT) AS total
+FROM transaction_details td
+JOIN transactions t ON td.id = t.id
+WHERE t.budget_id = $1
 `
 
 func (q *Queries) GetBudgetCapital(ctx context.Context, budgetID uuid.UUID) (int64, error) {

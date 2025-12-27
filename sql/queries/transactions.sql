@@ -51,9 +51,10 @@ VALUES (
 )
 RETURNING *;
 
--- name: GetTransactionsFromView :many
+-- name: GetTransactionDetails :many
 SELECT *
-FROM transactions_view t
+FROM transaction_details td
+JOIN transactions t ON td.id = t.id
 WHERE
     t.budget_id = sqlc.arg('budget_id')
     AND (sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = sqlc.arg('account_id')::uuid)
@@ -105,9 +106,9 @@ SELECT *
 FROM transactions
 WHERE id = $1;
 
--- name: GetTransactionFromViewByID :one
+-- name: GetTransactionDetailsByID :one
 SELECT *
-FROM transactions_view
+FROM transaction_details
 WHERE id = $1;
 
 -- name: UpdateTransaction :one

@@ -24,7 +24,6 @@ type Account struct {
 }
 
 type AccountTransfer struct {
-	ID                uuid.UUID
 	FromTransactionID uuid.UUID
 	ToTransactionID   uuid.UUID
 }
@@ -112,26 +111,25 @@ type Transaction struct {
 	Cleared         bool
 }
 
+type TransactionDetail struct {
+	ID              uuid.UUID
+	TransactionDate time.Time
+	TransactionType string
+	Notes           string
+	Payee           string
+	BudgetName      sql.NullString
+	AccountName     sql.NullString
+	LoggerName      sql.NullString
+	TotalAmount     int64
+	Splits          json.RawMessage
+	Cleared         bool
+}
+
 type TransactionSplit struct {
 	ID            uuid.UUID
 	TransactionID uuid.UUID
 	CategoryID    uuid.NullUUID
 	Amount        int64
-}
-
-type TransactionsView struct {
-	ID              uuid.UUID
-	TransactionType string
-	TransactionDate time.Time
-	Payee           string
-	PayeeID         uuid.UUID
-	Notes           string
-	BudgetID        uuid.UUID
-	AccountID       uuid.UUID
-	LoggerID        uuid.UUID
-	TotalAmount     int64
-	Splits          json.RawMessage
-	Cleared         bool
 }
 
 type User struct {

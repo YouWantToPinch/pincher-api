@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -203,7 +204,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	}
 
 	getTransactionView := func(transactionToViewID uuid.UUID) (TransactionView, error) {
-		viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), transactionToViewID)
+		viewTransaction, err := cfg.db.GetTransactionDetailsByID(r.Context(), transactionToViewID)
 		if err != nil {
 			return TransactionView{}, fmt.Errorf("could not get transaction from view using id %v: %v", transactionToViewID.String(), err.Error())
 		}
@@ -220,13 +221,9 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 
 		return TransactionView{
 			ID:              viewTransaction.ID,
-			BudgetID:        viewTransaction.BudgetID,
-			LoggerID:        viewTransaction.LoggerID,
-			AccountID:       viewTransaction.AccountID,
 			TransactionType: viewTransaction.TransactionType,
 			TransactionDate: viewTransaction.TransactionDate,
 			Payee:           viewTransaction.Payee,
-			PayeeID:         viewTransaction.PayeeID,
 			TotalAmount:     viewTransaction.TotalAmount,
 			Notes:           viewTransaction.Notes,
 			Cleared:         viewTransaction.Cleared,
@@ -267,6 +264,8 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
+	getDetails := strings.HasSuffix(r.URL.String(), "/details")
+
 	var err error
 
 	var parsedAccountID uuid.UUID
@@ -317,9 +316,7 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 		parsedEndDate.IsZero()),
 	)
 
-	getMode := r.URL.Query().Get("mode")
-	switch getMode {
-	case "db":
+	if !getDetails {
 		dbTransactions, err := cfg.db.GetTransactions(r.Context(), database.GetTransactionsParams{
 			AccountID:  parsedAccountID,
 			CategoryID: parsedCategoryID,
@@ -362,9 +359,9 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 
 		respondWithJSON(w, http.StatusOK, rspPayload)
 		return
-	default: // or case "view"
+	} else {
 
-		viewTransactions, err := cfg.db.GetTransactionsFromView(r.Context(), database.GetTransactionsFromViewParams{
+		viewTransactions, err := cfg.db.GetTransactionDetails(r.Context(), database.GetTransactionDetailsParams{
 			AccountID:  parsedAccountID,
 			CategoryID: parsedCategoryID,
 			PayeeID:    parsedPayeeID,
@@ -450,6 +447,8 @@ func (cfg *APIConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 }
 
 func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request) {
+	getDetails := strings.HasSuffix(r.URL.String(), "/details")
+
 	var pathTransactionID uuid.UUID
 	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
 	if err != nil {
@@ -457,9 +456,7 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	getMode := r.URL.Query().Get("mode")
-	switch getMode {
-	case "db":
+	if !getDetails {
 		dbTransaction, err := cfg.db.GetTransactionByID(r.Context(), pathTransactionID)
 		if err != nil {
 			respondWithError(w, http.StatusNotFound, "could not find transaction: ", err)
@@ -481,8 +478,8 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 
 		respondWithJSON(w, http.StatusOK, rspPayload)
 		return
-	default: // or case "view"
-		viewTransaction, err := cfg.db.GetTransactionFromViewByID(r.Context(), pathTransactionID)
+	} else {
+		viewTransaction, err := cfg.db.GetTransactionDetailsByID(r.Context(), pathTransactionID)
 		if err != nil {
 			respondWithError(w, http.StatusNotFound, "could not find transaction view: ", err)
 			return
@@ -501,9 +498,6 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 
 		rspPayload := TransactionView{
 			ID:              viewTransaction.ID,
-			BudgetID:        viewTransaction.BudgetID,
-			LoggerID:        viewTransaction.LoggerID,
-			AccountID:       viewTransaction.AccountID,
 			TransactionDate: viewTransaction.TransactionDate,
 			Payee:           viewTransaction.Payee,
 			TotalAmount:     viewTransaction.TotalAmount,

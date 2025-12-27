@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -83,25 +84,135 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 	return i, err
 }
 
-const getTransactionFromViewByID = `-- name: GetTransactionFromViewByID :one
-SELECT id, transaction_type, transaction_date, payee, payee_id, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
-FROM transactions_view
+const getTransactionDetails = `-- name: GetTransactionDetails :many
+SELECT td.id, td.transaction_date, td.transaction_type, td.notes, payee, budget_name, account_name, logger_name, total_amount, splits, td.cleared, t.id, created_at, updated_at, budget_id, logger_id, account_id, t.transaction_type, t.transaction_date, payee_id, t.notes, t.cleared
+FROM transaction_details td
+JOIN transactions t ON td.id = t.id
+WHERE
+    t.budget_id = $1
+    AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = $2::uuid)
+    AND (
+        $3::uuid = '00000000-0000-0000-0000-000000000000'
+        OR EXISTS (
+            SELECT 1
+            FROM transaction_splits ts
+            WHERE ts.transaction_id = t.id AND ts.category_id = $3::uuid
+        )
+    )
+    AND ($4::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = $4::uuid)
+    AND (
+        ($5::date = '0001-01-01' AND $6::date = '0001-01-01')
+        OR
+        (t.transaction_date >= $5::date AND t.transaction_date <= $6::date)
+    )
+ORDER BY t.transaction_date DESC
+`
+
+type GetTransactionDetailsParams struct {
+	BudgetID   uuid.UUID
+	AccountID  uuid.UUID
+	CategoryID uuid.UUID
+	PayeeID    uuid.UUID
+	StartDate  time.Time
+	EndDate    time.Time
+}
+
+type GetTransactionDetailsRow struct {
+	ID                uuid.UUID
+	TransactionDate   time.Time
+	TransactionType   string
+	Notes             string
+	Payee             string
+	BudgetName        sql.NullString
+	AccountName       sql.NullString
+	LoggerName        sql.NullString
+	TotalAmount       int64
+	Splits            json.RawMessage
+	Cleared           bool
+	ID_2              uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	BudgetID          uuid.UUID
+	LoggerID          uuid.UUID
+	AccountID         uuid.UUID
+	TransactionType_2 string
+	TransactionDate_2 time.Time
+	PayeeID           uuid.UUID
+	Notes_2           string
+	Cleared_2         bool
+}
+
+func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionDetailsParams) ([]GetTransactionDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTransactionDetails,
+		arg.BudgetID,
+		arg.AccountID,
+		arg.CategoryID,
+		arg.PayeeID,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTransactionDetailsRow
+	for rows.Next() {
+		var i GetTransactionDetailsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TransactionDate,
+			&i.TransactionType,
+			&i.Notes,
+			&i.Payee,
+			&i.BudgetName,
+			&i.AccountName,
+			&i.LoggerName,
+			&i.TotalAmount,
+			&i.Splits,
+			&i.Cleared,
+			&i.ID_2,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.BudgetID,
+			&i.LoggerID,
+			&i.AccountID,
+			&i.TransactionType_2,
+			&i.TransactionDate_2,
+			&i.PayeeID,
+			&i.Notes_2,
+			&i.Cleared_2,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTransactionDetailsByID = `-- name: GetTransactionDetailsByID :one
+SELECT id, transaction_date, transaction_type, notes, payee, budget_name, account_name, logger_name, total_amount, splits, cleared
+FROM transaction_details
 WHERE id = $1
 `
 
-func (q *Queries) GetTransactionFromViewByID(ctx context.Context, id uuid.UUID) (TransactionsView, error) {
-	row := q.db.QueryRowContext(ctx, getTransactionFromViewByID, id)
-	var i TransactionsView
+func (q *Queries) GetTransactionDetailsByID(ctx context.Context, id uuid.UUID) (TransactionDetail, error) {
+	row := q.db.QueryRowContext(ctx, getTransactionDetailsByID, id)
+	var i TransactionDetail
 	err := row.Scan(
 		&i.ID,
-		&i.TransactionType,
 		&i.TransactionDate,
-		&i.Payee,
-		&i.PayeeID,
+		&i.TransactionType,
 		&i.Notes,
-		&i.BudgetID,
-		&i.AccountID,
-		&i.LoggerID,
+		&i.Payee,
+		&i.BudgetName,
+		&i.AccountName,
+		&i.LoggerName,
 		&i.TotalAmount,
 		&i.Splits,
 		&i.Cleared,
@@ -183,89 +294,13 @@ func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams
 	return items, nil
 }
 
-const getTransactionsFromView = `-- name: GetTransactionsFromView :many
-SELECT id, transaction_type, transaction_date, payee, payee_id, notes, budget_id, account_id, logger_id, total_amount, splits, cleared
-FROM transactions_view t
-WHERE
-    t.budget_id = $1
-    AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = $2::uuid)
-    AND (
-        $3::uuid = '00000000-0000-0000-0000-000000000000'
-        OR EXISTS (
-            SELECT 1
-            FROM transaction_splits ts
-            WHERE ts.transaction_id = t.id AND ts.category_id = $3::uuid
-        )
-    )
-    AND ($4::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = $4::uuid)
-    AND (
-        ($5::date = '0001-01-01' AND $6::date = '0001-01-01')
-        OR
-        (t.transaction_date >= $5::date AND t.transaction_date <= $6::date)
-    )
-ORDER BY t.transaction_date DESC
-`
-
-type GetTransactionsFromViewParams struct {
-	BudgetID   uuid.UUID
-	AccountID  uuid.UUID
-	CategoryID uuid.UUID
-	PayeeID    uuid.UUID
-	StartDate  time.Time
-	EndDate    time.Time
-}
-
-func (q *Queries) GetTransactionsFromView(ctx context.Context, arg GetTransactionsFromViewParams) ([]TransactionsView, error) {
-	rows, err := q.db.QueryContext(ctx, getTransactionsFromView,
-		arg.BudgetID,
-		arg.AccountID,
-		arg.CategoryID,
-		arg.PayeeID,
-		arg.StartDate,
-		arg.EndDate,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TransactionsView
-	for rows.Next() {
-		var i TransactionsView
-		if err := rows.Scan(
-			&i.ID,
-			&i.TransactionType,
-			&i.TransactionDate,
-			&i.Payee,
-			&i.PayeeID,
-			&i.Notes,
-			&i.BudgetID,
-			&i.AccountID,
-			&i.LoggerID,
-			&i.TotalAmount,
-			&i.Splits,
-			&i.Cleared,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const logAccountTransfer = `-- name: LogAccountTransfer :one
-INSERT INTO account_transfers (id, from_transaction_id, to_transaction_id)
+INSERT INTO account_transfers (from_transaction_id, to_transaction_id)
 VALUES (
-    gen_random_uuid(),
     $1,
     $2
 )
-RETURNING id, from_transaction_id, to_transaction_id
+RETURNING from_transaction_id, to_transaction_id
 `
 
 type LogAccountTransferParams struct {
@@ -276,7 +311,7 @@ type LogAccountTransferParams struct {
 func (q *Queries) LogAccountTransfer(ctx context.Context, arg LogAccountTransferParams) (AccountTransfer, error) {
 	row := q.db.QueryRowContext(ctx, logAccountTransfer, arg.FromTransactionID, arg.ToTransactionID)
 	var i AccountTransfer
-	err := row.Scan(&i.ID, &i.FromTransactionID, &i.ToTransactionID)
+	err := row.Scan(&i.FromTransactionID, &i.ToTransactionID)
 	return i, err
 }
 

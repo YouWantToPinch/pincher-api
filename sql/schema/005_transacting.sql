@@ -62,11 +62,12 @@ CREATE TABLE transaction_splits (
     ON DELETE CASCADE
 );
 
-CREATE VIEW transactions_view AS
+CREATE VIEW transaction_details AS
 SELECT 
   t.id,
-  t.transaction_type,
   t.transaction_date,
+  t.transaction_type,
+  t.notes,
   COALESCE(
     p.name,
     (
@@ -82,11 +83,9 @@ SELECT
     ),
     'Transfer'
   ) AS payee,
-  t.payee_id,
-  t.notes,
-  t.budget_id,
-  t.account_id,
-  t.logger_id,
+  b.name AS budget_name,
+  a.name AS account_name,
+  u.username AS logger_name,
   SUM(ts.amount)::bigint AS total_amount,
   jsonb_object_agg(COALESCE(c.name, 'Uncategorized'), ts.amount) AS splits,
   t.cleared
@@ -94,19 +93,23 @@ FROM transactions t
 JOIN transaction_splits ts ON t.id = ts.transaction_id
 LEFT JOIN categories c ON ts.category_id = c.id
 LEFT JOIN payees p ON t.payee_id = p.id
+LEFT JOIN accounts a ON t.account_id = a.id
+LEFT JOIN users u ON t.logger_id = u.id
+LEFT JOIN budgets b ON t.budget_id = b.id
 GROUP BY
     t.id,
-    t.transaction_type,
     t.transaction_date,
-    p.name,
-    t.payee_id,
+    t.transaction_type,
     t.notes,
-    t.account_id,
-    t.logger_id,
-    t.cleared;
+    p.name,
+    a.name,
+    u.username,
+    b.name
+ORDER BY
+    t.transaction_date DESC;
 
 -- +goose Down
-DROP VIEW transactions_view;
+DROP VIEW transaction_details;
 DROP TABLE transaction_splits;
 DROP TABLE payees;
 DROP TABLE account_transfers;

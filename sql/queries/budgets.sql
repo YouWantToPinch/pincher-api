@@ -50,9 +50,10 @@ SET updated_at = EXCLUDED.updated_at, member_role = EXCLUDED.member_role
 RETURNING *;
 
 -- name: GetBudgetCapital :one
-SELECT CAST(COALESCE(SUM(transactions_view.total_amount), 0) AS BIGINT) AS total
-FROM transactions_view
-WHERE transactions_view.budget_id = $1;
+SELECT CAST(COALESCE(SUM(td.total_amount), 0) AS BIGINT) AS total
+FROM transaction_details td
+JOIN transactions t ON td.id = t.id
+WHERE t.budget_id = $1;
 
 -- name: UpdateBudget :one
 UPDATE budgets
