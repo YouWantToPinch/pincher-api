@@ -76,7 +76,7 @@ type Group struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	BudgetID  uuid.UUID `json:"user_id"`
+	BudgetID  uuid.UUID `json:"budget_id"`
 	Meta
 }
 
@@ -84,7 +84,7 @@ type Category struct {
 	ID        uuid.UUID     `json:"id"`
 	CreatedAt time.Time     `json:"created_at"`
 	UpdatedAt time.Time     `json:"updated_at"`
-	BudgetID  uuid.UUID     `json:"user_id"`
+	BudgetID  uuid.UUID     `json:"budget_id"`
 	GroupID   uuid.NullUUID `json:"group_id"`
 	Meta
 }
