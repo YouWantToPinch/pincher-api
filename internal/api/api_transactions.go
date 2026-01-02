@@ -603,5 +603,6 @@ func (cfg *APIConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Reque
 		respondWithError(w, http.StatusNotFound, "404 Not Found", err)
 		return
 	}
-	respondWithText(w, http.StatusOK, "Transaction deleted successfully")
+
+	respondWithCode(w, http.StatusNoContent)
 }

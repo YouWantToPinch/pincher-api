@@ -118,6 +118,5 @@ func (cfg *APIConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusNotFound, "Refresh Token not found", err)
 	}
 
-	respMsg := "Revoked refresh token for user: " + dbUser.Username
-	respondWithText(w, http.StatusOK, respMsg)
+	respondWithCode(w, http.StatusNoContent)
 }

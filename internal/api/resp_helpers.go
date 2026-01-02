@@ -51,6 +51,10 @@ func respondWithJSON(w http.ResponseWriter, code int, payload any) {
 	}
 }
 
+func respondWithCode(w http.ResponseWriter, code int) {
+	w.WriteHeader(code)
+}
+
 func respondWithText(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(code)

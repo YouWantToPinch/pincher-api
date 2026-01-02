@@ -126,5 +126,5 @@ func (cfg *APIConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithText(w, http.StatusOK, "The user was deleted.")
+	respondWithCode(w, http.StatusNoContent)
 }

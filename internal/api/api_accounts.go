@@ -254,7 +254,7 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 			respondWithError(w, http.StatusInternalServerError, "could not delete account: ", err)
 			return
 		}
-		respondWithText(w, http.StatusOK, "Account hard-deleted successfully; it cannot be restored")
+		respondWithCode(w, http.StatusNoContent)
 		return
 	}
 }

@@ -200,5 +200,5 @@ func (cfg *APIConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusNotFound, "404 Not Found", err)
 		return
 	}
-	respondWithText(w, http.StatusOK, "The category was deleted")
+	respondWithCode(w, http.StatusNoContent)
 }

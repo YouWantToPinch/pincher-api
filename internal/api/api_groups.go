@@ -151,5 +151,6 @@ func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "could not delete group: ", err)
 		return
 	}
-	respondWithText(w, http.StatusOK, "Group deleted successfully")
+
+	respondWithCode(w, http.StatusNoContent)
 }

@@ -265,5 +265,5 @@ func (cfg *APIConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithText(w, http.StatusOK, "Budget deleted successfully")
+	respondWithCode(w, http.StatusNoContent)
 }

@@ -203,5 +203,5 @@ func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithText(w, http.StatusOK, "Payee deleted successfully")
+	respondWithCode(w, http.StatusNoContent)
 }
