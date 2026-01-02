@@ -142,7 +142,7 @@ func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if pathBudgetID != dbGroup.BudgetID {
-		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
+		respondWithCode(w, http.StatusForbidden)
 		return
 	}
 

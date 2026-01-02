@@ -594,7 +594,7 @@ func (cfg *APIConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Reque
 	}
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	if pathBudgetID != dbTransaction.BudgetID {
-		respondWithError(w, http.StatusForbidden, "401 Unauthorized", nil)
+		respondWithCode(w, http.StatusForbidden)
 		return
 	}
 
