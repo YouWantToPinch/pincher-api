@@ -53,9 +53,7 @@ type User struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 	Username       string    `json:"username"`
-	HashedPassword string    `json:"hashed_password"`
-	Token          string    `json:"token"`
-	RefreshToken   string    `json:"refresh_token"`
+	HashedPassword string    `json:"-"`
 }
 
 type BudgetMembership struct {

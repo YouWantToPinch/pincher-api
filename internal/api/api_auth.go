@@ -48,21 +48,29 @@ func (cfg *APIConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		UserID: dbUser.ID,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Trouble logging in", err)
+		respondWithError(w, http.StatusInternalServerError, "Failed to save refresh token", err)
 		return
 	}
 
 	accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.secret, time.Hour)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Trouble logging in", err)
+		respondWithError(w, http.StatusInternalServerError, "Failed to create access token", err)
 		return
 	}
 
-	rspPayload := User{
-		ID:           dbUser.ID,
-		CreatedAt:    dbUser.CreatedAt,
-		UpdatedAt:    dbUser.UpdatedAt,
-		Username:     dbUser.Username,
+	type rspSchema struct {
+		User
+		Token        string
+		RefreshToken string
+	}
+
+	rspPayload := rspSchema{
+		User: User{
+			ID:        dbUser.ID,
+			CreatedAt: dbUser.CreatedAt,
+			UpdatedAt: dbUser.UpdatedAt,
+			Username:  dbUser.Username,
+		},
 		Token:        accessToken,
 		RefreshToken: refreshToken,
 	}
