@@ -60,8 +60,8 @@ func (cfg *APIConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 
 	type rspSchema struct {
 		User
-		Token        string
-		RefreshToken string
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	rspPayload := rspSchema{
