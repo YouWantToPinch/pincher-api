@@ -11,7 +11,6 @@ import (
 
 func (cfg *APIConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
-	slog.Debug("user_id is " + validatedUserID.String())
 
 	type rqSchema struct {
 		Meta
@@ -19,7 +18,7 @@ func (cfg *APIConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
@@ -34,7 +33,7 @@ func (cfg *APIConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		Notes:   rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not create budget: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not create budget", err)
 		return
 	}
 
@@ -44,7 +43,7 @@ func (cfg *APIConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		MemberRole: "ADMIN",
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure to assign ADMIN to new budget: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not assign ADMIN to new budget", err)
 		slog.Info("Attempting deletion of new budget, as no admin could be assigned.")
 		err := cfg.db.DeleteBudget(r.Context(), dbBudget.ID)
 		if err != nil {
@@ -71,7 +70,7 @@ func (cfg *APIConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
 
 	dbBudget, err := cfg.db.GetBudgetByID(r.Context(), pathBudgetID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "budget not found: ", err)
+		respondWithError(w, http.StatusNotFound, "could not get budget", err)
 		return
 	}
 
@@ -101,7 +100,7 @@ func (cfg *APIConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 			UserID: validatedUserID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "no budgets found: ", err)
+			respondWithError(w, http.StatusInternalServerError, "could not retrieve user budgets", err)
 			return
 		}
 	} else {
@@ -110,7 +109,7 @@ func (cfg *APIConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 			Roles:  roleFilters,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "no budgets found with user listed as membership role: ", err)
+			respondWithError(w, http.StatusInternalServerError, "could not retrieve user budgets", err)
 			return
 		}
 	}
@@ -145,7 +144,7 @@ func (cfg *APIConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Reques
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	capitalAmount, err := cfg.db.GetBudgetCapital(r.Context(), pathBudgetID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not calculate budget capital: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not calculate budget capital", err)
 		return
 	}
 
@@ -170,19 +169,19 @@ func (cfg *APIConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
 	parsedUserID, err := uuid.Parse(rqPayload.UserID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure parsing UserID: ", err)
+		respondWithError(w, http.StatusBadRequest, "could not parse UserID", err)
 		return
 	}
 
 	newMemberRole, err := BMRFromString(rqPayload.MemberRole)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "failure interpreting role: ", err)
+		respondWithError(w, http.StatusBadRequest, "failure interpreting role", err)
 		return
 	}
 	if newMemberRole == ADMIN {
@@ -196,7 +195,7 @@ func (cfg *APIConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 		MemberRole: newMemberRole.String(),
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not assign new member to budget: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not assign new member to budget", err)
 		return
 	}
 
@@ -215,7 +214,7 @@ func (cfg *APIConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 	var pathUserID uuid.UUID
 	err := parseUUIDFromPath("user_id", r, &pathUserID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure parsing UUID: ", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
@@ -224,10 +223,10 @@ func (cfg *APIConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 		UserID:   pathUserID,
 	})
 	if err != nil {
-		respondWithText(w, http.StatusNotFound, "No membership found to revoke")
+		respondWithError(w, http.StatusInternalServerError, "could not revoke membership", err)
 	}
 
-	respondWithText(w, http.StatusOK, "Revoked membership successfully")
+	respondWithCode(w, http.StatusNoContent)
 }
 
 func (cfg *APIConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
@@ -239,7 +238,7 @@ func (cfg *APIConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
@@ -249,11 +248,11 @@ func (cfg *APIConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
 		Notes: rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not update budget: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not update budget", err)
 		return
 	}
 
-	respondWithText(w, http.StatusOK, "Budget '"+rqPayload.Name+"' updated successfully!")
+	respondWithCode(w, http.StatusNoContent)
 }
 
 func (cfg *APIConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
@@ -261,7 +260,7 @@ func (cfg *APIConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
 
 	err := cfg.db.DeleteBudget(r.Context(), pathBudgetID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "could not delete budget: ", err)
+		respondWithError(w, http.StatusNotFound, "could not delete budget", err)
 		return
 	}
 

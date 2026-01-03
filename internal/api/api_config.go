@@ -122,7 +122,7 @@ func (cfg *APIConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenString, err := auth.GetBearerToken(r.Header)
 		if err != nil {
-			respondWithError(w, http.StatusUnauthorized, "no token found: ", err)
+			respondWithError(w, http.StatusBadRequest, "no token found", err)
 			return
 		}
 		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret, "HS256")
@@ -143,7 +143,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 		var pathBudgetID uuid.UUID
 		err := parseUUIDFromPath("budget_id", r, &pathBudgetID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
+			respondWithError(w, http.StatusBadRequest, "", err)
 			return
 		}
 
@@ -152,18 +152,18 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 			UserID:   validatedUserID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "user not found as member: ", err)
+			respondWithError(w, http.StatusNotFound, "user not found as member", err)
 			return
 		}
 
 		callerBudgetMemberRole, err := BMRFromString(callerRole)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, err.Error(), err)
+			respondWithError(w, http.StatusBadRequest, "invalid role", err)
 			return
 		}
 
 		if callerBudgetMemberRole > required {
-			respondWithError(w, http.StatusForbidden, "user does not have clearance for action: ", err)
+			respondWithError(w, http.StatusForbidden, "user does not have clearance for action", err)
 			return
 		}
 		ctxBudgetID := ctxKey("budget_id")

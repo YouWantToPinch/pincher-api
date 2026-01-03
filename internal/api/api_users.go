@@ -15,7 +15,7 @@ func (cfg *APIConfig) endpCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
@@ -56,7 +56,7 @@ func (cfg *APIConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
@@ -82,7 +82,7 @@ func (cfg *APIConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 		respondWithError(w, http.StatusInternalServerError, "could not update user credentials", err)
 	}
 
-	respondWithText(w, http.StatusOK, "User '"+rqPayload.Username+"' updated successfully!")
+	respondWithCode(w, http.StatusNoContent)
 }
 
 func (cfg *APIConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +93,7 @@ func (cfg *APIConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 

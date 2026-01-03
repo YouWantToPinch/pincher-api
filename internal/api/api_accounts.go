@@ -16,7 +16,7 @@ func (cfg *APIConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
@@ -34,7 +34,7 @@ func (cfg *APIConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 		Notes:       rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not create account: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not create account", err)
 		return
 	}
 
@@ -57,7 +57,7 @@ func (cfg *APIConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 	dbAccounts, err := cfg.db.GetAccountsFromBudget(r.Context(), pathBudgetID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not get budget accounts: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not retrieve budget accounts", err)
 		return
 	}
 
@@ -93,16 +93,16 @@ func (cfg *APIConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("account_id")
-	pathAccountID, err := uuid.Parse(idString)
+	var pathAccountID uuid.UUID
+	err := parseUUIDFromPath("account_id", r, &pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "failure parsing account_id as UUID: ", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
 	dbAccount, err := cfg.db.GetAccountByID(r.Context(), pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "could not find account: ", err)
+		respondWithError(w, http.StatusNotFound, "could not get account", err)
 		return
 	}
 
@@ -122,16 +122,16 @@ func (cfg *APIConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http.Request) {
-	idString := r.PathValue("account_id")
-	pathAccountID, err := uuid.Parse(idString)
+	var pathAccountID uuid.UUID
+	err := parseUUIDFromPath("account_id", r, &pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "failure parsing account_id as UUID: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
 	capitalAmount, err := cfg.db.GetBudgetAccountCapital(r.Context(), pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not get budget account capital: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not calculate budget account capital", err)
 		return
 	}
 
@@ -150,7 +150,7 @@ func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 	var pathAccountID uuid.UUID
 	err := parseUUIDFromPath("account_id", r, &pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
@@ -161,7 +161,7 @@ func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
@@ -172,24 +172,24 @@ func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 		Notes:       rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not update account: ", err)
+		respondWithError(w, http.StatusNotFound, "could not update account", err)
 		return
 	}
 
-	respondWithText(w, http.StatusOK, "Account '"+rqPayload.Name+"' updated successfully")
+	respondWithCode(w, http.StatusNoContent)
 }
 
 func (cfg *APIConfig) endpRestoreAccount(w http.ResponseWriter, r *http.Request) {
 	var pathAccountID uuid.UUID
 	err := parseUUIDFromPath("account_id", r, &pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
 	err = cfg.db.RestoreAccount(r.Context(), pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not restore account: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not restore account", err)
 		return
 	}
 
@@ -203,20 +203,20 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
-	idString := r.PathValue("account_id")
-	pathAccountID, err := uuid.Parse(idString)
+	var pathAccountID uuid.UUID
+	err = parseUUIDFromPath("account_id", r, &pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
 	dbAccount, err := cfg.db.GetAccountByID(r.Context(), pathAccountID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "could not find account: ", err)
+		respondWithError(w, http.StatusNotFound, "could not get account", err)
 		return
 	}
 
@@ -228,12 +228,12 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 
 	if !rqPayload.DeleteHard {
 		if dbAccount.IsDeleted {
-			respondWithText(w, http.StatusOK, "Account already deleted.")
+			respondWithText(w, http.StatusOK, "Account already soft-deleted.")
 			return
 		}
 		err = cfg.db.DeleteAccountSoft(r.Context(), pathAccountID)
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "could not find account: ", nil)
+			respondWithError(w, http.StatusInternalServerError, "could not soft-delete account", nil)
 			return
 		}
 		respondWithText(w, http.StatusOK, "Account soft-deleted; it may be restored")
@@ -246,7 +246,7 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 
 		err = cfg.db.DeleteAccountHard(r.Context(), pathAccountID)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not delete account: ", err)
+			respondWithError(w, http.StatusInternalServerError, "could not delete account", err)
 			return
 		}
 		respondWithCode(w, http.StatusNoContent)

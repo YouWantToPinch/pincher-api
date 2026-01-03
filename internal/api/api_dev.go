@@ -1,33 +1,30 @@
 package api
 
 import (
-	"log/slog"
 	"net/http"
 )
 
 func (cfg *APIConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if cfg.platform != "dev" {
-		respondWithText(w, 403, "403 Forbidden")
+		respondWithText(w, http.StatusForbidden, "platform not dev")
 	}
 
 	err := cfg.db.DeleteUsers(r.Context())
 	if err != nil {
-		slog.Error(err.Error())
+		respondWithError(w, http.StatusInternalServerError, "could not delete users", err)
 	}
 
-	respondWithText(w, 200, "Successfully deleted all users.")
+	respondWithCode(w, http.StatusNoContent)
 }
 
 func (cfg *APIConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if cfg.platform != "dev" {
-		respondWithText(w, 403, "403 Forbidden")
+		respondWithText(w, http.StatusForbidden, "platform not dev")
 	}
 
 	dbUsers, err := cfg.db.GetAllUsers(r.Context())
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Could not find any users", err)
+		respondWithError(w, http.StatusInternalServerError, "could not retrieve users", err)
 		return
 	}
 
@@ -54,14 +51,13 @@ func (cfg *APIConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if cfg.platform != "dev" {
-		respondWithText(w, 403, "403 Forbidden")
+		respondWithText(w, http.StatusForbidden, "platform not dev")
 	}
 
 	count, err := cfg.db.GetUserCount(r.Context())
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Could not find any users", err)
+		respondWithError(w, http.StatusInternalServerError, "could not calculate user count", err)
 		return
 	}
 

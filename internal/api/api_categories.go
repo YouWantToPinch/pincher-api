@@ -16,7 +16,7 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 
 	params, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 	if params.GroupID != "" {
 		parsedGroupID, err := uuid.Parse(params.GroupID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "provided group_id could not be parsed as UUID: ", err)
+			respondWithError(w, http.StatusBadRequest, "could not parse group ID from payload", err)
 			return
 		}
 		foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
@@ -39,7 +39,7 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 			ID:       parsedGroupID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "could not find group: ", err)
+			respondWithError(w, http.StatusNotFound, "could not get category group", err)
 			return
 		}
 		assignedGroup.UUID = foundGroup.ID
@@ -53,7 +53,7 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 		Notes:    params.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not create category: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not create category", err)
 		return
 	}
 
@@ -79,7 +79,7 @@ func (cfg *APIConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 		var err error
 		parsedGroupID, err = uuid.Parse(queryGroupID)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "failure parsing group_id as UUID: ", err)
+			respondWithError(w, http.StatusBadRequest, "could not parse group ID from query", err)
 		}
 	}
 
@@ -90,7 +90,7 @@ func (cfg *APIConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 		GroupID:  parsedGroupID,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "no categories found: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not retrieve categories", err)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 	var pathCategoryID uuid.UUID
 	err := parseUUIDFromPath("category_id", r, &pathCategoryID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "failure parsing UUID: ", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
@@ -135,7 +135,7 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 
 	params, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
@@ -145,15 +145,15 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 	if params.GroupID != "" {
 		parsedGroupID, err := uuid.Parse(params.GroupID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Provided group_id could not be parsed as UUID", err)
+			respondWithError(w, http.StatusBadRequest, "could not parse group ID from payload", err)
 			return
 		}
 		foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
 			BudgetID: pathBudgetID,
 			ID:       parsedGroupID,
 		})
-		if err != nil || pathBudgetID != foundGroup.BudgetID {
-			respondWithError(w, http.StatusBadRequest, "Found no group in budget with provided group_id", err)
+		if err != nil {
+			respondWithError(w, http.StatusNotFound, "could not get group", err)
 			return
 		}
 		assignedGroup.UUID = foundGroup.ID
@@ -169,24 +169,24 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 		Notes:   params.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to update category", err)
+		respondWithError(w, http.StatusInternalServerError, "failed to update category", err)
 		return
 	}
 
-	respondWithText(w, http.StatusOK, "Category '"+params.Name+"' updated successfully!")
+	respondWithCode(w, http.StatusNoContent)
 }
 
 func (cfg *APIConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) {
 	var pathCategoryID uuid.UUID
 	err := parseUUIDFromPath("category_id", r, &pathCategoryID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid id", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
 	dbCategory, err := cfg.db.GetCategoryByID(r.Context(), pathCategoryID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Couldn't find category with specified id", err)
+		respondWithError(w, http.StatusNotFound, "could not get category", err)
 		return
 	}
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
@@ -197,7 +197,7 @@ func (cfg *APIConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request)
 
 	err = cfg.db.DeleteCategoryByID(r.Context(), pathCategoryID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "404 Not Found", err)
+		respondWithError(w, http.StatusNotFound, "could not delete category", err)
 		return
 	}
 	respondWithCode(w, http.StatusNoContent)
