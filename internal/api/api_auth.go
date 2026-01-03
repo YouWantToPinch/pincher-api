@@ -109,19 +109,13 @@ func (cfg *APIConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Reque
 }
 
 func (cfg *APIConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
-	rTokenString, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
-		return
-	}
-
-	dbUser, err := cfg.db.GetUserByRefreshToken(r.Context(), rTokenString)
+	refreshToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "failure to get refresh token", err)
 		return
 	}
 
-	err = cfg.db.RevokeUserRefreshToken(r.Context(), dbUser.ID)
+	err = cfg.db.RevokeRefreshToken(r.Context(), refreshToken)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failed to revoke session", err)
 	}

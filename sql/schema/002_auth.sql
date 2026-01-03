@@ -15,5 +15,5 @@ CREATE TABLE refresh_tokens (
 
 -- +goose Down
 ALTER TABLE users
-DROP COLUMN hashed_password;
+DROP COLUMN hashed_password
 DROP TABLE refresh_tokens;
