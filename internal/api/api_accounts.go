@@ -198,8 +198,7 @@ func (cfg *APIConfig) endpRestoreAccount(w http.ResponseWriter, r *http.Request)
 
 func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
-		Name       string `json:"name"`
-		DeleteHard bool   `json:"delete_hard"`
+		DeleteHard bool `json:"delete_hard"`
 	}
 
 	rqPayload, err := decodePayload[rqSchema](r)
@@ -242,10 +241,6 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 	} else {
 		if !dbAccount.IsDeleted {
 			respondWithError(w, http.StatusBadRequest, "request for hard delete ignored (soft is required first)", nil)
-			return
-		}
-		if rqPayload.Name != dbAccount.Name {
-			respondWithError(w, http.StatusBadRequest, "request for hard delete ignored (input name must match name within database)", nil)
 			return
 		}
 
