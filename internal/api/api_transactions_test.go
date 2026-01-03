@@ -20,7 +20,7 @@ func TestValidateTXN(t *testing.T) {
 			name: "Infer TRANSFER_FROM",
 			mockPayload: &LogTransactionrqSchema{
 				Cleared:           "true",
-				TransactionDate:   "2025-09-15T17:00:00Z",
+				TransactionDate:   "2025-09-15",
 				TransferAccountID: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
 				Amounts: map[string]int64{
 					"UNCATEGORIZED": -1000,
@@ -29,7 +29,7 @@ func TestValidateTXN(t *testing.T) {
 			expectCleared:    true,
 			expectAmounts:    1,
 			expectType:       "TRANSFER_FROM",
-			expectDate:       time.Date(2025, 9, 15, 17, 0, 0, 0, time.UTC),
+			expectDate:       time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 			expectIsTransfer: true,
 			wantErr:          false,
 		},
@@ -37,7 +37,7 @@ func TestValidateTXN(t *testing.T) {
 			name: "Infer TRANSFER_TO",
 			mockPayload: &LogTransactionrqSchema{
 				Cleared:           "true",
-				TransactionDate:   "2025-09-15T17:00:00Z",
+				TransactionDate:   "2025-09-15",
 				TransferAccountID: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
 				Amounts: map[string]int64{
 					"UNCATEGORIZED": 1000,
@@ -46,7 +46,7 @@ func TestValidateTXN(t *testing.T) {
 			expectCleared:    true,
 			expectAmounts:    1,
 			expectType:       "TRANSFER_TO",
-			expectDate:       time.Date(2025, 9, 15, 17, 0, 0, 0, time.UTC),
+			expectDate:       time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 			expectIsTransfer: true,
 			wantErr:          false,
 		},
@@ -54,7 +54,7 @@ func TestValidateTXN(t *testing.T) {
 			name: "Infer WITHDRAWAL",
 			mockPayload: &LogTransactionrqSchema{
 				Cleared:         "true",
-				TransactionDate: "2025-09-15T17:00:00Z",
+				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Dining Out": -1000,
 				},
@@ -62,7 +62,7 @@ func TestValidateTXN(t *testing.T) {
 			expectCleared:    true,
 			expectAmounts:    1,
 			expectType:       "WITHDRAWAL",
-			expectDate:       time.Date(2025, 9, 15, 17, 0, 0, 0, time.UTC),
+			expectDate:       time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 			expectIsTransfer: false,
 			wantErr:          false,
 		},
@@ -70,7 +70,7 @@ func TestValidateTXN(t *testing.T) {
 			name: "Infer DEPOSIT",
 			mockPayload: &LogTransactionrqSchema{
 				Cleared:         "true",
-				TransactionDate: "2025-09-15T17:00:00Z",
+				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Income Buffer": 1000,
 				},
@@ -78,7 +78,7 @@ func TestValidateTXN(t *testing.T) {
 			expectCleared:    true,
 			expectAmounts:    1,
 			expectType:       "DEPOSIT",
-			expectDate:       time.Date(2025, 9, 15, 17, 0, 0, 0, time.UTC),
+			expectDate:       time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 			expectIsTransfer: false,
 			wantErr:          false,
 		},
@@ -86,7 +86,7 @@ func TestValidateTXN(t *testing.T) {
 			name: "Discard zeroes",
 			mockPayload: &LogTransactionrqSchema{
 				Cleared:         "true",
-				TransactionDate: "2025-09-15T17:00:00Z",
+				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Dining Out":    -1000,
 					"UNCATEGORIZED": 0,
@@ -95,20 +95,36 @@ func TestValidateTXN(t *testing.T) {
 			expectCleared:    true,
 			expectAmounts:    1,
 			expectType:       "WITHDRAWAL",
-			expectDate:       time.Date(2025, 9, 15, 17, 0, 0, 0, time.UTC),
+			expectDate:       time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 			expectIsTransfer: false,
 			wantErr:          false,
+		},
+		{
+			name: "Bad time format",
+			mockPayload: &LogTransactionrqSchema{
+				Cleared:         "true",
+				TransactionDate: "2025-09-15T17:00:00Z",
+				Amounts: map[string]int64{
+					"Dining Out": -1000,
+				},
+			},
+			expectCleared:    false,
+			expectAmounts:    0,
+			expectType:       "NONE",
+			expectDate:       time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+			expectIsTransfer: false,
+			wantErr:          true,
 		},
 		{
 			name: "No amounts",
 			mockPayload: &LogTransactionrqSchema{
 				Cleared:         "true",
-				TransactionDate: "2025-09-15T17:00:00Z",
+				TransactionDate: "2025-09-15",
 			},
 			expectCleared:    true,
 			expectAmounts:    0,
 			expectType:       "NONE",
-			expectDate:       time.Date(2025, 9, 15, 17, 0, 0, 0, time.UTC),
+			expectDate:       time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 			expectIsTransfer: false,
 			wantErr:          true,
 		},
@@ -116,7 +132,7 @@ func TestValidateTXN(t *testing.T) {
 			name: "No amounts after discard",
 			mockPayload: &LogTransactionrqSchema{
 				Cleared:         "true",
-				TransactionDate: "2025-09-15T17:00:00Z",
+				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Dining Out": 0,
 				},
@@ -124,7 +140,7 @@ func TestValidateTXN(t *testing.T) {
 			expectCleared:    true,
 			expectAmounts:    0,
 			expectType:       "NONE",
-			expectDate:       time.Date(2025, 9, 15, 17, 0, 0, 0, time.UTC),
+			expectDate:       time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 			expectIsTransfer: false,
 			wantErr:          true,
 		},
@@ -132,7 +148,7 @@ func TestValidateTXN(t *testing.T) {
 			name: "Bad txn splits",
 			mockPayload: &LogTransactionrqSchema{
 				Cleared:         "true",
-				TransactionDate: "2025-09-15T17:00:00Z",
+				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Dining Out":       -1000,
 					"General Spending": 500,
@@ -141,7 +157,7 @@ func TestValidateTXN(t *testing.T) {
 			expectCleared:    true,
 			expectAmounts:    0,
 			expectType:       "NONE",
-			expectDate:       time.Date(2025, 9, 15, 17, 0, 0, 0, time.UTC),
+			expectDate:       time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 			expectIsTransfer: false,
 			wantErr:          true,
 		},

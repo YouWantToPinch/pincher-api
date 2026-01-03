@@ -17,7 +17,7 @@ import (
 type LogTransactionrqSchema struct {
 	AccountID         string `json:"account_id"`
 	TransferAccountID string `json:"transfer_account_id"`
-	// TransactionDate is a full time string in time.RFC3339 format
+	// TransactionDate is a time string in the custom format: "2006-01-02" (YYYY-MM-DD)
 	TransactionDate string `json:"transaction_date"`
 	PayeeID         string `json:"payee_id"`
 	Notes           string `json:"notes"`
@@ -38,7 +38,7 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (isCleared bool, amounts map
 		return false, nil, "NONE", time.Time{}, false, err
 	}
 
-	txnDate, err = time.Parse(time.RFC3339, rqPayload.TransactionDate)
+	txnDate, err = time.Parse("2006-01-02", rqPayload.TransactionDate)
 	if err != nil {
 		return false, nil, "NONE", time.Time{}, false, err
 	}

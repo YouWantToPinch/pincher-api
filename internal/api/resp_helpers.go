@@ -91,7 +91,6 @@ func parseDateFromQuery(queryParam string, r *http.Request, parse *time.Time) er
 	var err error
 
 	timeLayouts := []string{
-		time.RFC3339,
 		"2006-01-02",
 	}
 
@@ -118,7 +117,6 @@ func parseDateFromPath(pathParam string, r *http.Request, parse *time.Time) erro
 	var err error
 
 	timeLayouts := []string{
-		time.RFC3339,
 		"2006-01-02",
 	}
 
