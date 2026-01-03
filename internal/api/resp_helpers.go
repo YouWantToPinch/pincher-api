@@ -61,7 +61,12 @@ func respondWithJSON(w http.ResponseWriter, code int, payload any) {
 
 // respondWithCode responds with a text body including only a status code message
 func respondWithCode(w http.ResponseWriter, code int) {
-	respondWithText(w, code, "")
+	switch code {
+	case http.StatusNoContent:
+		w.WriteHeader(code)
+	default:
+		respondWithText(w, code, "")
+	}
 }
 
 func respondWithText(w http.ResponseWriter, code int, msg string) {
