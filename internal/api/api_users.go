@@ -20,13 +20,13 @@ func (cfg *APIConfig) endpCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if rqPayload.Username == "" || rqPayload.Password == "" {
-		respondWithError(w, http.StatusBadRequest, "Missing username or password", nil)
+		respondWithError(w, http.StatusBadRequest, "missing username or password", nil)
 		return
 	}
 
 	hashedPass, err := auth.HashPassword(rqPayload.Password)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure processing request to create user", err)
+		respondWithError(w, http.StatusInternalServerError, "failure processing request to create user", err)
 		return
 	}
 
@@ -35,7 +35,7 @@ func (cfg *APIConfig) endpCreateUser(w http.ResponseWriter, r *http.Request) {
 		HashedPassword: hashedPass,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusConflict, "Failure processing request to create user", err)
+		respondWithError(w, http.StatusConflict, "failure processing request to create user", err)
 		return
 	}
 	rspPayload := User{
@@ -56,18 +56,18 @@ func (cfg *APIConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload", err)
 		return
 	}
 
 	if rqPayload.Username == "" || rqPayload.Password == "" {
-		respondWithError(w, http.StatusBadRequest, "Missing username or password", nil)
+		respondWithError(w, http.StatusBadRequest, "missing username or password", nil)
 		return
 	}
 
 	hashedPass, err := auth.HashPassword(rqPayload.Password)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failure processing request to create user", err)
+		respondWithError(w, http.StatusInternalServerError, "failure processing request to create user", err)
 		return
 	}
 
@@ -79,7 +79,7 @@ func (cfg *APIConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 		HashedPassword: hashedPass,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't modify user credentials", err)
+		respondWithError(w, http.StatusInternalServerError, "could not update user credentials", err)
 	}
 
 	respondWithText(w, http.StatusOK, "User '"+rqPayload.Username+"' updated successfully!")
@@ -93,12 +93,12 @@ func (cfg *APIConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload", err)
 		return
 	}
 
 	if rqPayload.Username == "" || rqPayload.Password == "" {
-		respondWithError(w, http.StatusBadRequest, "Missing username or password", nil)
+		respondWithError(w, http.StatusBadRequest, "missing username or password", nil)
 		return
 	}
 
@@ -106,23 +106,23 @@ func (cfg *APIConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	dbUser, err := cfg.db.GetUserByUsername(r.Context(), rqPayload.Username)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		respondWithError(w, http.StatusUnauthorized, "incorrect username or password", err)
 		return
 	}
 	if validatedUserID != dbUser.ID {
-		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		respondWithCode(w, http.StatusForbidden)
 		return
 	}
 
 	match, err := auth.CheckPasswordHash(rqPayload.Password, dbUser.HashedPassword)
 	if err != nil || !match {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		respondWithError(w, http.StatusUnauthorized, "incorrect username or password", err)
 		return
 	}
 
 	err = cfg.db.DeleteUserByID(r.Context(), validatedUserID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't delete user: ", err)
+		respondWithError(w, http.StatusInternalServerError, "could not delete user", err)
 		return
 	}
 

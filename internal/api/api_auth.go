@@ -17,30 +17,30 @@ func (cfg *APIConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 
 	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Could not log in user", err)
+		respondWithError(w, http.StatusInternalServerError, "failure decoding request payload: ", err)
 		return
 	}
 
 	if rqPayload.Username == "" || rqPayload.Password == "" {
-		respondWithError(w, http.StatusBadRequest, "Missing credential(s)", nil)
+		respondWithError(w, http.StatusBadRequest, "missing credential(s)", nil)
 		return
 	}
 
 	dbUser, err := cfg.db.GetUserByUsername(r.Context(), rqPayload.Username)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect username or password", err)
+		respondWithError(w, http.StatusUnauthorized, "incorrect username or password", err)
 		return
 	}
 
 	match, err := auth.CheckPasswordHash(rqPayload.Password, dbUser.HashedPassword)
 	if err != nil || !match {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect username or password", err)
+		respondWithError(w, http.StatusUnauthorized, "incorrect username or password", err)
 		return
 	}
 
 	refreshToken, err := auth.MakeRefreshToken()
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Trouble logging in", err)
+		respondWithError(w, http.StatusInternalServerError, "failure creating refresh token", err)
 		return
 	}
 	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
@@ -48,13 +48,13 @@ func (cfg *APIConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		UserID: dbUser.ID,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to save refresh token", err)
+		respondWithError(w, http.StatusInternalServerError, "failure saving refresh token", err)
 		return
 	}
 
 	accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.secret, time.Hour)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to create access token", err)
+		respondWithError(w, http.StatusInternalServerError, "failure creating access token", err)
 		return
 	}
 
@@ -81,19 +81,19 @@ func (cfg *APIConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 func (cfg *APIConfig) endpCheckRefreshToken(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Couldn't find refresh token", err)
+		respondWithError(w, http.StatusUnauthorized, "failure to get refresh token", err)
 		return
 	}
 
 	dbUser, err := cfg.db.GetUserByRefreshToken(r.Context(), refreshToken)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Couldn't get user for refresh token", err)
+		respondWithError(w, http.StatusUnauthorized, "could not get user by refresh token", err)
 		return
 	}
 
 	accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.secret, time.Hour)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Couldn't validate token", err)
+		respondWithError(w, http.StatusUnauthorized, "could not validate token", err)
 		return
 	}
 
@@ -117,13 +117,13 @@ func (cfg *APIConfig) endpRevokeRefreshToken(w http.ResponseWriter, r *http.Requ
 
 	dbUser, err := cfg.db.GetUserByRefreshToken(r.Context(), rTokenString)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid or missing token", err)
+		respondWithError(w, http.StatusUnauthorized, "failure to get refresh token", err)
 		return
 	}
 
 	err = cfg.db.RevokeUserRefreshToken(r.Context(), dbUser.ID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Refresh Token not found", err)
+		respondWithError(w, http.StatusInternalServerError, "failed to revoke session", err)
 	}
 
 	respondWithCode(w, http.StatusNoContent)

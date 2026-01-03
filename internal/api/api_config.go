@@ -163,7 +163,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 		}
 
 		if callerBudgetMemberRole > required {
-			respondWithError(w, http.StatusUnauthorized, "user does not have clearance for action: ", err)
+			respondWithError(w, http.StatusForbidden, "user does not have clearance for action: ", err)
 			return
 		}
 		ctxBudgetID := ctxKey("budget_id")
