@@ -15,7 +15,8 @@ import (
 )
 
 // NOTE: This integration testing has two optional implementations.
-// Firstly, the conventional one; a more stateful approach recording variables for use in further mock requests.
+// Firstly, the conventional one; a more stateful approach recording variables for use in further requests,
+// made with the httptest package.
 // But secondly, in an effort to make the tests more readable, a table-driven approach was implemented.
 // Far too late, it appeared that this second implementation may only make things more readable for those
 // 	tests which don't demand very detailed requests, and may otherwise be an overengineered solution to
@@ -150,7 +151,7 @@ func Test_CRUD(t *testing.T) {
 
 	// PREP: Delete all users
 	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
+	assert.Equal(t, http.StatusNoContent, c.W.Code)
 
 	// REQUESTS
 
@@ -166,7 +167,7 @@ func Test_CRUD(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, c.W.Code)
 		// DELETE user
 		c.Request(pt.DeleteUser(jwt1.(string), "newUsername", "verySecure123456"))
-		assert.Equal(t, http.StatusOK, c.W.Code)
+		assert.Equal(t, http.StatusNoContent, c.W.Code)
 	})
 
 	// PREP: Create user, log in
@@ -256,7 +257,7 @@ func Test_CRUD(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, c.W.Code)
 		// DELETE account SOFT
 		c.Request(pt.DeleteBudgetAccount(jwt1.(string), budgetID1.(string), accountID1.(string), "Test Account", false))
-		assert.Equal(t, http.StatusNoContent, c.W.Code)
+		assert.Equal(t, http.StatusOK, c.W.Code)
 		// DELETE account HARD
 		c.Request(pt.DeleteBudgetAccount(jwt1.(string), budgetID1.(string), accountID1.(string), "Test Account", true))
 		assert.Equal(t, http.StatusNoContent, c.W.Code)
@@ -332,7 +333,7 @@ func Test_MakeAndResetUsers(t *testing.T) {
 			RequestFunc: func() *http.Request {
 				return pt.DeleteAllUsers()
 			},
-			Expected: http.StatusOK,
+			Expected: http.StatusNoContent,
 		},
 		// Create two new users
 		{
@@ -365,7 +366,7 @@ func Test_MakeAndResetUsers(t *testing.T) {
 			RequestFunc: func() *http.Request {
 				return pt.DeleteAllUsers()
 			},
-			Expected: http.StatusOK,
+			Expected: http.StatusNoContent,
 		},
 		// User count should now be 0 again
 		{
@@ -404,7 +405,7 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 		// Delete all users in the database
 		{
 			RequestFunc: func() *http.Request { return pt.DeleteAllUsers() },
-			Expected:    http.StatusOK,
+			Expected:    http.StatusNoContent,
 		},
 		// Create two new users
 		{
@@ -445,14 +446,14 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 			RequestFunc: func() *http.Request {
 				return pt.DeleteUser(c.GetResource("jwt1").(string), "user2", "pwd2")
 			},
-			Expected: http.StatusUnauthorized,
+			Expected: http.StatusForbidden,
 		},
 		// Attempt deletion of user 1 as user 1
 		{
 			RequestFunc: func() *http.Request {
 				return pt.DeleteUser(c.GetResource("jwt1").(string), "user1", "pwd1")
 			},
-			Expected: http.StatusOK,
+			Expected: http.StatusNoContent,
 		},
 		// User count should now be 1
 		{
@@ -470,7 +471,7 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 		// Delete all users
 		{
 			RequestFunc: func() *http.Request { return pt.DeleteAllUsers() },
-			Expected:    http.StatusOK,
+			Expected:    http.StatusNoContent,
 		},
 		// User count should now be 0
 		{
@@ -511,7 +512,7 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// Delete all users
 	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
+	assert.Equal(t, http.StatusNoContent, c.W.Code)
 
 	// Create four users
 	c.Request(pt.CreateUser("user1", "pwd1"))
@@ -565,7 +566,7 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// Attempt deletion of Webflyx Org budget as user2. Should fail; only admin can do it.
 	c.Request(pt.DeleteUserBudget(jwt2.(string), budget1.(string)))
-	assert.Equal(t, http.StatusUnauthorized, c.W.Code)
+	assert.Equal(t, http.StatusForbidden, c.W.Code)
 
 	// Attempt to revoke user3's Webflyx Org membership as user4. Should fail.
 	c.Request(pt.RevokeBudgetMembership(jwt4.(string), budget1.(string), user3.(string)))
@@ -606,7 +607,7 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 
 	// Delete all users
 	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
+	assert.Equal(t, http.StatusNoContent, c.W.Code)
 
 	// Create four users
 	c.Request(pt.CreateUser("user1", "pwd1"))
@@ -672,7 +673,7 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 
 	// Delete all users
 	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
+	assert.Equal(t, http.StatusNoContent, c.W.Code)
 }
 
 // Build a budget and give it a predictable amount of money to operate with between 1-2 accounts.
@@ -688,7 +689,7 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 
 	// Delete all users
 	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
+	assert.Equal(t, http.StatusNoContent, c.W.Code)
 
 	// Create user
 	c.Request(pt.CreateUser("user1", "pwd1"))
@@ -768,7 +769,7 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 
 	// Delete all users
 	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
+	assert.Equal(t, http.StatusNoContent, c.W.Code)
 }
 
 // Build a budget and simulate 3 months of transactions and dollar assignment.
@@ -787,7 +788,7 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 
 	// Delete all users
 	c.Request(pt.DeleteAllUsers())
-	assert.Equal(t, 200, c.W.Code)
+	assert.Equal(t, http.StatusNoContent, c.W.Code)
 
 	// Create user
 	c.Request(pt.CreateUser("user1", "pwd1"))
@@ -904,6 +905,6 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	assert.Equal(t, int64(-1000), (budgetTotalCapital.(int64) - budgetTotalBalance.(int64)))
 
 	// Delete all users
-	// c.Request(pt.DeleteAllUsers())
-	// assert.Equal(t, 200, c.W.Code)
+	c.Request(pt.DeleteAllUsers())
+	assert.Equal(t, http.StatusNoContent, c.W.Code)
 }
