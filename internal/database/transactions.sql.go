@@ -89,7 +89,8 @@ SELECT td.id, td.transaction_date, td.transaction_type, td.notes, payee, budget_
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
-    t.budget_id = $1
+
+    t.budget_id = $1 -- TODO: Separate these optional sorting ideas into separate queries. It's messy.
     AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = $2::uuid)
     AND (
         $3::uuid = '00000000-0000-0000-0000-000000000000'

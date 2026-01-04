@@ -67,9 +67,9 @@ const getCategories = `-- name: GetCategories :many
 SELECT id, created_at, updated_at, budget_id, name, group_id, notes
 FROM categories c
 WHERE c.budget_id = $1
-  AND (
-    $2::uuid IS NULL
-    OR c.group_id = $2
+  AND ( -- TODO: Lesson learned. Separate stuff like this into separate queries! This is just messy.
+    $2::uuid = '00000000-0000-0000-0000-000000000000'
+    OR c.group_id = $2::uuid
   )
 `
 

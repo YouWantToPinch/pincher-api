@@ -20,9 +20,9 @@ WHERE id = $1;
 SELECT *
 FROM categories c
 WHERE c.budget_id = sqlc.arg('budget_id')
-  AND (
-    sqlc.arg('group_id')::uuid IS NULL
-    OR c.group_id = sqlc.arg('group_id')
+  AND ( -- TODO: Lesson learned. Separate stuff like this into separate queries! This is just messy.
+    sqlc.arg('group_id')::uuid = '00000000-0000-0000-0000-000000000000'
+    OR c.group_id = sqlc.arg('group_id')::uuid
   );
 
 -- name: UpdateCategory :one

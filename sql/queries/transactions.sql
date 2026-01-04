@@ -56,7 +56,8 @@ SELECT *
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
-    t.budget_id = sqlc.arg('budget_id')
+
+    t.budget_id = sqlc.arg('budget_id') -- TODO: Separate these optional sorting ideas into separate queries. It's messy.
     AND (sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = sqlc.arg('account_id')::uuid)
     AND (
         sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
