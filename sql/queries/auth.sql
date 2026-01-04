@@ -23,4 +23,5 @@ AND expires_at > NOW();
 -- name: RevokeRefreshToken :exec
 UPDATE refresh_tokens
 SET revoked_at = NOW(), updated_at = NOW()
-WHERE token = $1;
+WHERE token = $1
+AND revoked_at IS NULL;
