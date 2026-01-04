@@ -40,8 +40,13 @@ func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 	// log the error on the server
 	slog.Error(errorMessage, slog.Int("HTTP Status Code", code))
 
-	// respond with the errorMessage as text
-	respondWithText(w, code, errorMessage)
+	// respond with the errorMessage as JSON
+	type errorResponse struct {
+		Error string `json:"error"`
+	}
+	respondWithJSON(w, code, errorResponse{
+		Error: msg,
+	})
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload any) {
