@@ -44,8 +44,9 @@ func (cfg *APIConfig) endpLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
-		Token:  refreshToken,
-		UserID: dbUser.ID,
+		Token:     refreshToken,
+		UserID:    dbUser.ID,
+		ExpiresAt: time.Now().UTC().UTC().Add(time.Hour * 24 * 30),
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not save refresh token", err)
