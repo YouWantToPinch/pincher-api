@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -146,17 +145,6 @@ func parseDate(dateString string, parse *time.Time) error {
 	}
 
 	return fmt.Errorf("value '%s' could not be parsed as DATE", dateString)
-}
-
-func parseBoolFromString(s string) (bool, error) {
-	switch s {
-	case "true":
-		return true, nil
-	case "false":
-		return false, nil
-	default:
-		return false, errors.New("provided string value for 'Cleared' could not be parsed; must be 'true' or 'false'")
-	}
 }
 
 func lookupResourceIDByName[T any](ctx context.Context, arg T, dbQuery func(context.Context, T) (uuid.UUID, error)) (*uuid.UUID, error) {

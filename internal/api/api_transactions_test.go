@@ -19,7 +19,6 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "Infer TRANSFER_FROM",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:             "true",
 				TransactionDate:     "2025-09-15",
 				TransferAccountName: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
 				Amounts: map[string]int64{
@@ -36,7 +35,6 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "Infer TRANSFER_TO",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:             "true",
 				TransactionDate:     "2025-09-15",
 				TransferAccountName: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
 				Amounts: map[string]int64{
@@ -53,7 +51,6 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "Infer WITHDRAWAL",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:         "true",
 				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Dining Out": -1000,
@@ -69,7 +66,6 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "Infer DEPOSIT",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:         "true",
 				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Income Buffer": 1000,
@@ -85,7 +81,6 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "Discard zeroes",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:         "true",
 				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Dining Out":    -1000,
@@ -102,7 +97,6 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "Bad time format",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:         "true",
 				TransactionDate: "2025-09-15T17:00:00Z",
 				Amounts: map[string]int64{
 					"Dining Out": -1000,
@@ -118,7 +112,6 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "No amounts",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:         "true",
 				TransactionDate: "2025-09-15",
 			},
 			expectCleared:    true,
@@ -131,7 +124,6 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "No amounts after discard",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:         "true",
 				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Dining Out": 0,
@@ -147,7 +139,6 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "Bad txn splits",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:         "true",
 				TransactionDate: "2025-09-15",
 				Amounts: map[string]int64{
 					"Dining Out":       -1000,
@@ -165,12 +156,9 @@ func TestValidateTXN(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cleared, amounts, txnType, txnDate, isTransfer, err := validateTxn(tt.mockPayload)
+			amounts, txnType, txnDate, isTransfer, err := validateTxn(tt.mockPayload)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateTxn() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if cleared != tt.expectCleared {
-				t.Errorf("validateTxn() cleared = %v, want %v", cleared, tt.expectCleared)
 			}
 			if len(amounts) != tt.expectAmounts {
 				t.Errorf("validateTxn() amounts = %v, want %v", len(amounts), tt.expectAmounts)

@@ -198,7 +198,7 @@ func DeleteBudgetGroup(token, budgetID, groupID string) *http.Request {
 
 // BUDGET -> TRANSACTION CRUD
 
-func LogTransaction(token, budgetID, accountName, transferAccountName, transactionDate, payeeName, notes, isCleared string, amounts map[string]int64) *http.Request {
+func LogTransaction(token, budgetID, accountName, transferAccountName, transactionDate, payeeName, notes string, isCleared bool, amounts map[string]int64) *http.Request {
 	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/transactions", token, map[string]any{
 		"account_name":          accountName,
 		"transfer_account_name": transferAccountName,
