@@ -163,7 +163,7 @@ func (cfg *APIConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	type rqSchema struct {
-		UserID     string `json:"user_id"`
+		UserName   string `json:"username"`
 		MemberRole string `json:"member_role"`
 	}
 
@@ -173,9 +173,9 @@ func (cfg *APIConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 		return
 	}
 
-	parsedUserID, err := uuid.Parse(rqPayload.UserID)
+	user, err := cfg.db.GetUserByUsername(r.Context(), rqPayload.UserName)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "could not parse UserID", err)
+		respondWithError(w, http.StatusNotFound, "user does not exist", err)
 		return
 	}
 
@@ -191,7 +191,7 @@ func (cfg *APIConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 
 	dbBudgetMembership, err := cfg.db.AssignBudgetMemberWithRole(r.Context(), database.AssignBudgetMemberWithRoleParams{
 		BudgetID:   pathBudgetID,
-		UserID:     parsedUserID,
+		UserID:     user.ID,
 		MemberRole: newMemberRole.String(),
 	})
 	if err != nil {

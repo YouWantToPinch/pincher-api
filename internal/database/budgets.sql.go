@@ -89,6 +89,27 @@ func (q *Queries) DeleteBudget(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getBudgetAccountIDByName = `-- name: GetBudgetAccountIDByName :one
+
+SELECT id
+FROM accounts
+WHERE name = $1
+AND budget_id = $2
+`
+
+type GetBudgetAccountIDByNameParams struct {
+	AccountName string
+	BudgetID    uuid.UUID
+}
+
+// RESOURCE ID RETRIEVAL
+func (q *Queries) GetBudgetAccountIDByName(ctx context.Context, arg GetBudgetAccountIDByNameParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, getBudgetAccountIDByName, arg.AccountName, arg.BudgetID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getBudgetByID = `-- name: GetBudgetByID :one
 SELECT id, created_at, updated_at, admin_id, name, notes
 FROM budgets
@@ -123,6 +144,44 @@ func (q *Queries) GetBudgetCapital(ctx context.Context, budgetID uuid.UUID) (int
 	return total, err
 }
 
+const getBudgetCategoryIDByName = `-- name: GetBudgetCategoryIDByName :one
+SELECT id
+FROM categories
+WHERE name = $1
+AND budget_id = $2
+`
+
+type GetBudgetCategoryIDByNameParams struct {
+	CategoryName string
+	BudgetID     uuid.UUID
+}
+
+func (q *Queries) GetBudgetCategoryIDByName(ctx context.Context, arg GetBudgetCategoryIDByNameParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, getBudgetCategoryIDByName, arg.CategoryName, arg.BudgetID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getBudgetGroupIDByName = `-- name: GetBudgetGroupIDByName :one
+SELECT id
+FROM groups
+WHERE name = $1
+AND budget_id = $2
+`
+
+type GetBudgetGroupIDByNameParams struct {
+	GroupName string
+	BudgetID  uuid.UUID
+}
+
+func (q *Queries) GetBudgetGroupIDByName(ctx context.Context, arg GetBudgetGroupIDByNameParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, getBudgetGroupIDByName, arg.GroupName, arg.BudgetID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getBudgetMemberRole = `-- name: GetBudgetMemberRole :one
 SELECT member_role
 FROM budgets_users
@@ -139,6 +198,25 @@ func (q *Queries) GetBudgetMemberRole(ctx context.Context, arg GetBudgetMemberRo
 	var member_role string
 	err := row.Scan(&member_role)
 	return member_role, err
+}
+
+const getBudgetPayeeIDByName = `-- name: GetBudgetPayeeIDByName :one
+SELECT id
+FROM payees
+WHERE name = $1
+AND budget_id = $2
+`
+
+type GetBudgetPayeeIDByNameParams struct {
+	PayeeName string
+	BudgetID  uuid.UUID
+}
+
+func (q *Queries) GetBudgetPayeeIDByName(ctx context.Context, arg GetBudgetPayeeIDByNameParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, getBudgetPayeeIDByName, arg.PayeeName, arg.BudgetID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getUserBudgets = `-- name: GetUserBudgets :many

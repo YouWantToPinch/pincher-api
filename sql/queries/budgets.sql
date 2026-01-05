@@ -72,3 +72,30 @@ DELETE
 FROM budgets
 WHERE id = $1;
 
+
+-- RESOURCE ID RETRIEVAL
+
+-- name: GetBudgetAccountIDByName :one
+SELECT id
+FROM accounts
+WHERE name = sqlc.arg('account_name')
+AND budget_id = sqlc.arg('budget_id');
+
+-- name: GetBudgetCategoryIDByName :one
+SELECT id
+FROM categories
+WHERE name = sqlc.arg('category_name')
+AND budget_id = sqlc.arg('budget_id');
+
+-- name: GetBudgetPayeeIDByName :one
+SELECT id
+FROM payees
+WHERE name = sqlc.arg('payee_name')
+AND budget_id = sqlc.arg('budget_id');
+
+-- name: GetBudgetGroupIDByName :one
+SELECT id
+FROM groups
+WHERE name = sqlc.arg('group_name')
+AND budget_id = sqlc.arg('budget_id');
+

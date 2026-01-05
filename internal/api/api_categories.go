@@ -10,47 +10,43 @@ import (
 
 func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
-		GroupID string `json:"group_id"`
+		GroupName string `json:"group_name"`
 		Meta
 	}
 
-	params, err := decodePayload[rqSchema](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
-	if params.Name == "" {
+	if rqPayload.Name == "" {
 		respondWithError(w, http.StatusBadRequest, "name not provided", nil)
 		return
 	}
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	var assignedGroup uuid.NullUUID
-	if params.GroupID != "" {
-		parsedGroupID, err := uuid.Parse(params.GroupID)
+	assignedGroupID := &uuid.NullUUID{}
+	if rqPayload.GroupName != "" {
+		GroupID, err := lookupResourceIDByName(r.Context(),
+			database.GetBudgetGroupIDByNameParams{
+				GroupName: rqPayload.GroupName,
+				BudgetID:  pathBudgetID,
+			}, cfg.db.GetBudgetGroupIDByName)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "could not parse group ID from payload", err)
+			respondWithError(w, http.StatusBadRequest, "could not get group id", err)
 			return
 		}
-		foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
-			BudgetID: pathBudgetID,
-			ID:       parsedGroupID,
-		})
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, "could not get category group", err)
-			return
-		}
-		assignedGroup.UUID = foundGroup.ID
-		assignedGroup.Valid = true
+		assignedGroupID.UUID = *GroupID
+		assignedGroupID.Valid = true
 	}
 
 	dbCategory, err := cfg.db.CreateCategory(r.Context(), database.CreateCategoryParams{
 		BudgetID: pathBudgetID,
-		GroupID:  assignedGroup,
-		Name:     params.Name,
-		Notes:    params.Notes,
+		GroupID:  *assignedGroupID,
+		Name:     rqPayload.Name,
+		Notes:    rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not create category", err)
@@ -129,11 +125,11 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 	}
 
 	type rqSchema struct {
-		GroupID string `json:"group_id"`
+		GroupName string `json:"group_name"`
 		Meta
 	}
 
-	params, err := decodePayload[rqSchema](r)
+	rqPayload, err := decodePayload[rqSchema](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
@@ -141,32 +137,26 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
-	var assignedGroup uuid.NullUUID
-	if params.GroupID != "" {
-		parsedGroupID, err := uuid.Parse(params.GroupID)
+	assignedGroupID := &uuid.NullUUID{}
+	if rqPayload.GroupName != "" {
+		GroupID, err := lookupResourceIDByName(r.Context(),
+			database.GetBudgetGroupIDByNameParams{
+				GroupName: rqPayload.GroupName,
+				BudgetID:  pathBudgetID,
+			}, cfg.db.GetBudgetGroupIDByName)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "could not parse group ID from payload", err)
+			respondWithError(w, http.StatusBadRequest, "could not get group id", err)
 			return
 		}
-		foundGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
-			BudgetID: pathBudgetID,
-			ID:       parsedGroupID,
-		})
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, "could not get group", err)
-			return
-		}
-		assignedGroup.UUID = foundGroup.ID
-		assignedGroup.Valid = true
-	} else {
-		assignedGroup.Valid = false
+		assignedGroupID.UUID = *GroupID
+		assignedGroupID.Valid = true
 	}
 
 	_, err = cfg.db.UpdateCategory(r.Context(), database.UpdateCategoryParams{
 		ID:      pathCategoryID,
-		GroupID: assignedGroup,
-		Name:    params.Name,
-		Notes:   params.Notes,
+		GroupID: *assignedGroupID,
+		Name:    rqPayload.Name,
+		Notes:   rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failed to update category", err)

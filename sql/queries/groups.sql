@@ -4,8 +4,8 @@
 INSERT INTO groups (id, created_at, updated_at, budget_id, name, notes)
 VALUES (
     gen_random_uuid(),
-    NOW(),
-    NOW(),
+    DEFAULT,
+    DEFAULT,
     $1,
     $2,
     $3

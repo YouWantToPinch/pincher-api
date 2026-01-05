@@ -15,8 +15,8 @@ const createCategory = `-- name: CreateCategory :one
 INSERT INTO categories (id, created_at, updated_at, budget_id, group_id, name, notes)
 VALUES (
     gen_random_uuid(),
-    NOW(),
-    NOW(),
+    DEFAULT,
+    DEFAULT,
     $1,
     $2,
     $3,

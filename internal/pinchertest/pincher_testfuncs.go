@@ -19,10 +19,10 @@ func GetUserCount() *http.Request {
 	return MakeRequest(http.MethodGet, "/admin/users/count", "", nil)
 }
 
-func UpdateUser(token, username, password string) *http.Request {
+func UpdateUser(token, newUsername, newPassword string) *http.Request {
 	return MakeRequest(http.MethodPut, "/api/users", token, map[string]any{
-		"username": username,
-		"password": password,
+		"username": newUsername,
+		"password": newPassword,
 	})
 }
 
@@ -59,10 +59,10 @@ func GetUserBudgets(token string) *http.Request {
 	return MakeRequest(http.MethodGet, "/api/budgets", token, nil)
 }
 
-func UpdateBudget(token, budgetID, name, notes string) *http.Request {
+func UpdateBudget(token, budgetID, newName, newNotes string) *http.Request {
 	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID, token, map[string]any{
-		"name":  name,
-		"notes": notes,
+		"name":  newName,
+		"notes": newNotes,
 	})
 }
 
@@ -94,18 +94,18 @@ func GetBudgetCapital(token, budgetID, accountID string) *http.Request {
 	return MakeRequest(http.MethodGet, path, token, nil)
 }
 
-func AssignMemberToBudget(token, budgetID, userID, memberRole string) *http.Request {
+func AssignMemberToBudget(token, budgetID, username, memberRole string) *http.Request {
 	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/members", token, map[string]any{
-		"user_id":     userID,
+		"username":    username,
 		"member_role": memberRole,
 	})
 }
 
-func UpdateAccount(token, budgetID, accountID, accountType, name, notes string) *http.Request {
+func UpdateAccount(token, budgetID, accountID, accountType, newName, newNotes string) *http.Request {
 	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID+"/accounts/"+accountID, token, map[string]any{
 		"account_type": accountType,
-		"name":         name,
-		"notes":        notes,
+		"name":         newName,
+		"notes":        newNotes,
 	})
 }
 
@@ -133,26 +133,26 @@ func GetBudgetPayees(token, budgetID string) *http.Request {
 	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/payees", token, nil)
 }
 
-func UpdatePayee(token, budgetID, payeeID, name, notes string) *http.Request {
+func UpdatePayee(token, budgetID, payeeID, newName, newNotes string) *http.Request {
 	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID+"/payees/"+payeeID, token, map[string]any{
-		"name":  name,
-		"notes": notes,
+		"name":  newName,
+		"notes": newNotes,
 	})
 }
 
-func DeletePayee(token, budgetID, payeeID, newPayeeID string) *http.Request {
+func DeletePayee(token, budgetID, payeeID, newPayeeName string) *http.Request {
 	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/payees/"+payeeID, token, map[string]any{
-		"new_payee_id": newPayeeID,
+		"new_payee_name": newPayeeName,
 	})
 }
 
 // BUDGET -> CATEGORY CRUD
 
-func CreateCategory(token, budgetID, groupID, name, notes string) *http.Request {
+func CreateCategory(token, budgetID, groupName, name, notes string) *http.Request {
 	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/categories", token, map[string]any{
-		"name":     name,
-		"notes":    notes,
-		"group_id": groupID,
+		"name":       name,
+		"notes":      notes,
+		"group_name": groupName,
 	})
 }
 
@@ -160,17 +160,11 @@ func GetBudgetCategories(token, budgetID, query string) *http.Request {
 	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/categories"+query, token, nil)
 }
 
-func AssignCategoryToGroup(token, budgetID, categoryID, groupID string) *http.Request {
+func UpdateCategory(token, budgetID, categoryID, groupName, newName, newNotes string) *http.Request {
 	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID+"/categories/"+categoryID, token, map[string]any{
-		"group_id": groupID,
-	})
-}
-
-func UpdateCategory(token, budgetID, categoryID, groupID, name, notes string) *http.Request {
-	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID+"/categories/"+categoryID, token, map[string]any{
-		"name":     name,
-		"notes":    notes,
-		"group_id": groupID,
+		"name":       newName,
+		"notes":      newNotes,
+		"group_name": groupName,
 	})
 }
 
@@ -191,10 +185,10 @@ func GetBudgetGroups(token, budgetID string) *http.Request {
 	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/groups", token, nil)
 }
 
-func UpdateGroup(token, budgetID, groupID, name, notes string) *http.Request {
+func UpdateGroup(token, budgetID, groupID, newName, newNotes string) *http.Request {
 	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID+"/groups/"+groupID, token, map[string]any{
-		"name":  name,
-		"notes": notes,
+		"name":  newName,
+		"notes": newNotes,
 	})
 }
 
@@ -204,15 +198,15 @@ func DeleteBudgetGroup(token, budgetID, groupID string) *http.Request {
 
 // BUDGET -> TRANSACTION CRUD
 
-func LogTransaction(token, budgetID, accountID, transferAccountID, transactionDate, payeeID, notes, isCleared string, amounts map[string]int64) *http.Request {
+func LogTransaction(token, budgetID, accountName, transferAccountName, transactionDate, payeeName, notes, isCleared string, amounts map[string]int64) *http.Request {
 	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/transactions", token, map[string]any{
-		"account_id":          accountID,
-		"transfer_account_id": transferAccountID,
-		"transaction_date":    transactionDate,
-		"payee_id":            payeeID,
-		"notes":               notes,
-		"amounts":             amounts,
-		"is_cleared":          isCleared,
+		"account_name":          accountName,
+		"transfer_account_name": transferAccountName,
+		"transaction_date":      transactionDate,
+		"payee_name":            payeeName,
+		"notes":                 notes,
+		"amounts":               amounts,
+		"is_cleared":            isCleared,
 	})
 }
 
@@ -236,16 +230,16 @@ func GetTransaction(token, budgetID, transactionID string) *http.Request {
 	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/transactions/"+transactionID, token, nil)
 }
 
-func UpdateTransaction(token, budgetID, transactionID, accountID, transferAccountID, transactionType, transactionDate, payeeID, notes, isCleared string, amounts map[string]int64) *http.Request {
+func UpdateTransaction(token, budgetID, transactionID, accountName, transferAccountName, transactionType, transactionDate, payeeName, notes, isCleared string, amounts map[string]int64) *http.Request {
 	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID+"/transactions/"+transactionID, token, map[string]any{
-		"account_id":          accountID,
-		"transfer_account_id": transferAccountID,
-		"transaction_type":    transactionType,
-		"transaction_date":    transactionDate,
-		"payee_id":            payeeID,
-		"notes":               notes,
-		"amounts":             amounts,
-		"is_cleared":          isCleared,
+		"account_name":          accountName,
+		"transfer_account_name": transferAccountName,
+		"transaction_type":      transactionType,
+		"transaction_date":      transactionDate,
+		"payee_name":            payeeName,
+		"notes":                 notes,
+		"amounts":               amounts,
+		"is_cleared":            isCleared,
 	})
 }
 

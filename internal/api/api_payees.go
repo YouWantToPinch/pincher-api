@@ -163,7 +163,7 @@ func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type rqSchema struct {
-		NewPayeeID string `json:"new_payee_id"`
+		NewPayeeName string `json:"new_payee_name"`
 	}
 
 	rqPayload, err := decodePayload[rqSchema](r)
@@ -178,18 +178,23 @@ func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if payeeInUse {
-		if rqPayload.NewPayeeID == "" {
+		if rqPayload.NewPayeeName == "" {
 			respondWithError(w, http.StatusBadRequest, "payee ID not provided", nil)
 			return
 		}
-		parsedNewPayeeID, err := uuid.Parse(rqPayload.NewPayeeID)
+		PayeeID, err := lookupResourceIDByName(r.Context(),
+			database.GetBudgetPayeeIDByNameParams{
+				PayeeName: rqPayload.NewPayeeName,
+				BudgetID:  pathBudgetID,
+			}, cfg.db.GetBudgetPayeeIDByName)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "could not parse payee ID", err)
+			respondWithError(w, http.StatusBadRequest, "could not get payee id", err)
 			return
 		}
+
 		err = cfg.db.ReassignTransactions(r.Context(), database.ReassignTransactionsParams{
 			OldPayeeID: pathPayeeID,
-			NewPayeeID: parsedNewPayeeID,
+			NewPayeeID: *PayeeID,
 		})
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "could not reassign payee for transactions", err)

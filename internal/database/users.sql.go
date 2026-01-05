@@ -16,8 +16,8 @@ const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, created_at, updated_at, username, hashed_password)
 VALUES (
     gen_random_uuid(),
-    NOW(),
-    NOW(),
+    DEFAULT,
+    DEFAULT,
     $1,
     $2
 )

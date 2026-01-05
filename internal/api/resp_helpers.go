@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -156,4 +157,12 @@ func parseBoolFromString(s string) (bool, error) {
 	default:
 		return false, errors.New("provided string value for 'Cleared' could not be parsed; must be 'true' or 'false'")
 	}
+}
+
+func lookupResourceIDByName[T any](ctx context.Context, arg T, dbQuery func(context.Context, T) (uuid.UUID, error)) (*uuid.UUID, error) {
+	id, err := dbQuery(ctx, arg)
+	if err != nil {
+		return &uuid.Nil, err
+	}
+	return &id, err
 }

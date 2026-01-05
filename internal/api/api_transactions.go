@@ -15,11 +15,11 @@ import (
 )
 
 type LogTransactionrqSchema struct {
-	AccountID         string `json:"account_id"`
-	TransferAccountID string `json:"transfer_account_id"`
+	AccountName         string `json:"account_name"`
+	TransferAccountName string `json:"transfer_account_name"`
 	// TransactionDate is a time string in the custom format"2006-01-02" (YYYY-MM-DD)
 	TransactionDate string `json:"transaction_date"`
-	PayeeID         string `json:"payee_id"`
+	PayeeName       string `json:"payee_name"`
 	Notes           string `json:"notes"`
 	Cleared         string `json:"is_cleared"`
 	/* Amounts is a map of category UUID strings to integers.
@@ -43,8 +43,7 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (isCleared bool, amounts map
 		return false, nil, "NONE", time.Time{}, false, err
 	}
 
-	_, transferErr := uuid.Parse(rqPayload.TransferAccountID)
-	isTransfer = (transferErr == nil)
+	isTransfer = (rqPayload.TransferAccountName != "")
 	txnType = "NONE"
 
 	setTxnType := func(ptr *string, val string) error {
@@ -106,14 +105,25 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusBadRequest, "failure validating transaction", err)
 	}
 
-	parsedAccountID, err := uuid.Parse(rqPayload.AccountID)
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+
+	AccountID, err := lookupResourceIDByName(r.Context(),
+		database.GetBudgetAccountIDByNameParams{
+			AccountName: rqPayload.AccountName,
+			BudgetID:    pathBudgetID,
+		}, cfg.db.GetBudgetAccountIDByName)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "failure parsing account_id as UUID", err)
+		respondWithError(w, http.StatusBadRequest, "could not get account id", err)
 		return
 	}
-	parsedPayeeID, err := uuid.Parse(rqPayload.PayeeID)
+
+	PayeeID, err := lookupResourceIDByName(r.Context(),
+		database.GetBudgetPayeeIDByNameParams{
+			PayeeName: rqPayload.PayeeName,
+			BudgetID:  pathBudgetID,
+		}, cfg.db.GetBudgetPayeeIDByName)
 	if err != nil && !isTransfer {
-		respondWithError(w, http.StatusBadRequest, "failure parsing payee_id as UUID", err)
+		respondWithError(w, http.StatusBadRequest, "could not get payee id", err)
 		return
 	}
 
@@ -124,15 +134,14 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	}
 
 	validatedUserID := getContextKeyValue(r.Context(), "user_id")
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
 
 	dbTransaction, err := cfg.db.LogTransaction(r.Context(), database.LogTransactionParams{
 		BudgetID:        pathBudgetID,
 		LoggerID:        validatedUserID,
-		AccountID:       parsedAccountID,
+		AccountID:       *AccountID,
 		TransactionType: txnType,
 		TransactionDate: txnDate,
-		PayeeID:         parsedPayeeID,
+		PayeeID:         *PayeeID,
 		Notes:           rqPayload.Notes,
 		Cleared:         parsedCleared,
 		Amounts:         json.RawMessage(amountsJSONBytes),
@@ -142,13 +151,17 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var transferTransactionID uuid.UUID
-	var parsedTransferAccountID uuid.UUID
+	var transferTransactionID *uuid.UUID
+	var TransferAccountID *uuid.UUID
 	if isTransfer {
 		// parse transfer_account_id
-		parsedTransferAccountID, err = uuid.Parse(rqPayload.TransferAccountID)
+		TransferAccountID, err = lookupResourceIDByName(r.Context(),
+			database.GetBudgetAccountIDByNameParams{
+				AccountName: rqPayload.TransferAccountName,
+				BudgetID:    pathBudgetID,
+			}, cfg.db.GetBudgetAccountIDByName)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "failure parsing transfer_account_id as UUID", err)
+			respondWithError(w, http.StatusBadRequest, "could not get transfer account id", err)
 			return
 		}
 		// prepare inverse amounts for corresponding transaction
@@ -171,10 +184,10 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 		transferTransaction, err := cfg.db.LogTransaction(r.Context(), database.LogTransactionParams{
 			BudgetID:        pathBudgetID,
 			LoggerID:        validatedUserID,
-			AccountID:       parsedTransferAccountID,
+			AccountID:       *TransferAccountID,
 			TransactionType: invertTransferType(txnType),
 			TransactionDate: txnDate,
-			PayeeID:         parsedPayeeID,
+			PayeeID:         *PayeeID,
 			Notes:           rqPayload.Notes,
 			Cleared:         parsedCleared,
 			Amounts:         json.RawMessage(invertedAmountsJSONBytes),
@@ -183,7 +196,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			respondWithError(w, http.StatusInternalServerError, "could not log corresponding transfer transaction", err)
 			return
 		}
-		transferTransactionID = transferTransaction.ID
+		transferTransactionID = &transferTransaction.ID
 		// link transfer transactions
 		getTransferIDs := func(t1, t2 *database.LogTransactionRow) (*database.LogTransactionRow, *database.LogTransactionRow) {
 			if (*t1).TransactionType == "TRANSFER_FROM" {
@@ -241,7 +254,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 			respondWithError(w, http.StatusBadRequest, "", err)
 			return
 		}
-		t2, err := getTransactionView(transferTransactionID)
+		t2, err := getTransactionView(*transferTransactionID)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "", err)
 			return
@@ -264,7 +277,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
-	getDetails := strings.HasSuffix(r.URL.String(), "/details")
+	getDetails := strings.Contains(r.URL.String(), "/details")
 
 	var err error
 
@@ -544,14 +557,25 @@ func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		respondWithError(w, http.StatusBadRequest, "cannot change transfer txn to non-transfer txn, nor vice-versa", nil)
 	}
 
-	parsedAccountID, err := uuid.Parse(rqPayload.AccountID)
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+
+	AccountID, err := lookupResourceIDByName(r.Context(),
+		database.GetBudgetAccountIDByNameParams{
+			AccountName: rqPayload.AccountName,
+			BudgetID:    pathBudgetID,
+		}, cfg.db.GetBudgetAccountIDByName)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "could not parse account_id as UUID", err)
+		respondWithError(w, http.StatusBadRequest, "could not get account ID", err)
 		return
 	}
-	parsedPayeeID, err := uuid.Parse(rqPayload.PayeeID)
+
+	PayeeID, err := lookupResourceIDByName(r.Context(),
+		database.GetBudgetPayeeIDByNameParams{
+			PayeeName: rqPayload.PayeeName,
+			BudgetID:  pathBudgetID,
+		}, cfg.db.GetBudgetPayeeIDByName)
 	if err != nil && !isTransfer {
-		respondWithError(w, http.StatusBadRequest, "could not parse payee_id as UUID", err)
+		respondWithError(w, http.StatusBadRequest, "could not get payee ID", err)
 		return
 	}
 
@@ -563,10 +587,10 @@ func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 
 	_, err = cfg.db.UpdateTransaction(r.Context(), database.UpdateTransactionParams{
 		TransactionID:   pathTransactionID,
-		AccountID:       parsedAccountID,
+		AccountID:       *AccountID,
 		TransactionType: txnType,
 		TransactionDate: txnDate,
-		PayeeID:         parsedPayeeID,
+		PayeeID:         *PayeeID,
 		Notes:           rqPayload.Notes,
 		Cleared:         parsedCleared,
 		Amounts:         json.RawMessage(amountsJSONBytes),

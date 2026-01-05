@@ -19,9 +19,9 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "Infer TRANSFER_FROM",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:           "true",
-				TransactionDate:   "2025-09-15",
-				TransferAccountID: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+				Cleared:             "true",
+				TransactionDate:     "2025-09-15",
+				TransferAccountName: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
 				Amounts: map[string]int64{
 					"UNCATEGORIZED": -1000,
 				},
@@ -36,9 +36,9 @@ func TestValidateTXN(t *testing.T) {
 		{
 			name: "Infer TRANSFER_TO",
 			mockPayload: &LogTransactionrqSchema{
-				Cleared:           "true",
-				TransactionDate:   "2025-09-15",
-				TransferAccountID: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+				Cleared:             "true",
+				TransactionDate:     "2025-09-15",
+				TransferAccountName: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
 				Amounts: map[string]int64{
 					"UNCATEGORIZED": 1000,
 				},

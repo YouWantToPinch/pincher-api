@@ -68,7 +68,7 @@ func (cfg *APIConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request)
 	var parsedMonth time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonth)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
@@ -91,7 +91,7 @@ func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 	var parsedMonth time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonth)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
@@ -123,7 +123,7 @@ func (cfg *APIConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.
 	var parsedMonth time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonth)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "", err)
+		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
