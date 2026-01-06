@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -49,7 +48,7 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (amounts map[string]int64, t
 		case val:
 			return nil
 		default:
-			return errors.New("one or more splits do not match expected type" + *ptr)
+			return fmt.Errorf("one or more splits do not match expected type %v", *ptr)
 		}
 	}
 
@@ -78,11 +77,11 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (amounts map[string]int64, t
 	}
 	// return error on txn amount of 0
 	if len(parsedAmounts) == 0 {
-		return nil, "NONE", txnDate, false, errors.New("no amount values provided for transaction")
+		return nil, "NONE", txnDate, false, fmt.Errorf("no amount values provided for transaction")
 	}
 	// sanity check
 	if txnType == "NONE" {
-		return nil, txnType, txnDate, isTransfer, errors.New("found one or more amounts in txn, but could not interpret txn type (THIS SHOULD NEVER HAPPEN!)")
+		return nil, txnType, txnDate, isTransfer, fmt.Errorf("found one or more amounts in txn, but could not interpret txn type (THIS SHOULD NEVER HAPPEN!)")
 	}
 
 	return parsedAmounts, txnType, txnDate, isTransfer, nil
@@ -91,13 +90,13 @@ func validateTxn(rqPayload *LogTransactionrqSchema) (amounts map[string]int64, t
 func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
 	rqPayload, err := decodePayload[LogTransactionrqSchema](r)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, ":  when logging transaction", err)
+		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
 	}
 
 	parsedAmounts, txnType, txnDate, isTransfer, err := validateTxn(&rqPayload)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "failure validating transaction", err)
+		respondWithError(w, http.StatusBadRequest, "could not validate transaction", err)
 	}
 
 	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
