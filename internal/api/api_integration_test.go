@@ -4,7 +4,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,16 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// NOTE: This integration testing has two oc.onal implementations.
-// Firstly, the conventional one; a more stateful approach recording variables for use in further requests,
-// made with the httptest package.
-// But secondly, in an effort to make the tests more readable, a table-driven approach was implemented.
-// Far too late, it appeared that this second implementation may only make things more readable for those
-// 	tests which don't demand very detailed requests, and may otherwise be an overengineered solution to
-// 	running others that demand resources to be evaluated at runtime rather than compile time.
-// Both implementations are left here for developer use.
-// When in doubt: loop through a slice of httptestCase structs for lighter tests,
-// 	but use the more traditional, stateful approach for anything else.
+// NOTE: The methodology of this integration testing suite is as follows:
+// - The APITestClient provides a means of making requests and pulling recorded values from responses.
+// - Each test is run within a separate testcontainer.
+// - Each test follows a stateful approach.
 
 const (
 	roleAdmin       = "ADMIN"
@@ -52,10 +45,22 @@ const (
 type APITestClient struct {
 	Mux       http.Handler
 	W         *httptest.ResponseRecorder
-	Resources map[string]any
 	testState *testing.T
 }
 
+// Request records a new request, saves the response to a new recorder for reference,
+// and calls an assert check against the response status code.
+func (c *APITestClient) Request(req *http.Request, expectedCode int) {
+	w := httptest.NewRecorder()
+	c.Mux.ServeHTTP(w, req)
+	c.W = w
+	if expectedCode != 0 {
+		assert.Equal(c.testState, expectedCode, c.W.Code)
+	}
+}
+
+// GetJSONField returns a value from the last response recorded,
+// assuming that the response content-type was JSON.
 func (c *APITestClient) GetJSONField(field string) (any, error) {
 	res := c.W.Result()
 	defer res.Body.Close()
@@ -70,15 +75,6 @@ func (c *APITestClient) GetJSONField(field string) (any, error) {
 	val, ok := body[field]
 	if !ok {
 		return nil, fmt.Errorf("field %s not found in response", field)
-	}
-
-	if num, ok := val.(json.Number); ok {
-		if i, err := num.Int64(); err == nil {
-			return i, nil
-		}
-		if f, err := num.Float64(); err == nil {
-			return f, nil
-		}
 	}
 
 	return val, nil
@@ -100,75 +96,17 @@ func (c *APITestClient) GetJSONFieldAsInt64(field string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	if num, ok := fieldRetrieved.(json.Number); ok {
+		if i, err := num.Int64(); err == nil {
+			return i, nil
+		}
+		return -987654321, err
+	}
+
 	if val, ok := fieldRetrieved.(int64); ok {
 		return val, nil
 	}
 	return 0, fmt.Errorf("field retrieved from response was not of type int64")
-}
-
-// Request records a new request, saves the response to a new recorder for reference,
-// and calls an assert check against the response status code before then returning the request.
-func (c *APITestClient) Request(req *http.Request, expectedCode int) *http.Request {
-	w := httptest.NewRecorder()
-	c.Mux.ServeHTTP(w, req)
-	c.W = w
-	if expectedCode != 0 {
-		assert.Equal(c.testState, expectedCode, c.W.Code)
-	}
-	return req
-}
-
-func (c *APITestClient) GetResource(name string) any {
-	if v, ok := c.Resources[name]; ok {
-		return v
-	}
-	return nil
-}
-
-func (c *APITestClient) SaveResourceFromJSON(field string, name string) {
-	jsonObject, _ := c.GetJSONField(field)
-	c.Resources[name] = jsonObject
-	slog.Debug(fmt.Sprintf("Saved resource %s at: %v (type: %T)", name, c.Resources[name], c.Resources[name]))
-}
-
-func (c *APITestClient) equalsResourceAt(expected any, resourceName string) func() bool {
-	return func() bool {
-		return expected == c.Resources[resourceName]
-	}
-}
-
-type httptestCase struct {
-	// Oc.onal name for subtest
-	Name string
-	// Path saved from making the request
-	Path string
-	// Request to make; use c.MakeRequest, or a premade wrapper that uses it
-	RequestFunc func() *http.Request
-	// JSON objects, derived from the Response body at the given JSON fields, to assign to given names
-	SaveFields map[string]string
-	// Status code that this subtest expects to receive in response to its Request
-	Expected int
-	// Further expectations beyond status code, typically surrounding resources
-	Checks []func() bool
-}
-
-func (tc *httptestCase) Handle(t *testing.T, client *APITestClient) {
-	t.Helper()
-	client.testState = t
-	tc.Path = client.Request(tc.RequestFunc(), tc.Expected).URL.Path
-	for key, val := range tc.SaveFields {
-		client.SaveResourceFromJSON(key, val)
-	}
-	for _, check := range tc.Checks {
-		assert.True(t, check())
-	}
-}
-
-func (tc *httptestCase) getName() string {
-	if tc.Name != "" {
-		return tc.Name
-	}
-	return tc.Path
 }
 
 // --------------------
@@ -189,7 +127,11 @@ func doServerSetup(t *testing.T) *http.Server {
 	return &http.Server{Handler: SetupMux(cfg)}
 }
 
-// Check CRUD for each resource exclusively, in order
+// Check CRUD for each resource in as much isolation as possible.
+// NOTE:
+// Before testing much interaction between resources, the CRUD operations of EACH is tested.
+// The ORDER of which resources are tested, of course, conforms to resource dependency.
+// For example, budget CRUD ops depend on working user CRUD ops, so users are tested first.
 func Test_CRUD(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
@@ -214,8 +156,8 @@ func Test_CRUD(t *testing.T) {
 	})
 
 	// PREP: Create user, log in
-	c.Request(c.CreateUser(username1, password1), 0)
-	c.Request(c.LoginUser(username1, password1), 0)
+	c.Request(c.CreateUser(username1, password1), http.StatusCreated)
+	c.Request(c.LoginUser(username1, password1), http.StatusOK)
 	jwt1, _ := c.GetJSONFieldAsString("token")
 
 	t.Run("Budgets", func(t *testing.T) {
@@ -231,7 +173,7 @@ func Test_CRUD(t *testing.T) {
 	})
 
 	// PREP: Create budget
-	c.Request(c.CreateBudget(jwt1, "userBudget", "A new budget for the test user."), 0)
+	c.Request(c.CreateBudget(jwt1, "userBudget", "A new budget for the test user."), http.StatusCreated)
 	budgetID1, _ := c.GetJSONFieldAsString("id")
 
 	t.Run("Groups", func(t *testing.T) {
@@ -252,7 +194,7 @@ func Test_CRUD(t *testing.T) {
 
 	t.Run("Categories", func(t *testing.T) {
 		// PREP: Create another group
-		c.Request(c.CreateGroup(jwt1, budgetID1, "temc.stGroup", "A group for testing updates."), 0)
+		c.Request(c.CreateGroup(jwt1, budgetID1, "temc.stGroup", "A group for testing updates."), http.StatusCreated)
 
 		// CREATE category
 		c.Request(c.CreateCategory(jwt1, budgetID1, "testGroup", "testCategory", "A category for testing."), http.StatusCreated)
@@ -310,9 +252,6 @@ func Test_CRUD(t *testing.T) {
 		payeeID2, _ := c.GetJSONFieldAsString("id")
 
 		// CREATE transaction
-		transactionAmounts := map[string]int64{}
-		transactionAmounts[categoryID1] = -500
-
 		c.Request(c.LogTransaction(jwt1, budgetID1, "testAccount", "", dateSeptember, "testPayee2", "A transaction for testing.", true, map[string]int64{categoryID1: -500}), http.StatusCreated)
 		transactionID1, _ := c.GetJSONFieldAsString("id")
 		// READ transaction
@@ -332,184 +271,47 @@ func Test_MakeAndResetUsers(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 	pincherServer := doServerSetup(t)
-	c := APITestClient{Mux: pincherServer.Handler, Resources: map[string]any{}}
+	c := APITestClient{Mux: pincherServer.Handler, testState: t}
 
 	// REQUESTS
-
-	cases := []httptestCase{
-		// Delete all users in the database
-		{
-			RequestFunc: func() *http.Request {
-				return c.DeleteAllUsers()
-			},
-			Expected: http.StatusNoContent,
-		},
-		// Create two new users
-		{
-			RequestFunc: func() *http.Request {
-				return c.CreateUser(username1, password1)
-			},
-			Expected: http.StatusCreated,
-		},
-		{
-			RequestFunc: func() *http.Request {
-				return c.CreateUser(username2, password2)
-			},
-			Expected: http.StatusCreated,
-		},
-		// User count should now be 2
-		{
-			RequestFunc: func() *http.Request {
-				return c.GetUserCount()
-			},
-			SaveFields: map[string]string{
-				"count": "count",
-			},
-			Expected: http.StatusOK,
-			Checks: []func() bool{
-				c.equalsResourceAt(int64(2), "count"),
-			},
-		},
-		// Delete all users again
-		{
-			RequestFunc: func() *http.Request {
-				return c.DeleteAllUsers()
-			},
-			Expected: http.StatusNoContent,
-		},
-		// User count should now be 0 again
-		{
-			RequestFunc: func() *http.Request {
-				return c.GetUserCount()
-			},
-			SaveFields: map[string]string{
-				"count": "count",
-			},
-			Expected: http.StatusOK,
-			Checks: []func() bool{
-				(c.equalsResourceAt(int64(0), "count")),
-			},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.getName(), func(t *testing.T) {
-			tc.Handle(t, &c)
-		})
-	}
+	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
+	c.Request(c.CreateUser(username1, password1), http.StatusCreated)
+	c.Request(c.CreateUser(username2, password2), http.StatusCreated)
+	c.Request(c.GetUserCount(), http.StatusOK)
+	userCount, _ := c.GetJSONFieldAsInt64("count")
+	assert.Equal(t, int64(2), userCount)
+	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 }
 
-// Should make and log in 2 users, which should be able to then delete themselves,
-// but not each other
+// Should make and log in 2 users,
+// which should be able to then delete themselves, but not each other
 func Test_MakeLoginDeleteUsers(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
 	pincherServer := doServerSetup(t)
-	c := APITestClient{Mux: pincherServer.Handler, Resources: map[string]any{}}
+	c := APITestClient{Mux: pincherServer.Handler, testState: t}
 
 	// REQUESTS
-
-	cases := []httptestCase{
-		// Delete all users in the database
-		{
-			RequestFunc: func() *http.Request { return c.DeleteAllUsers() },
-			Expected:    http.StatusNoContent,
-		},
-		// Create two new users
-		{
-			RequestFunc: func() *http.Request {
-				return c.CreateUser(username1, password1)
-			},
-			Expected: http.StatusCreated,
-		},
-		{
-			RequestFunc: func() *http.Request {
-				return c.CreateUser(username2, password2)
-			},
-			Expected: http.StatusCreated,
-		},
-		// Log in both users
-		{
-			Name: "User1Login",
-			RequestFunc: func() *http.Request {
-				return c.LoginUser(username1, password1)
-			},
-			SaveFields: map[string]string{
-				"token": "jwt1",
-			},
-			Expected: http.StatusOK,
-		},
-		{
-			Name: "User2Login",
-			RequestFunc: func() *http.Request {
-				return c.LoginUser(username2, password2)
-			},
-			SaveFields: map[string]string{
-				"token": "jwt2",
-			},
-			Expected: http.StatusOK,
-		},
-		// attemc.deletion of user 2 as user 1; should fail
-		{
-			RequestFunc: func() *http.Request {
-				return c.DeleteUser(c.GetResource("jwt1").(string), username2, password2)
-			},
-			Expected: http.StatusForbidden,
-		},
-		// Attemc.deletion of user 1 as user 1
-		{
-			RequestFunc: func() *http.Request {
-				return c.DeleteUser(c.GetResource("jwt1").(string), username1, password1)
-			},
-			Expected: http.StatusNoContent,
-		},
-		// User count should now be 1
-		{
-			RequestFunc: func() *http.Request {
-				return c.GetUserCount()
-			},
-			SaveFields: map[string]string{
-				"count": "count",
-			},
-			Expected: http.StatusOK,
-			Checks: []func() bool{
-				c.equalsResourceAt(int64(1), "count"),
-			},
-		},
-		// Delete all users
-		{
-			RequestFunc: func() *http.Request { return c.DeleteAllUsers() },
-			Expected:    http.StatusNoContent,
-		},
-		// User count should now be 0
-		{
-			RequestFunc: func() *http.Request {
-				return c.GetUserCount()
-			},
-			SaveFields: map[string]string{
-				"count": "count",
-			},
-			Expected: http.StatusOK,
-			Checks: []func() bool{
-				(c.equalsResourceAt(int64(0), "count")),
-			},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.getName(), func(t *testing.T) {
-			tc.Handle(t, &c)
-		})
-	}
+	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
+	c.Request(c.CreateUser(username1, password1), http.StatusCreated)
+	c.Request(c.CreateUser(username2, password2), http.StatusCreated)
+	c.Request(c.LoginUser(username1, password1), http.StatusOK)
+	jwt1, _ := c.GetJSONFieldAsString("token")
+	c.Request(c.LoginUser(username2, password2), http.StatusOK)
+	jwt2, _ := c.GetJSONFieldAsString("token")
+	c.Request(c.DeleteUser(jwt1, username2, password2), http.StatusForbidden)
+	c.Request(c.DeleteUser(jwt2, username1, password1), http.StatusForbidden)
+	c.Request(c.DeleteUser(jwt1, username1, password1), http.StatusNoContent)
+	c.Request(c.GetUserCount(), http.StatusOK)
+	userCount, _ := c.GetJSONFieldAsInt64("count")
+	assert.Equal(t, int64(1), userCount)
+	c.Request(c.DeleteUser(jwt2, username2, password2), http.StatusNoContent)
+	c.Request(c.GetUserCount(), http.StatusOK)
+	userCount, _ = c.GetJSONFieldAsInt64("count")
+	assert.Equal(t, int64(0), userCount)
 }
 
-/*
-Creates two budgets with an admin user, and adds other users to the first.
-Along the way, various roles attemc.various actions that
-they should or should not be able to do; authorizations that
-should be verified.
-*/
 func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
@@ -621,7 +423,7 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	jwt4, _ := c.GetJSONFieldAsString("token")
 
 	// user1 ADMIN: Creating Webflyx Org budget & assigning u2, u3, u4 as MANAGER, CONTRIBUTOR, VIEWER.
-	c.Request(c.CreateBudget(jwt1, "Webflyx Org", "For budgeting Webflyx Org financial resources and tracking expenses."), 0)
+	c.Request(c.CreateBudget(jwt1, "Webflyx Org", "For budgeting Webflyx Org financial resources and tracking expenses."), http.StatusCreated)
 	budget1, _ := c.GetJSONFieldAsString("id")
 	c.Request(c.AssignMemberToBudget(jwt1, budget1, username2, roleManager), http.StatusCreated)
 	c.Request(c.AssignMemberToBudget(jwt1, budget1, username3, roleContributor), http.StatusCreated)
