@@ -110,7 +110,7 @@ func UpdateAccount(token, budgetID, accountID, accountType, newName, newNotes st
 }
 
 func RevokeBudgetMembership(token, budgetID, userID string) *http.Request {
-	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/members"+userID, token, nil)
+	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/members/"+userID, token, nil)
 }
 
 func DeleteBudgetAccount(token, budgetID, accountID, name string, deleteHard bool) *http.Request {
