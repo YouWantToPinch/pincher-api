@@ -144,12 +144,11 @@ type Payee struct {
 }
 
 type CategoryReport struct {
-	MonthID    time.Time `json:"month_id"`
-	CategoryID uuid.UUID `json:"category_id"`
-	Name       string    `json:"category_name"`
-	Assigned   int64     `json:"assigned"`
-	Activity   int64     `json:"activity"`
-	Balance    int64     `json:"balance"`
+	MonthID  time.Time `json:"month_id"`
+	Name     string    `json:"category_name"`
+	Assigned int64     `json:"assigned"`
+	Activity int64     `json:"activity"`
+	Balance  int64     `json:"balance"`
 }
 
 type MonthReport struct {

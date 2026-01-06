@@ -45,34 +45,34 @@ func (cfg *APIConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 		Amount:     rqPayload.Amount,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not assign amount to category for month specified", err)
+		respondWithError(w, http.StatusInternalServerError, "could not assign amount to category for month specified"+parsedMonth.String(), err)
 		return
 	}
 
-	type Assignment struct {
+	type rspSchema struct {
 		MonthID    time.Time `json:"month_id"`
 		CategoryID uuid.UUID `json:"category_id"`
 		Amount     int64     `json:"amount"`
 	}
 
-	rspPayload := Assignment{
+	rspPayload := rspSchema{
 		MonthID:    dbAssignment.Month,
 		CategoryID: dbAssignment.CategoryID,
 		Amount:     dbAssignment.Assigned,
 	}
 
-	respondWithJSON(w, http.StatusCreated, rspPayload)
+	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
 func (cfg *APIConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request) {
-	var parsedMonth time.Time
-	err := parseDateFromPath("month_id", r, &parsedMonth)
+	var parsedMonthID time.Time
+	err := parseDateFromPath("month_id", r, &parsedMonthID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
-	monthReport, err := cfg.db.GetMonthReport(r.Context(), parsedMonth)
+	monthReport, err := cfg.db.GetMonthReport(r.Context(), parsedMonthID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not generate report for month specified", err)
 		return
@@ -88,14 +88,19 @@ func (cfg *APIConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Request) {
-	var parsedMonth time.Time
-	err := parseDateFromPath("month_id", r, &parsedMonth)
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+
+	var parsedMonthID time.Time
+	err := parseDateFromPath("month_id", r, &parsedMonthID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
-	dbCategoryReports, err := cfg.db.GetMonthCategoryReports(r.Context(), parsedMonth)
+	dbCategoryReports, err := cfg.db.GetMonthCategoryReports(r.Context(), database.GetMonthCategoryReportsParams{
+		MonthID:  parsedMonthID,
+		BudgetID: pathBudgetID,
+	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not generate category reports for month specified", err)
 		return
@@ -105,12 +110,11 @@ func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 	for _, report := range dbCategoryReports {
 
 		newReport := CategoryReport{
-			MonthID:    report.Month,
-			CategoryID: report.CategoryID,
-			Name:       report.CategoryName,
-			Assigned:   report.Assigned,
-			Activity:   report.Activity,
-			Balance:    report.Balance,
+			MonthID:  report.Month,
+			Name:     report.CategoryName,
+			Assigned: report.Assigned,
+			Activity: report.Activity,
+			Balance:  report.Balance,
 		}
 
 		rspPayload = append(rspPayload, newReport)
@@ -120,8 +124,10 @@ func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 }
 
 func (cfg *APIConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.Request) {
-	var parsedMonth time.Time
-	err := parseDateFromPath("month_id", r, &parsedMonth)
+	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+
+	var parsedMonthID time.Time
+	err := parseDateFromPath("month_id", r, &parsedMonthID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -134,8 +140,9 @@ func (cfg *APIConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.
 		return
 	}
 	dbCategoryReport, err := cfg.db.GetMonthCategoryReport(r.Context(), database.GetMonthCategoryReportParams{
-		Month:      parsedMonth,
+		MonthID:    parsedMonthID,
 		CategoryID: pathCategoryID,
+		BudgetID:   pathBudgetID,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not generate category report for month specified", err)
@@ -143,12 +150,11 @@ func (cfg *APIConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.
 	}
 
 	rspPayload := CategoryReport{
-		MonthID:    dbCategoryReport.Month,
-		CategoryID: dbCategoryReport.CategoryID,
-		Name:       dbCategoryReport.CategoryName,
-		Assigned:   dbCategoryReport.Assigned,
-		Activity:   dbCategoryReport.Activity,
-		Balance:    dbCategoryReport.Balance,
+		MonthID:  dbCategoryReport.Month,
+		Name:     dbCategoryReport.CategoryName,
+		Assigned: dbCategoryReport.Assigned,
+		Activity: dbCategoryReport.Activity,
+		Balance:  dbCategoryReport.Balance,
 	}
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }

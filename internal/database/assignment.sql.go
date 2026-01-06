@@ -54,18 +54,38 @@ func (q *Queries) DeleteMonthAssignmentForCat(ctx context.Context, arg DeleteMon
 }
 
 const getMonthCategoryReport = `-- name: GetMonthCategoryReport :one
-SELECT month, category_name, category_id, assigned, activity, balance FROM category_reports cr
-WHERE cr.month = $1 AND cr.category_id = $2
+SELECT month, category_name, category_id, assigned, activity, balance, id, created_at, updated_at, budget_id, name, group_id, notes FROM category_reports cr
+JOIN categories ON cr.category_id = categories.id
+WHERE cr.month = date_trunc('month', $1::timestamp) 
+  AND cr.category_id = $2::uuid
+  AND categories.budget_id = $3::uuid
 `
 
 type GetMonthCategoryReportParams struct {
-	Month      time.Time
+	MonthID    time.Time
 	CategoryID uuid.UUID
+	BudgetID   uuid.UUID
 }
 
-func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCategoryReportParams) (CategoryReport, error) {
-	row := q.db.QueryRowContext(ctx, getMonthCategoryReport, arg.Month, arg.CategoryID)
-	var i CategoryReport
+type GetMonthCategoryReportRow struct {
+	Month        time.Time
+	CategoryName string
+	CategoryID   uuid.UUID
+	Assigned     int64
+	Activity     int64
+	Balance      int64
+	ID           uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	BudgetID     uuid.UUID
+	Name         string
+	GroupID      uuid.NullUUID
+	Notes        string
+}
+
+func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCategoryReportParams) (GetMonthCategoryReportRow, error) {
+	row := q.db.QueryRowContext(ctx, getMonthCategoryReport, arg.MonthID, arg.CategoryID, arg.BudgetID)
+	var i GetMonthCategoryReportRow
 	err := row.Scan(
 		&i.Month,
 		&i.CategoryName,
@@ -73,24 +93,53 @@ func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCatego
 		&i.Assigned,
 		&i.Activity,
 		&i.Balance,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BudgetID,
+		&i.Name,
+		&i.GroupID,
+		&i.Notes,
 	)
 	return i, err
 }
 
 const getMonthCategoryReports = `-- name: GetMonthCategoryReports :many
-SELECT month, category_name, category_id, assigned, activity, balance FROM category_reports cr
-WHERE cr.month = $1
+SELECT month, category_name, category_id, assigned, activity, balance, id, created_at, updated_at, budget_id, name, group_id, notes FROM category_reports cr
+JOIN categories ON cr.category_id = categories.id
+WHERE cr.month = date_trunc('month', $1::timestamp) AND categories.budget_id = $2::uuid
 `
 
-func (q *Queries) GetMonthCategoryReports(ctx context.Context, month time.Time) ([]CategoryReport, error) {
-	rows, err := q.db.QueryContext(ctx, getMonthCategoryReports, month)
+type GetMonthCategoryReportsParams struct {
+	MonthID  time.Time
+	BudgetID uuid.UUID
+}
+
+type GetMonthCategoryReportsRow struct {
+	Month        time.Time
+	CategoryName string
+	CategoryID   uuid.UUID
+	Assigned     int64
+	Activity     int64
+	Balance      int64
+	ID           uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	BudgetID     uuid.UUID
+	Name         string
+	GroupID      uuid.NullUUID
+	Notes        string
+}
+
+func (q *Queries) GetMonthCategoryReports(ctx context.Context, arg GetMonthCategoryReportsParams) ([]GetMonthCategoryReportsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMonthCategoryReports, arg.MonthID, arg.BudgetID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CategoryReport
+	var items []GetMonthCategoryReportsRow
 	for rows.Next() {
-		var i CategoryReport
+		var i GetMonthCategoryReportsRow
 		if err := rows.Scan(
 			&i.Month,
 			&i.CategoryName,
@@ -98,6 +147,13 @@ func (q *Queries) GetMonthCategoryReports(ctx context.Context, month time.Time) 
 			&i.Assigned,
 			&i.Activity,
 			&i.Balance,
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.BudgetID,
+			&i.Name,
+			&i.GroupID,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -118,7 +174,7 @@ SELECT
     COALESCE(SUM(activity), 0)::bigint AS activity,
     COALESCE(SUM(balance), 0)::bigint AS balance
 FROM category_reports mr
-WHERE mr.month = $1
+WHERE mr.month = date_trunc('month', $1::timestamp)
 `
 
 type GetMonthReportRow struct {
@@ -127,8 +183,8 @@ type GetMonthReportRow struct {
 	Balance  int64
 }
 
-func (q *Queries) GetMonthReport(ctx context.Context, month time.Time) (GetMonthReportRow, error) {
-	row := q.db.QueryRowContext(ctx, getMonthReport, month)
+func (q *Queries) GetMonthReport(ctx context.Context, monthID time.Time) (GetMonthReportRow, error) {
+	row := q.db.QueryRowContext(ctx, getMonthReport, monthID)
 	var i GetMonthReportRow
 	err := row.Scan(&i.Assigned, &i.Activity, &i.Balance)
 	return i, err

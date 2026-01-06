@@ -17,15 +17,19 @@ SELECT
     COALESCE(SUM(activity), 0)::bigint AS activity,
     COALESCE(SUM(balance), 0)::bigint AS balance
 FROM category_reports mr
-WHERE mr.month = $1;
+WHERE mr.month = date_trunc('month', sqlc.arg('month_id')::timestamp);
 
 -- name: GetMonthCategoryReports :many
 SELECT * FROM category_reports cr
-WHERE cr.month = $1;
+JOIN categories ON cr.category_id = categories.id
+WHERE cr.month = date_trunc('month', sqlc.arg('month_id')::timestamp) AND categories.budget_id = sqlc.arg('budget_id')::uuid;
 
 -- name: GetMonthCategoryReport :one
 SELECT * FROM category_reports cr
-WHERE cr.month = $1 AND cr.category_id = $2;
+JOIN categories ON cr.category_id = categories.id
+WHERE cr.month = date_trunc('month', sqlc.arg('month_id')::timestamp) 
+  AND cr.category_id = sqlc.arg('category_id')::uuid
+  AND categories.budget_id = sqlc.arg('budget_id')::uuid;
 
 -- name: DeleteMonthAssignmentForCat :exec
 DELETE FROM assignments
