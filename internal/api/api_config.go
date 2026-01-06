@@ -152,7 +152,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 			UserID:   validatedUserID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "user not found as member", err)
+			respondWithError(w, http.StatusForbidden, "user not found as member", err)
 			return
 		}
 
