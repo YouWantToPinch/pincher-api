@@ -71,7 +71,7 @@ func (cfg *APIConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	validatedUserID := getContextKeyValue(r.Context(), "user_id")
+	validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
 	_, err = cfg.db.UpdateUserCredentials(r.Context(), database.UpdateUserCredentialsParams{
 		ID:             validatedUserID,
@@ -102,7 +102,7 @@ func (cfg *APIConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validatedUserID := getContextKeyValue(r.Context(), "user_id")
+	validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
 	dbUser, err := cfg.db.GetUserByUsername(r.Context(), rqPayload.Username)
 	if err != nil {

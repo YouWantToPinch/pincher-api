@@ -25,7 +25,7 @@ func (cfg *APIConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	dbAccount, err := cfg.db.AddAccount(r.Context(), database.AddAccountParams{
 		BudgetID:    pathBudgetID,
@@ -54,7 +54,7 @@ func (cfg *APIConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 	dbAccounts, err := cfg.db.GetAccountsFromBudget(r.Context(), pathBudgetID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not retrieve budget accounts", err)
@@ -220,7 +220,7 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 	if pathBudgetID != dbAccount.BudgetID {
 		respondWithCode(w, http.StatusForbidden)
 		return

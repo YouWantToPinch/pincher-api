@@ -24,7 +24,7 @@ func (cfg *APIConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	dbPayee, err := cfg.db.CreatePayee(r.Context(), database.CreatePayeeParams{
 		BudgetID: pathBudgetID,
@@ -51,7 +51,7 @@ func (cfg *APIConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 	dbPayees, err := cfg.db.GetBudgetPayees(r.Context(), pathBudgetID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not retrieve budget payees", err)
@@ -156,7 +156,7 @@ func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 	if pathBudgetID != dbPayee.BudgetID {
 		respondWithCode(w, http.StatusForbidden)
 		return

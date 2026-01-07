@@ -13,6 +13,7 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	// middleware
 	mdAuth := cfg.middlewareAuthenticate
 	mdClear := cfg.middlewareCheckClearance
+	mdValidateTxn := cfg.middlewareValidateTxn
 
 	// REGISTER API HANDLERS
 	// ======================
@@ -62,7 +63,7 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux.HandleFunc("PATCH /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(MANAGER, cfg.endpRestoreAccount)))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.endpDeleteAccount)))
 	// Transactions
-	mux.HandleFunc("POST /api/budgets/{budget_id}/transactions", mdAuth(mdClear(CONTRIBUTOR, cfg.endpLogTransaction)))
+	mux.HandleFunc("POST /api/budgets/{budget_id}/transactions", mdAuth(mdClear(CONTRIBUTOR, mdValidateTxn(cfg.endpLogTransaction))))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts/{account_id}/transactions", mdAuth(mdClear(VIEWER, cfg.endpGetTransactions)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/categories/{category_id}/transactions", mdAuth(mdClear(VIEWER, cfg.endpGetTransactions)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/payees/{payee_id}/transactions", mdAuth(mdClear(VIEWER, cfg.endpGetTransactions)))
@@ -71,7 +72,7 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(VIEWER, cfg.endpGetTransaction)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}/details", mdAuth(mdClear(VIEWER, cfg.endpGetTransaction)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}/splits", mdAuth(mdClear(VIEWER, cfg.endpGetTransactionSplits)))
-	mux.HandleFunc("PUT /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(MANAGER, cfg.endpUpdateTransaction)))
+	mux.HandleFunc("PUT /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(MANAGER, mdValidateTxn(cfg.endpUpdateTransaction))))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.endpDeleteTransaction)))
 	// Months & Dollar Assignment
 	mux.HandleFunc("POST /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.endpAssignAmountToCategory)))

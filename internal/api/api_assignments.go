@@ -88,7 +88,7 @@ func (cfg *APIConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	var parsedMonthID time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonthID)
@@ -124,7 +124,7 @@ func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 }
 
 func (cfg *APIConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	var parsedMonthID time.Time
 	err := parseDateFromPath("month_id", r, &parsedMonthID)

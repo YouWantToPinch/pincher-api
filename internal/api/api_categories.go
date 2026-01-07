@@ -25,7 +25,7 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	assignedGroupID := &uuid.NullUUID{}
 	if rqPayload.GroupName != "" {
@@ -79,7 +79,7 @@ func (cfg *APIConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	categories, err := cfg.db.GetCategories(r.Context(), database.GetCategoriesParams{
 		BudgetID: pathBudgetID,
@@ -135,7 +135,7 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	assignedGroupID := &uuid.NullUUID{}
 	if rqPayload.GroupName != "" {
@@ -179,7 +179,7 @@ func (cfg *APIConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusNotFound, "could not get category", err)
 		return
 	}
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 	if pathBudgetID != dbCategory.BudgetID {
 		respondWithCode(w, http.StatusForbidden)
 		return

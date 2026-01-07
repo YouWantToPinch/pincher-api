@@ -115,7 +115,7 @@ type TransactionSplit struct {
 	ID            uuid.UUID     `json:"id"`
 	TransactionID uuid.UUID     `json:"transaction_id"`
 	CategoryID    uuid.NullUUID `json:"category_id"`
-	Amount        int64         `json:"transaction_date"`
+	Amount        int64         `json:"amount"`
 }
 
 type TransactionView struct {

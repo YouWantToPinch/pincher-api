@@ -24,7 +24,7 @@ func (cfg *APIConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	_, err = cfg.db.GetGroupByBudgetIDAndName(r.Context(), database.GetGroupByBudgetIDAndNameParams{
 		Name:     rqPayload.Name,
@@ -59,7 +59,7 @@ func (cfg *APIConfig) endpCreateGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	dbGroups, err := cfg.db.GetGroupsByBudgetID(r.Context(), pathBudgetID)
 	if err != nil {
@@ -131,7 +131,7 @@ func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	dbGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
 		BudgetID: pathBudgetID,

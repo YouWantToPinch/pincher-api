@@ -10,7 +10,7 @@ import (
 )
 
 func (cfg *APIConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
-	validatedUserID := getContextKeyValue(r.Context(), "user_id")
+	validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
 	type rqSchema struct {
 		Meta
@@ -66,7 +66,7 @@ func (cfg *APIConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	dbBudget, err := cfg.db.GetBudgetByID(r.Context(), pathBudgetID)
 	if err != nil {
@@ -89,7 +89,7 @@ func (cfg *APIConfig) endpGetBudget(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request) {
-	validatedUserID := getContextKeyValue(r.Context(), "user_id")
+	validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
 	roleFilters := r.URL.Query()["role"]
 
@@ -141,7 +141,7 @@ func (cfg *APIConfig) endpGetUserBudgets(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *APIConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 	capitalAmount, err := cfg.db.GetBudgetCapital(r.Context(), pathBudgetID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not calculate budget capital", err)
@@ -160,7 +160,7 @@ func (cfg *APIConfig) endpGetBudgetCapital(w http.ResponseWriter, r *http.Reques
 }
 
 func (cfg *APIConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	type rqSchema struct {
 		UserName   string `json:"username"`
@@ -209,7 +209,7 @@ func (cfg *APIConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 }
 
 func (cfg *APIConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	var pathUserID uuid.UUID
 	err := parseUUIDFromPath("user_id", r, &pathUserID)
@@ -230,7 +230,7 @@ func (cfg *APIConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Requ
 }
 
 func (cfg *APIConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	type rqSchema struct {
 		Meta
@@ -256,7 +256,7 @@ func (cfg *APIConfig) endpUpdateBudget(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpDeleteBudget(w http.ResponseWriter, r *http.Request) {
-	pathBudgetID := getContextKeyValue(r.Context(), "budget_id")
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	err := cfg.db.DeleteBudget(r.Context(), pathBudgetID)
 	if err != nil {

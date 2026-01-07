@@ -6,8 +6,10 @@ import (
 	"embed"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -138,7 +140,7 @@ func (cfg *APIConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 
 func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		validatedUserID := getContextKeyValue(r.Context(), "user_id")
+		validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
 		var pathBudgetID uuid.UUID
 		err := parseUUIDFromPath("budget_id", r, &pathBudgetID)
@@ -172,13 +174,175 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 	})
 }
 
+// middlewareValidateTxn validates transaction request payloads,
+// then converts relevant resource names to their corresponding UUIDs where valid,
+// in preparation for the database query to log the transaction.
+func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
+		rqPayload, err := decodePayload[UpsertTransactionRqSchema](r)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "", err)
+			return
+		}
+		validatedTxn, err := validateTxnInput(&rqPayload)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "", err)
+			return
+		}
+		if validatedTxn.txnType == "NONE" {
+			respondWithError(w, http.StatusInternalServerError, "transaction type could not be inferred", nil)
+		}
+
+		accountID, err := lookupResourceIDByName(r.Context(),
+			database.GetBudgetAccountIDByNameParams{
+				AccountName: rqPayload.AccountName,
+				BudgetID:    pathBudgetID,
+			}, cfg.db.GetBudgetAccountIDByName)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "could not get account id", err)
+			return
+		}
+		validatedTxn.accountID = *accountID
+
+		if validatedTxn.isTransfer {
+			transferAccountID, err := lookupResourceIDByName(r.Context(),
+				database.GetBudgetAccountIDByNameParams{
+					AccountName: rqPayload.TransferAccountName,
+					BudgetID:    pathBudgetID,
+				}, cfg.db.GetBudgetAccountIDByName)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, "could not get transfer account id", err)
+				return
+			}
+			validatedTxn.transferAccountID = *transferAccountID
+		} else {
+			payeeID, err := lookupResourceIDByName(r.Context(),
+				database.GetBudgetPayeeIDByNameParams{
+					PayeeName: rqPayload.PayeeName,
+					BudgetID:  pathBudgetID,
+				}, cfg.db.GetBudgetPayeeIDByName)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, "could not get payee id", err)
+				return
+			}
+			validatedTxn.payeeID = *payeeID
+		}
+
+		// convert names to IDs if needed
+		for k, v := range rqPayload.Amounts {
+			if _, ok := validatedTxn.amounts[k]; !ok {
+				slog.Info("SKIPPING ELIMINATED KEY: " + k)
+				// validation already weeded this one out; move on to the next
+				continue
+			}
+			if k == "TRANSFER" || (k == "UNCATEGORIZED" && validatedTxn.txnType == "DEPOSIT") {
+				slog.Info("SKIPPING IRRELEVANT KEY: " + k)
+				// categories are not relevant
+				continue
+			}
+			slog.Info(fmt.Sprintf("GETTING UUID FOR KEY: %s, AMOUNT: %d", k, v))
+			categoryID, err := lookupResourceIDByName(r.Context(),
+				database.GetBudgetCategoryIDByNameParams{
+					CategoryName: k,
+					BudgetID:     pathBudgetID,
+				}, cfg.db.GetBudgetCategoryIDByName)
+			if err != nil {
+				var errMessage string
+				if len(rqPayload.Amounts) > 1 {
+					errMessage = "could not get category id for one or more transaction splits"
+				} else {
+					errMessage = "could not get category id for transaction"
+				}
+				respondWithError(w, http.StatusBadRequest, errMessage, err)
+				return
+			}
+			validatedTxn.amounts[categoryID.String()] = v
+			delete(validatedTxn.amounts, k)
+		}
+
+		ctxValidatedTxn := ctxKey("validated_txn")
+		ctx := context.WithValue(r.Context(), ctxValidatedTxn, validatedTxn)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 // ============== HELPERS =================
 
-func getContextKeyValue(ctx context.Context, key string) uuid.UUID {
+func getContextKeyValueAsUUID(ctx context.Context, key string) uuid.UUID {
 	contextKeyValue, ok := ctx.Value(ctxKey(key)).(uuid.UUID)
 	if !ok {
-		slog.Warn("failed to retrieve key from context")
+		slog.Warn("failed to retrieve key from context", slog.String("key", key))
 		return uuid.Nil
 	}
 	return contextKeyValue
+}
+
+func getContextKeyValueAsTxn(ctx context.Context, key string) *validatedTxnPayload {
+	contextKeyValue, ok := ctx.Value(ctxKey(key)).(*validatedTxnPayload)
+	if !ok {
+		slog.Warn("failed to retrieve key from context", slog.String("key", key))
+		return nil
+	}
+	return contextKeyValue
+}
+
+// validateTxnInput parses relevant inputs: txn amounts, txnDate, transfer status, txnType.
+// Any txn with no amount, or with amounts not matching in type, are rejected.
+// Any error returned implies a bad request.
+func validateTxnInput(rqPayload *UpsertTransactionRqSchema) (*validatedTxnPayload, error) {
+	validatedTxn := &validatedTxnPayload{amounts: map[string]int64{}}
+	var err error
+
+	validatedTxn.txnDate, err = time.Parse("2006-01-02", rqPayload.TransactionDate)
+	if err != nil {
+		return nil, fmt.Errorf("transaction date could not be parsed")
+	}
+
+	validatedTxn.isTransfer = (rqPayload.TransferAccountName != "")
+	validatedTxn.txnType = "NONE"
+
+	setTxnType := func(ptr *string, val string) error {
+		switch *ptr {
+		case "NONE":
+			*ptr = val
+			return nil
+		case val:
+			return nil
+		default:
+			return fmt.Errorf("one or more splits do not match expected type '%v'", *ptr)
+		}
+	}
+
+	maps.Copy(validatedTxn.amounts, rqPayload.Amounts)
+	for k, v := range rqPayload.Amounts {
+		if k == "" {
+			return nil, fmt.Errorf("found missing category name from one or more amount fields")
+		}
+		switch {
+		case v > 0:
+			if validatedTxn.isTransfer {
+				err = setTxnType(&validatedTxn.txnType, "TRANSFER_TO")
+			} else {
+				err = setTxnType(&validatedTxn.txnType, "DEPOSIT")
+			}
+		case v < 0:
+			if validatedTxn.isTransfer {
+				err = setTxnType(&validatedTxn.txnType, "TRANSFER_FROM")
+			} else {
+				err = setTxnType(&validatedTxn.txnType, "WITHDRAWAL")
+			}
+		default:
+			delete(validatedTxn.amounts, k)
+		}
+		// return error on txnType mismatch
+		if err != nil {
+			return nil, fmt.Errorf("inconsistent signage on amount values")
+		}
+	}
+	// return error on txn amount of 0
+	if len(validatedTxn.amounts) == 0 {
+		return nil, fmt.Errorf("no non-zero amount specified for transaction")
+	}
+	return validatedTxn, nil
 }
