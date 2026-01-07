@@ -27,9 +27,9 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	assignedGroupID := &uuid.NullUUID{}
+	var assignedGroupID *uuid.UUID
 	if rqPayload.GroupName != "" {
-		GroupID, err := lookupResourceIDByName(r.Context(),
+		groupID, err := lookupResourceIDByName(r.Context(),
 			database.GetBudgetGroupIDByNameParams{
 				GroupName: rqPayload.GroupName,
 				BudgetID:  pathBudgetID,
@@ -38,13 +38,12 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 			respondWithError(w, http.StatusBadRequest, "could not get group id", err)
 			return
 		}
-		assignedGroupID.UUID = *GroupID
-		assignedGroupID.Valid = true
+		assignedGroupID = groupID
 	}
 
 	dbCategory, err := cfg.db.CreateCategory(r.Context(), database.CreateCategoryParams{
 		BudgetID: pathBudgetID,
-		GroupID:  *assignedGroupID,
+		GroupID:  assignedGroupID,
 		Name:     rqPayload.Name,
 		Notes:    rqPayload.Notes,
 	})
@@ -137,9 +136,9 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	assignedGroupID := &uuid.NullUUID{}
+	var assignedGroupID *uuid.UUID
 	if rqPayload.GroupName != "" {
-		GroupID, err := lookupResourceIDByName(r.Context(),
+		groupID, err := lookupResourceIDByName(r.Context(),
 			database.GetBudgetGroupIDByNameParams{
 				GroupName: rqPayload.GroupName,
 				BudgetID:  pathBudgetID,
@@ -148,13 +147,12 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 			respondWithError(w, http.StatusBadRequest, "could not get group id", err)
 			return
 		}
-		assignedGroupID.UUID = *GroupID
-		assignedGroupID.Valid = true
+		assignedGroupID = groupID
 	}
 
 	_, err = cfg.db.UpdateCategory(r.Context(), database.UpdateCategoryParams{
 		ID:      pathCategoryID,
-		GroupID: *assignedGroupID,
+		GroupID: assignedGroupID,
 		Name:    rqPayload.Name,
 		Notes:   rqPayload.Notes,
 	})

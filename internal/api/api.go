@@ -3,8 +3,6 @@ package api
 
 import (
 	"net/http"
-
-	_ "github.com/lib/pq"
 )
 
 func SetupMux(cfg *APIConfig) *http.ServeMux {

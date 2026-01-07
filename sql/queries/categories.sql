@@ -20,7 +20,9 @@ WHERE id = $1;
 SELECT *
 FROM categories c
 WHERE c.budget_id = sqlc.arg('budget_id')
-  AND ( -- TODO: Lesson learned. Separate stuff like this into separate queries! This is just messy.
+  AND (
+    -- HACK: It may be wiser to set up separate queries to be called
+    -- based on what URL queries or URI Parameters are provided for sorting purposes.
     sqlc.arg('group_id')::uuid = '00000000-0000-0000-0000-000000000000'
     OR c.group_id = sqlc.arg('group_id')::uuid
   );

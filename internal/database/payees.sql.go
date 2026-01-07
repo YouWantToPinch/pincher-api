@@ -31,7 +31,7 @@ type CreatePayeeParams struct {
 }
 
 func (q *Queries) CreatePayee(ctx context.Context, arg CreatePayeeParams) (Payee, error) {
-	row := q.db.QueryRowContext(ctx, createPayee, arg.BudgetID, arg.Name, arg.Notes)
+	row := q.db.QueryRow(ctx, createPayee, arg.BudgetID, arg.Name, arg.Notes)
 	var i Payee
 	err := row.Scan(
 		&i.ID,
@@ -51,7 +51,7 @@ WHERE id = $1
 `
 
 func (q *Queries) DeletePayee(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deletePayee, id)
+	_, err := q.db.Exec(ctx, deletePayee, id)
 	return err
 }
 
@@ -62,7 +62,7 @@ WHERE budget_id = $1
 `
 
 func (q *Queries) GetBudgetPayees(ctx context.Context, budgetID uuid.UUID) ([]Payee, error) {
-	rows, err := q.db.QueryContext(ctx, getBudgetPayees, budgetID)
+	rows, err := q.db.Query(ctx, getBudgetPayees, budgetID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,9 +82,6 @@ func (q *Queries) GetBudgetPayees(ctx context.Context, budgetID uuid.UUID) ([]Pa
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -98,7 +95,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetPayeeByID(ctx context.Context, id uuid.UUID) (Payee, error) {
-	row := q.db.QueryRowContext(ctx, getPayeeByID, id)
+	row := q.db.QueryRow(ctx, getPayeeByID, id)
 	var i Payee
 	err := row.Scan(
 		&i.ID,
@@ -120,7 +117,7 @@ SELECT EXISTS (
 `
 
 func (q *Queries) IsPayeeInUse(ctx context.Context, payeeID uuid.UUID) (bool, error) {
-	row := q.db.QueryRowContext(ctx, isPayeeInUse, payeeID)
+	row := q.db.QueryRow(ctx, isPayeeInUse, payeeID)
 	var found bool
 	err := row.Scan(&found)
 	return found, err
@@ -138,7 +135,7 @@ type ReassignTransactionsParams struct {
 }
 
 func (q *Queries) ReassignTransactions(ctx context.Context, arg ReassignTransactionsParams) error {
-	_, err := q.db.ExecContext(ctx, reassignTransactions, arg.NewPayeeID, arg.OldPayeeID)
+	_, err := q.db.Exec(ctx, reassignTransactions, arg.NewPayeeID, arg.OldPayeeID)
 	return err
 }
 
@@ -156,7 +153,7 @@ type UpdatePayeeParams struct {
 }
 
 func (q *Queries) UpdatePayee(ctx context.Context, arg UpdatePayeeParams) (Payee, error) {
-	row := q.db.QueryRowContext(ctx, updatePayee, arg.ID, arg.Name, arg.Notes)
+	row := q.db.QueryRow(ctx, updatePayee, arg.ID, arg.Name, arg.Notes)
 	var i Payee
 	err := row.Scan(
 		&i.ID,

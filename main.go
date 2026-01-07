@@ -7,10 +7,14 @@ import (
 	"log/slog"
 	"net/http"
 
-	_ "github.com/lib/pq"
-
 	"github.com/YouWantToPinch/pincher-api/internal/api"
 )
+
+func shutdown(cfg *api.APIConfig) {
+	if cfg.Pool != nil {
+		cfg.Pool.Close()
+	}
+}
 
 //go:embed sql/schema/*.sql
 var embedMigrations embed.FS
@@ -19,8 +23,10 @@ func main() {
 	const port = "8080"
 
 	cfg := &api.APIConfig{}
+	defer shutdown(cfg)
 	cfg.Init(".env", "")
 	cfg.ConnectToDB(embedMigrations, "sql/schema")
+	defer cfg.Pool.Close()
 
 	pincher := &http.Server{
 		Addr:    ":" + port,

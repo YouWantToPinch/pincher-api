@@ -32,7 +32,7 @@ type AssignAmountToCategoryParams struct {
 }
 
 func (q *Queries) AssignAmountToCategory(ctx context.Context, arg AssignAmountToCategoryParams) (Assignment, error) {
-	row := q.db.QueryRowContext(ctx, assignAmountToCategory, arg.MonthID, arg.CategoryID, arg.Amount)
+	row := q.db.QueryRow(ctx, assignAmountToCategory, arg.MonthID, arg.CategoryID, arg.Amount)
 	var i Assignment
 	err := row.Scan(&i.Month, &i.CategoryID, &i.Assigned)
 	return i, err
@@ -49,7 +49,7 @@ type DeleteMonthAssignmentForCatParams struct {
 }
 
 func (q *Queries) DeleteMonthAssignmentForCat(ctx context.Context, arg DeleteMonthAssignmentForCatParams) error {
-	_, err := q.db.ExecContext(ctx, deleteMonthAssignmentForCat, arg.Month, arg.CategoryID)
+	_, err := q.db.Exec(ctx, deleteMonthAssignmentForCat, arg.Month, arg.CategoryID)
 	return err
 }
 
@@ -79,12 +79,12 @@ type GetMonthCategoryReportRow struct {
 	UpdatedAt    time.Time
 	BudgetID     uuid.UUID
 	Name         string
-	GroupID      uuid.NullUUID
+	GroupID      *uuid.UUID
 	Notes        string
 }
 
 func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCategoryReportParams) (GetMonthCategoryReportRow, error) {
-	row := q.db.QueryRowContext(ctx, getMonthCategoryReport, arg.MonthID, arg.CategoryID, arg.BudgetID)
+	row := q.db.QueryRow(ctx, getMonthCategoryReport, arg.MonthID, arg.CategoryID, arg.BudgetID)
 	var i GetMonthCategoryReportRow
 	err := row.Scan(
 		&i.Month,
@@ -127,12 +127,12 @@ type GetMonthCategoryReportsRow struct {
 	UpdatedAt    time.Time
 	BudgetID     uuid.UUID
 	Name         string
-	GroupID      uuid.NullUUID
+	GroupID      *uuid.UUID
 	Notes        string
 }
 
 func (q *Queries) GetMonthCategoryReports(ctx context.Context, arg GetMonthCategoryReportsParams) ([]GetMonthCategoryReportsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMonthCategoryReports, arg.MonthID, arg.BudgetID)
+	rows, err := q.db.Query(ctx, getMonthCategoryReports, arg.MonthID, arg.BudgetID)
 	if err != nil {
 		return nil, err
 	}
@@ -159,9 +159,6 @@ func (q *Queries) GetMonthCategoryReports(ctx context.Context, arg GetMonthCateg
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -184,7 +181,7 @@ type GetMonthReportRow struct {
 }
 
 func (q *Queries) GetMonthReport(ctx context.Context, monthID time.Time) (GetMonthReportRow, error) {
-	row := q.db.QueryRowContext(ctx, getMonthReport, monthID)
+	row := q.db.QueryRow(ctx, getMonthReport, monthID)
 	var i GetMonthReportRow
 	err := row.Scan(&i.Assigned, &i.Activity, &i.Balance)
 	return i, err

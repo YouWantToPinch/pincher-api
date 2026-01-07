@@ -5,11 +5,10 @@
 package database
 
 import (
-	"database/sql"
-	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Account struct {
@@ -57,7 +56,7 @@ type Category struct {
 	UpdatedAt time.Time
 	BudgetID  uuid.UUID
 	Name      string
-	GroupID   uuid.NullUUID
+	GroupID   *uuid.UUID
 	Notes     string
 }
 
@@ -94,7 +93,7 @@ type RefreshToken struct {
 	UpdatedAt time.Time
 	UserID    uuid.UUID
 	ExpiresAt time.Time
-	RevokedAt sql.NullTime
+	RevokedAt pgtype.Timestamp
 }
 
 type Transaction struct {
@@ -117,18 +116,18 @@ type TransactionDetail struct {
 	TransactionType string
 	Notes           string
 	Payee           string
-	BudgetName      sql.NullString
-	AccountName     sql.NullString
-	LoggerName      sql.NullString
+	BudgetName      pgtype.Text
+	AccountName     pgtype.Text
+	LoggerName      pgtype.Text
 	TotalAmount     int64
-	Splits          json.RawMessage
+	Splits          []byte
 	Cleared         bool
 }
 
 type TransactionSplit struct {
 	ID            uuid.UUID
 	TransactionID uuid.UUID
-	CategoryID    uuid.NullUUID
+	CategoryID    *uuid.UUID
 	Amount        int64
 }
 

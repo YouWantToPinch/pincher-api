@@ -34,7 +34,7 @@ type CreateRefreshTokenParams struct {
 
 // TOKEN CRUD
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
-	row := q.db.QueryRowContext(ctx, createRefreshToken, arg.Token, arg.UserID, arg.ExpiresAt)
+	row := q.db.QueryRow(ctx, createRefreshToken, arg.Token, arg.UserID, arg.ExpiresAt)
 	var i RefreshToken
 	err := row.Scan(
 		&i.Token,
@@ -57,7 +57,7 @@ AND expires_at > NOW()
 `
 
 func (q *Queries) GetUserByRefreshToken(ctx context.Context, token string) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserByRefreshToken, token)
+	row := q.db.QueryRow(ctx, getUserByRefreshToken, token)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -77,6 +77,6 @@ AND revoked_at IS NULL
 `
 
 func (q *Queries) RevokeRefreshToken(ctx context.Context, token string) error {
-	_, err := q.db.ExecContext(ctx, revokeRefreshToken, token)
+	_, err := q.db.Exec(ctx, revokeRefreshToken, token)
 	return err
 }

@@ -14,7 +14,7 @@ DELETE FROM users
 `
 
 func (q *Queries) DeleteUsers(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, deleteUsers)
+	_, err := q.db.Exec(ctx, deleteUsers)
 	return err
 }
 
@@ -23,7 +23,7 @@ SELECT id, created_at, updated_at, username, hashed_password FROM users
 `
 
 func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.db.QueryContext(ctx, getAllUsers)
+	rows, err := q.db.Query(ctx, getAllUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +42,6 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -58,7 +55,7 @@ SELECT COUNT(*) from users
 
 // USER ACTIONS
 func (q *Queries) GetUserCount(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getUserCount)
+	row := q.db.QueryRow(ctx, getUserCount)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

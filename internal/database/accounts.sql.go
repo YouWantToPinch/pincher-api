@@ -34,7 +34,7 @@ type AddAccountParams struct {
 }
 
 func (q *Queries) AddAccount(ctx context.Context, arg AddAccountParams) (Account, error) {
-	row := q.db.QueryRowContext(ctx, addAccount,
+	row := q.db.QueryRow(ctx, addAccount,
 		arg.BudgetID,
 		arg.AccountType,
 		arg.Name,
@@ -62,7 +62,7 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteAccountHard(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteAccountHard, id)
+	_, err := q.db.Exec(ctx, deleteAccountHard, id)
 	return err
 }
 
@@ -73,7 +73,7 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteAccountSoft(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteAccountSoft, id)
+	_, err := q.db.Exec(ctx, deleteAccountSoft, id)
 	return err
 }
 
@@ -84,7 +84,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetAccountByID(ctx context.Context, id uuid.UUID) (Account, error) {
-	row := q.db.QueryRowContext(ctx, getAccountByID, id)
+	row := q.db.QueryRow(ctx, getAccountByID, id)
 	var i Account
 	err := row.Scan(
 		&i.ID,
@@ -106,7 +106,7 @@ WHERE budget_id = $1
 `
 
 func (q *Queries) GetAccountsFromBudget(ctx context.Context, budgetID uuid.UUID) ([]Account, error) {
-	rows, err := q.db.QueryContext(ctx, getAccountsFromBudget, budgetID)
+	rows, err := q.db.Query(ctx, getAccountsFromBudget, budgetID)
 	if err != nil {
 		return nil, err
 	}
@@ -128,9 +128,6 @@ func (q *Queries) GetAccountsFromBudget(ctx context.Context, budgetID uuid.UUID)
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -145,7 +142,7 @@ WHERE t.account_id = $1
 `
 
 func (q *Queries) GetBudgetAccountCapital(ctx context.Context, accountID uuid.UUID) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getBudgetAccountCapital, accountID)
+	row := q.db.QueryRow(ctx, getBudgetAccountCapital, accountID)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -158,7 +155,7 @@ WHERE id = $1
 `
 
 func (q *Queries) RestoreAccount(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, restoreAccount, id)
+	_, err := q.db.Exec(ctx, restoreAccount, id)
 	return err
 }
 
@@ -177,7 +174,7 @@ type UpdateAccountParams struct {
 }
 
 func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error) {
-	row := q.db.QueryRowContext(ctx, updateAccount,
+	row := q.db.QueryRow(ctx, updateAccount,
 		arg.ID,
 		arg.AccountType,
 		arg.Name,

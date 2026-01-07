@@ -7,11 +7,10 @@ package database
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const deleteTransaction = `-- name: DeleteTransaction :exec
@@ -21,7 +20,7 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteTransaction(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteTransaction, id)
+	_, err := q.db.Exec(ctx, deleteTransaction, id)
 	return err
 }
 
@@ -32,7 +31,7 @@ WHERE transaction_id = $1
 `
 
 func (q *Queries) GetSplitsByTransactionID(ctx context.Context, transactionID uuid.UUID) ([]TransactionSplit, error) {
-	rows, err := q.db.QueryContext(ctx, getSplitsByTransactionID, transactionID)
+	rows, err := q.db.Query(ctx, getSplitsByTransactionID, transactionID)
 	if err != nil {
 		return nil, err
 	}
@@ -50,9 +49,6 @@ func (q *Queries) GetSplitsByTransactionID(ctx context.Context, transactionID uu
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -66,7 +62,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transaction, error) {
-	row := q.db.QueryRowContext(ctx, getTransactionByID, id)
+	row := q.db.QueryRow(ctx, getTransactionByID, id)
 	var i Transaction
 	err := row.Scan(
 		&i.ID,
@@ -85,12 +81,13 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 }
 
 const getTransactionDetails = `-- name: GetTransactionDetails :many
+
 SELECT td.id, td.transaction_date, td.transaction_type, td.notes, payee, budget_name, account_name, logger_name, total_amount, splits, td.cleared, t.id, created_at, updated_at, budget_id, logger_id, account_id, t.transaction_type, t.transaction_date, payee_id, t.notes, t.cleared
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
 
-    t.budget_id = $1 -- TODO: Separate these optional sorting ideas into separate queries. It's messy.
+    t.budget_id = $1
     AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = $2::uuid)
     AND (
         $3::uuid = '00000000-0000-0000-0000-000000000000'
@@ -124,11 +121,11 @@ type GetTransactionDetailsRow struct {
 	TransactionType   string
 	Notes             string
 	Payee             string
-	BudgetName        sql.NullString
-	AccountName       sql.NullString
-	LoggerName        sql.NullString
+	BudgetName        pgtype.Text
+	AccountName       pgtype.Text
+	LoggerName        pgtype.Text
 	TotalAmount       int64
-	Splits            json.RawMessage
+	Splits            []byte
 	Cleared           bool
 	ID_2              uuid.UUID
 	CreatedAt         time.Time
@@ -143,8 +140,11 @@ type GetTransactionDetailsRow struct {
 	Cleared_2         bool
 }
 
+// HACK: Where '000...' is used to represent nil UUIDs:
+// It may be wiser to set up separate queries to be called
+// based on what URL queries or URI Parameters are provided for sorting purposes.
 func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionDetailsParams) ([]GetTransactionDetailsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTransactionDetails,
+	rows, err := q.db.Query(ctx, getTransactionDetails,
 		arg.BudgetID,
 		arg.AccountID,
 		arg.CategoryID,
@@ -187,9 +187,6 @@ func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionD
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -203,7 +200,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetTransactionDetailsByID(ctx context.Context, id uuid.UUID) (TransactionDetail, error) {
-	row := q.db.QueryRowContext(ctx, getTransactionDetailsByID, id)
+	row := q.db.QueryRow(ctx, getTransactionDetailsByID, id)
 	var i TransactionDetail
 	err := row.Scan(
 		&i.ID,
@@ -254,7 +251,7 @@ type GetTransactionsParams struct {
 }
 
 func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams) ([]Transaction, error) {
-	rows, err := q.db.QueryContext(ctx, getTransactions,
+	rows, err := q.db.Query(ctx, getTransactions,
 		arg.BudgetID,
 		arg.AccountID,
 		arg.CategoryID,
@@ -286,9 +283,6 @@ func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -310,7 +304,7 @@ type LogAccountTransferParams struct {
 }
 
 func (q *Queries) LogAccountTransfer(ctx context.Context, arg LogAccountTransferParams) (AccountTransfer, error) {
-	row := q.db.QueryRowContext(ctx, logAccountTransfer, arg.FromTransactionID, arg.ToTransactionID)
+	row := q.db.QueryRow(ctx, logAccountTransfer, arg.FromTransactionID, arg.ToTransactionID)
 	var i AccountTransfer
 	err := row.Scan(&i.FromTransactionID, &i.ToTransactionID)
 	return i, err
@@ -371,7 +365,7 @@ type LogTransactionParams struct {
 	PayeeID         uuid.UUID
 	Notes           string
 	Cleared         bool
-	Amounts         json.RawMessage
+	Amounts         []byte
 }
 
 type LogTransactionRow struct {
@@ -386,11 +380,11 @@ type LogTransactionRow struct {
 	PayeeID         uuid.UUID
 	Notes           string
 	Cleared         bool
-	Splits          json.RawMessage
+	Splits          []byte
 }
 
 func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) (LogTransactionRow, error) {
-	row := q.db.QueryRowContext(ctx, logTransaction,
+	row := q.db.QueryRow(ctx, logTransaction,
 		arg.BudgetID,
 		arg.LoggerID,
 		arg.AccountID,
@@ -464,13 +458,13 @@ type UpdateTransactionParams struct {
 	Notes           string
 	Cleared         bool
 	TransactionID   uuid.UUID
-	Amounts         json.RawMessage
+	Amounts         []byte
 }
 
 // Delete existing splits associated with the transaction
 // Insert new splits from the provided JSON
 func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) error {
-	_, err := q.db.ExecContext(ctx, updateTransaction,
+	_, err := q.db.Exec(ctx, updateTransaction,
 		arg.AccountID,
 		arg.TransactionType,
 		arg.TransactionDate,

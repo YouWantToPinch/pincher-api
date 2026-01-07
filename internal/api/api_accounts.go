@@ -3,9 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/google/uuid"
-
 	"github.com/YouWantToPinch/pincher-api/internal/database"
+	"github.com/google/uuid"
 )
 
 func (cfg *APIConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {

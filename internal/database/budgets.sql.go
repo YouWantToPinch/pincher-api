@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
 const assignBudgetMemberWithRole = `-- name: AssignBudgetMemberWithRole :one
@@ -33,7 +32,7 @@ type AssignBudgetMemberWithRoleParams struct {
 }
 
 func (q *Queries) AssignBudgetMemberWithRole(ctx context.Context, arg AssignBudgetMemberWithRoleParams) (BudgetsUser, error) {
-	row := q.db.QueryRowContext(ctx, assignBudgetMemberWithRole, arg.BudgetID, arg.UserID, arg.MemberRole)
+	row := q.db.QueryRow(ctx, assignBudgetMemberWithRole, arg.BudgetID, arg.UserID, arg.MemberRole)
 	var i BudgetsUser
 	err := row.Scan(
 		&i.CreatedAt,
@@ -65,7 +64,7 @@ type CreateBudgetParams struct {
 }
 
 func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Budget, error) {
-	row := q.db.QueryRowContext(ctx, createBudget, arg.AdminID, arg.Name, arg.Notes)
+	row := q.db.QueryRow(ctx, createBudget, arg.AdminID, arg.Name, arg.Notes)
 	var i Budget
 	err := row.Scan(
 		&i.ID,
@@ -85,7 +84,7 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteBudget(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteBudget, id)
+	_, err := q.db.Exec(ctx, deleteBudget, id)
 	return err
 }
 
@@ -104,7 +103,7 @@ type GetBudgetAccountIDByNameParams struct {
 
 // RESOURCE ID RETRIEVAL
 func (q *Queries) GetBudgetAccountIDByName(ctx context.Context, arg GetBudgetAccountIDByNameParams) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, getBudgetAccountIDByName, arg.AccountName, arg.BudgetID)
+	row := q.db.QueryRow(ctx, getBudgetAccountIDByName, arg.AccountName, arg.BudgetID)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -117,7 +116,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetBudgetByID(ctx context.Context, id uuid.UUID) (Budget, error) {
-	row := q.db.QueryRowContext(ctx, getBudgetByID, id)
+	row := q.db.QueryRow(ctx, getBudgetByID, id)
 	var i Budget
 	err := row.Scan(
 		&i.ID,
@@ -138,7 +137,7 @@ WHERE t.budget_id = $1
 `
 
 func (q *Queries) GetBudgetCapital(ctx context.Context, budgetID uuid.UUID) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getBudgetCapital, budgetID)
+	row := q.db.QueryRow(ctx, getBudgetCapital, budgetID)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -157,7 +156,7 @@ type GetBudgetCategoryIDByNameParams struct {
 }
 
 func (q *Queries) GetBudgetCategoryIDByName(ctx context.Context, arg GetBudgetCategoryIDByNameParams) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, getBudgetCategoryIDByName, arg.CategoryName, arg.BudgetID)
+	row := q.db.QueryRow(ctx, getBudgetCategoryIDByName, arg.CategoryName, arg.BudgetID)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -176,7 +175,7 @@ type GetBudgetGroupIDByNameParams struct {
 }
 
 func (q *Queries) GetBudgetGroupIDByName(ctx context.Context, arg GetBudgetGroupIDByNameParams) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, getBudgetGroupIDByName, arg.GroupName, arg.BudgetID)
+	row := q.db.QueryRow(ctx, getBudgetGroupIDByName, arg.GroupName, arg.BudgetID)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -194,7 +193,7 @@ type GetBudgetMemberRoleParams struct {
 }
 
 func (q *Queries) GetBudgetMemberRole(ctx context.Context, arg GetBudgetMemberRoleParams) (string, error) {
-	row := q.db.QueryRowContext(ctx, getBudgetMemberRole, arg.BudgetID, arg.UserID)
+	row := q.db.QueryRow(ctx, getBudgetMemberRole, arg.BudgetID, arg.UserID)
 	var member_role string
 	err := row.Scan(&member_role)
 	return member_role, err
@@ -213,7 +212,7 @@ type GetBudgetPayeeIDByNameParams struct {
 }
 
 func (q *Queries) GetBudgetPayeeIDByName(ctx context.Context, arg GetBudgetPayeeIDByNameParams) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, getBudgetPayeeIDByName, arg.PayeeName, arg.BudgetID)
+	row := q.db.QueryRow(ctx, getBudgetPayeeIDByName, arg.PayeeName, arg.BudgetID)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -242,7 +241,7 @@ type GetUserBudgetsParams struct {
 }
 
 func (q *Queries) GetUserBudgets(ctx context.Context, arg GetUserBudgetsParams) ([]Budget, error) {
-	rows, err := q.db.QueryContext(ctx, getUserBudgets, arg.UserID, pq.Array(arg.Roles))
+	rows, err := q.db.Query(ctx, getUserBudgets, arg.UserID, arg.Roles)
 	if err != nil {
 		return nil, err
 	}
@@ -261,9 +260,6 @@ func (q *Queries) GetUserBudgets(ctx context.Context, arg GetUserBudgetsParams) 
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -284,7 +280,7 @@ type RevokeBudgetMembershipParams struct {
 }
 
 func (q *Queries) RevokeBudgetMembership(ctx context.Context, arg RevokeBudgetMembershipParams) error {
-	_, err := q.db.ExecContext(ctx, revokeBudgetMembership, arg.BudgetID, arg.UserID)
+	_, err := q.db.Exec(ctx, revokeBudgetMembership, arg.BudgetID, arg.UserID)
 	return err
 }
 
@@ -302,7 +298,7 @@ type UpdateBudgetParams struct {
 }
 
 func (q *Queries) UpdateBudget(ctx context.Context, arg UpdateBudgetParams) (Budget, error) {
-	row := q.db.QueryRowContext(ctx, updateBudget, arg.ID, arg.Name, arg.Notes)
+	row := q.db.QueryRow(ctx, updateBudget, arg.ID, arg.Name, arg.Notes)
 	var i Budget
 	err := row.Scan(
 		&i.ID,

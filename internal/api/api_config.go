@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"database/sql"
 	"embed"
 	"fmt"
 	"log/slog"
@@ -12,6 +11,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 
@@ -21,6 +23,7 @@ import (
 
 type APIConfig struct {
 	db       *database.Queries
+	Pool     *pgxpool.Pool
 	dbURL    string
 	platform string
 	secret   string
@@ -90,12 +93,6 @@ func (cfg *APIConfig) GenerateDBConnectionString() *string {
 }
 
 func (cfg *APIConfig) ConnectToDB(fs embed.FS, migrationsDir string) {
-	db, err := sql.Open("postgres", cfg.dbURL)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	// Default to relative directory so tests know where to find migrations
 	// Otherwise, use embedded directory in a compiled binary context
 	if len(migrationsDir) == 0 {
@@ -108,12 +105,33 @@ func (cfg *APIConfig) ConnectToDB(fs embed.FS, migrationsDir string) {
 		panic(err)
 	}
 
-	if err = goose.Up(db, migrationsDir); err != nil {
-		slog.Error("could not apply database migrations with goose; " + err.Error())
+	// Create a temporary *sql.DB so that goose can apply migrations
+	pgxConfig, err := pgx.ParseConfig(cfg.dbURL)
+	if err != nil {
+		slog.Error("could not apply database migrations with goose: " + err.Error())
 		panic(err)
 	}
+	sqlDB := stdlib.OpenDB(*pgxConfig)
 
-	cfg.db = database.New(db)
+	if err := goose.Up(sqlDB, migrationsDir); err != nil {
+		slog.Error("could not apply database migrations with goose " + err.Error())
+		panic(err)
+	} else {
+		err := sqlDB.Close()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, cfg.dbURL)
+	if err != nil {
+		slog.Error("could not connect to postgres database: %w" + err.Error())
+		panic(err)
+	}
+	cfg.Pool = pool
+
+	cfg.db = database.New(pool)
 }
 
 // ================= MIDDLEWARE ================= //

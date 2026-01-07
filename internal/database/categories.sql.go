@@ -27,13 +27,13 @@ RETURNING id, created_at, updated_at, budget_id, name, group_id, notes
 
 type CreateCategoryParams struct {
 	BudgetID uuid.UUID
-	GroupID  uuid.NullUUID
+	GroupID  *uuid.UUID
 	Name     string
 	Notes    string
 }
 
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
-	row := q.db.QueryRowContext(ctx, createCategory,
+	row := q.db.QueryRow(ctx, createCategory,
 		arg.BudgetID,
 		arg.GroupID,
 		arg.Name,
@@ -59,7 +59,7 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteCategoryByID(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteCategoryByID, id)
+	_, err := q.db.Exec(ctx, deleteCategoryByID, id)
 	return err
 }
 
@@ -67,7 +67,9 @@ const getCategories = `-- name: GetCategories :many
 SELECT id, created_at, updated_at, budget_id, name, group_id, notes
 FROM categories c
 WHERE c.budget_id = $1
-  AND ( -- TODO: Lesson learned. Separate stuff like this into separate queries! This is just messy.
+  AND (
+    -- HACK: It may be wiser to set up separate queries to be called
+    -- based on what URL queries or URI Parameters are provided for sorting purposes.
     $2::uuid = '00000000-0000-0000-0000-000000000000'
     OR c.group_id = $2::uuid
   )
@@ -79,7 +81,7 @@ type GetCategoriesParams struct {
 }
 
 func (q *Queries) GetCategories(ctx context.Context, arg GetCategoriesParams) ([]Category, error) {
-	rows, err := q.db.QueryContext(ctx, getCategories, arg.BudgetID, arg.GroupID)
+	rows, err := q.db.Query(ctx, getCategories, arg.BudgetID, arg.GroupID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +102,6 @@ func (q *Queries) GetCategories(ctx context.Context, arg GetCategoriesParams) ([
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -116,7 +115,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, error) {
-	row := q.db.QueryRowContext(ctx, getCategoryByID, id)
+	row := q.db.QueryRow(ctx, getCategoryByID, id)
 	var i Category
 	err := row.Scan(
 		&i.ID,
@@ -139,13 +138,13 @@ RETURNING id, created_at, updated_at, budget_id, name, group_id, notes
 
 type UpdateCategoryParams struct {
 	ID      uuid.UUID
-	GroupID uuid.NullUUID
+	GroupID *uuid.UUID
 	Name    string
 	Notes   string
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
-	row := q.db.QueryRowContext(ctx, updateCategory,
+	row := q.db.QueryRow(ctx, updateCategory,
 		arg.ID,
 		arg.GroupID,
 		arg.Name,

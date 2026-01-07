@@ -79,11 +79,11 @@ type Group struct {
 }
 
 type Category struct {
-	ID        uuid.UUID     `json:"id"`
-	CreatedAt time.Time     `json:"created_at"`
-	UpdatedAt time.Time     `json:"updated_at"`
-	BudgetID  uuid.UUID     `json:"budget_id"`
-	GroupID   uuid.NullUUID `json:"group_id"`
+	ID        uuid.UUID  `json:"id"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	BudgetID  uuid.UUID  `json:"budget_id"`
+	GroupID   *uuid.UUID `json:"group_id"`
 	Meta
 }
 
@@ -112,10 +112,10 @@ type Transaction struct {
 }
 
 type TransactionSplit struct {
-	ID            uuid.UUID     `json:"id"`
-	TransactionID uuid.UUID     `json:"transaction_id"`
-	CategoryID    uuid.NullUUID `json:"category_id"`
-	Amount        int64         `json:"amount"`
+	ID            uuid.UUID  `json:"id"`
+	TransactionID uuid.UUID  `json:"transaction_id"`
+	CategoryID    *uuid.UUID `json:"category_id"`
+	Amount        int64      `json:"amount"`
 }
 
 type TransactionView struct {

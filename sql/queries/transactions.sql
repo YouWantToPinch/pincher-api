@@ -51,13 +51,17 @@ VALUES (
 )
 RETURNING *;
 
+-- HACK: Where '000...' is used to represent nil UUIDs:
+-- It may be wiser to set up separate queries to be called
+-- based on what URL queries or URI Parameters are provided for sorting purposes.
+
 -- name: GetTransactionDetails :many
 SELECT *
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
 
-    t.budget_id = sqlc.arg('budget_id') -- TODO: Separate these optional sorting ideas into separate queries. It's messy.
+    t.budget_id = sqlc.arg('budget_id')
     AND (sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = sqlc.arg('account_id')::uuid)
     AND (
         sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
