@@ -189,27 +189,29 @@ func Test_CRUD(t *testing.T) {
 	})
 
 	// PREP: Create group
+	groupName := "testGroup"
 	c.Request(c.CreateGroup(jwt1, budgetID1, "testGroup", "A group for testing."), http.StatusCreated)
-	groupID1, _ := c.GetJSONFieldAsString("id")
 
 	t.Run("Categories", func(t *testing.T) {
+		groupID1, _ := c.GetJSONFieldAsString("id")
+
 		// PREP: Create another group
-		c.Request(c.CreateGroup(jwt1, budgetID1, "temc.stGroup", "A group for testing updates."), http.StatusCreated)
+		c.Request(c.CreateGroup(jwt1, budgetID1, "tempTestGroup", "A group for testing updates."), http.StatusCreated)
 
 		// CREATE category
-		c.Request(c.CreateCategory(jwt1, budgetID1, "testGroup", "testCategory", "A category for testing."), http.StatusCreated)
+		c.Request(c.CreateCategory(jwt1, budgetID1, groupName, "testCategory", "A category for testing."), http.StatusCreated)
 		categoryID1, _ := c.GetJSONFieldAsString("id")
 		// READ categories(s)
 		c.Request(c.GetBudgetCategories(jwt1, budgetID1, "?group_id="+groupID1), http.StatusOK)
 		// UPDATE category
-		c.Request(c.UpdateCategory(jwt1, budgetID1, categoryID1, "temc.stGroup", "Test Group", "Test user's first category, now updated to a new group."), http.StatusNoContent)
+		c.Request(c.UpdateCategory(jwt1, budgetID1, categoryID1, "tempTestGroup", "Test Category", "Test user's first category, now assigned to a new group with new info."), http.StatusNoContent)
 		// DELETE category
 		c.Request(c.DeleteBudgetCategory(jwt1, budgetID1, categoryID1), http.StatusNoContent)
 	})
 
 	// PREP: Create category
+	categoryName := "testCategory"
 	c.Request(c.CreateCategory(jwt1, budgetID1, "testGroup", "testCategory", "A category for testing."), http.StatusCreated)
-	categoryID1, _ := c.GetJSONFieldAsString("id")
 
 	t.Run("Accounts", func(t *testing.T) {
 		// CREATE account
@@ -221,7 +223,7 @@ func Test_CRUD(t *testing.T) {
 		// NOTE: As of this commit, Account Types mean nothing, so updates to an account
 		// 	may include changing them. This may need to be prohibited when Account Types
 		// 	logic is implemented.
-		c.Request(c.UpdateAccount(jwt1, budgetID1, accountID1, "CREDIT", "Test Account", "Test user's first account, now updated."), http.StatusNoContent)
+		c.Request(c.UpdateAccount(jwt1, budgetID1, accountID1, "ON_BUDGET", "Test Account", "Test user's first account, now updated."), http.StatusNoContent)
 		// DELETE account SOFT
 		c.Request(c.DeleteBudgetAccount(jwt1, budgetID1, accountID1, "Test Account", false), http.StatusOK)
 		// DELETE account HARD
@@ -229,7 +231,8 @@ func Test_CRUD(t *testing.T) {
 	})
 
 	// CREATE account
-	c.Request(c.CreateBudgetAccount(jwt1, budgetID1, "CREDIT", "testAccount", "An account for testing."), http.StatusCreated)
+	accountName := "testAccount"
+	c.Request(c.CreateBudgetAccount(jwt1, budgetID1, "ON_BUDGET", accountName, "An account for testing."), http.StatusCreated)
 
 	t.Run("Payees", func(t *testing.T) {
 		// CREATE payee
@@ -238,12 +241,13 @@ func Test_CRUD(t *testing.T) {
 		// READ payee(s)
 		c.Request(c.GetBudgetPayees(jwt1, budgetID1), http.StatusOK)
 		// UPDATE payee
-		c.Request(c.UpdatePayee(jwt1, budgetID1, payeeID1, "Test Payee", "Test user's first account, now updated."), http.StatusNoContent)
+		c.Request(c.UpdatePayee(jwt1, budgetID1, payeeID1, "Test Payee", "Test user's first payee, now updated."), http.StatusNoContent)
 		// DELETE payee
 		c.Request(c.DeletePayee(jwt1, budgetID1, payeeID1, ""), http.StatusNoContent)
 	})
 
 	// PREP: Create payee
+	payeeName := "testPayee"
 	c.Request(c.CreateBudgetPayee(jwt1, budgetID1, "testPayee", "A payee for testing."), http.StatusCreated)
 
 	t.Run("Transactions", func(t *testing.T) {
@@ -252,14 +256,14 @@ func Test_CRUD(t *testing.T) {
 		payeeID2, _ := c.GetJSONFieldAsString("id")
 
 		// CREATE transaction
-		c.Request(c.LogTransaction(jwt1, budgetID1, "testAccount", "", dateSeptember, "testPayee2", "A transaction for testing.", true, map[string]int64{categoryID1: -500}), http.StatusCreated)
+		c.Request(c.LogTransaction(jwt1, budgetID1, accountName, "", dateSeptember, payeeName, "A transaction for testing.", true, map[string]int64{categoryName: -500}), http.StatusCreated)
 		transactionID1, _ := c.GetJSONFieldAsString("id")
 		// READ transaction
 		c.Request(c.GetTransaction(jwt1, budgetID1, transactionID1), http.StatusOK)
 		// UPDATE transaction
-		c.Request(c.LogTransaction(jwt1, budgetID1, "testAccount", "", dateSeptember, "testPayee2", "A transaction whose notes are now updated.", true, map[string]int64{categoryID1: -500}), http.StatusCreated)
+		c.Request(c.UpdateTransaction(jwt1, budgetID1, transactionID1, accountName, "", dateSeptember, "testPayee2", "A transaction whose notes are now updated.", true, map[string]int64{categoryName: -500}), http.StatusNoContent)
 		// DELETE payee
-		c.Request(c.DeletePayee(jwt1, budgetID1, payeeID2, "testPayee"), http.StatusNoContent)
+		c.Request(c.DeletePayee(jwt1, budgetID1, payeeID2, payeeName), http.StatusNoContent)
 		// DELETE transaction
 		c.Request(c.DeleteTransaction(jwt1, budgetID1, transactionID1), http.StatusNoContent)
 	})
@@ -342,15 +346,15 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// user1 ADMIN: Creating Webflyx Org budget & assigning u2, u3, u4 as MANAGER, CONTRIBUTOR, VIEWER.
 	c.Request(c.CreateBudget(jwt1, "Webflyx Org", "For budgeting Webflyx Org financial resources and tracking expenses."), http.StatusCreated)
-	budget1, _ := c.GetJSONFieldAsString("id")
+	budget1ID, _ := c.GetJSONFieldAsString("id")
 	c.Request(c.CreateBudget(jwt1, "Personal", "user1's budget for personal finance."), http.StatusCreated)
 
 	// Try adding user2 as ADMIN using user4 (not in budget), then as MANAGER. Both should fail.
-	c.Request(c.AssignMemberToBudget(jwt4, budget1, username2, roleAdmin), http.StatusForbidden)
-	c.Request(c.AssignMemberToBudget(jwt4, budget1, username2, roleManager), http.StatusForbidden)
+	c.Request(c.AssignMemberToBudget(jwt4, budget1ID, username2, roleAdmin), http.StatusForbidden)
+	c.Request(c.AssignMemberToBudget(jwt4, budget1ID, username2, roleManager), http.StatusForbidden)
 
 	// Add user4 to Webflyx Org as user1 ADMIN, with role: VIEWER
-	c.Request(c.AssignMemberToBudget(jwt1, budget1, username4, roleViewer), http.StatusCreated)
+	c.Request(c.AssignMemberToBudget(jwt1, budget1ID, username4, roleViewer), http.StatusCreated)
 
 	// user4 should be assigned to only 1 budget
 	c.Request(c.GetUserBudgets(jwt4), http.StatusOK)
@@ -358,19 +362,19 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	assert.Len(t, gotBudgets.([]any), 1)
 
 	// As user4, try adding user2 as a MANAGER. Should fail auth check.
-	c.Request(c.AssignMemberToBudget(jwt4, budget1, username2, roleManager), http.StatusForbidden)
+	c.Request(c.AssignMemberToBudget(jwt4, budget1ID, username2, roleManager), http.StatusForbidden)
 
 	// As user1 ADMIN, add user2 and user3 as MANAGER and CONTRIBUTOR, respectively.
-	c.Request(c.AssignMemberToBudget(jwt1, budget1, username2, roleManager), http.StatusCreated)
-	c.Request(c.AssignMemberToBudget(jwt1, budget1, username3, roleContributor), http.StatusCreated)
+	c.Request(c.AssignMemberToBudget(jwt1, budget1ID, username2, roleManager), http.StatusCreated)
+	c.Request(c.AssignMemberToBudget(jwt1, budget1ID, username3, roleContributor), http.StatusCreated)
 
 	// Attemc.deletion of Webflyx Org budget as user2. Should fail; only admin can do it.
-	c.Request(c.DeleteUserBudget(jwt2, budget1), http.StatusForbidden)
+	c.Request(c.DeleteUserBudget(jwt2, budget1ID), http.StatusForbidden)
 
 	// Attemc.to revoke user3's Webflyx Org membership as user4. Should fail.
-	c.Request(c.RevokeBudgetMembership(jwt4, budget1, user3ID), http.StatusForbidden)
+	c.Request(c.RevokeBudgetMembership(jwt4, budget1ID, user3ID), http.StatusForbidden)
 	// Revoke user3's Webflyx Org membership as user1. Should succeed.
-	c.Request(c.RevokeBudgetMembership(jwt1, budget1, user3ID), http.StatusNoContent)
+	c.Request(c.RevokeBudgetMembership(jwt1, budget1ID, user3ID), http.StatusNoContent)
 
 	// user1 should be assigned to 2 budgets: Webflyx Org & their personal budget
 	c.Request(c.GetUserBudgets(jwt1), http.StatusOK)
@@ -378,7 +382,7 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	assert.Len(t, gotBudgets.([]any), 2)
 
 	// Attemc.deletion of Webflyx Org budget as user1. Should succeed.
-	c.Request(c.DeleteUserBudget(jwt1, budget1), http.StatusNoContent)
+	c.Request(c.DeleteUserBudget(jwt1, budget1ID), http.StatusNoContent)
 
 	// user1 should be assigned to only 1 budget now: their personal budget.
 	c.Request(c.GetUserBudgets(jwt1), http.StatusOK)
@@ -424,34 +428,34 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 
 	// user1 ADMIN: Creating Webflyx Org budget & assigning u2, u3, u4 as MANAGER, CONTRIBUTOR, VIEWER.
 	c.Request(c.CreateBudget(jwt1, "Webflyx Org", "For budgeting Webflyx Org financial resources and tracking expenses."), http.StatusCreated)
-	budget1, _ := c.GetJSONFieldAsString("id")
-	c.Request(c.AssignMemberToBudget(jwt1, budget1, username2, roleManager), http.StatusCreated)
-	c.Request(c.AssignMemberToBudget(jwt1, budget1, username3, roleContributor), http.StatusCreated)
-	c.Request(c.AssignMemberToBudget(jwt1, budget1, username4, roleViewer), http.StatusCreated)
+	budgetID, _ := c.GetJSONFieldAsString("id")
+	c.Request(c.AssignMemberToBudget(jwt1, budgetID, username2, roleManager), http.StatusCreated)
+	c.Request(c.AssignMemberToBudget(jwt1, budgetID, username3, roleContributor), http.StatusCreated)
+	c.Request(c.AssignMemberToBudget(jwt1, budgetID, username4, roleViewer), http.StatusCreated)
 
 	// user2 MANAGER: Adding account, groups, & categories.
-	c.Request(c.CreateBudgetAccount(jwt2, budget1, "savings", "Saved Org Funds", "Represents a bank account holding business capital."), http.StatusCreated)
-	c.Request(c.CreateBudgetAccount(jwt2, budget1, "credit", "Employee Business Credit Account", "Employees use cards that pull from this account to pay for business expenses."), http.StatusCreated)
+	c.Request(c.CreateBudgetAccount(jwt2, budgetID, "savings", "Saved Org Funds", "Represents a bank account holding business capital."), http.StatusCreated)
+	c.Request(c.CreateBudgetAccount(jwt2, budgetID, "credit", "Employee Business Credit Account", "Employees use cards that pull from this account to pay for business expenses."), http.StatusCreated)
 	account2, _ := c.GetJSONFieldAsString("id")
-	c.Request(c.CreateGroup(jwt2, budget1, "Business Capital", "Categories related to company capital"), http.StatusCreated)
-	c.Request(c.CreateCategory(jwt2, budget1, "Business Capital", "Surplus", "Category representing surplus funding to be spent on elective improvements to organization headquarters or employee bonuses."), http.StatusCreated)
-	category1, _ := c.GetJSONFieldAsString("id")
-	c.Request(c.CreateCategory(jwt2, budget1, "Business Capital", "Expenses", "Category representing funds to be used for employee expenses while on the job."), http.StatusCreated)
-	category2, _ := c.GetJSONFieldAsString("id")
+	c.Request(c.CreateGroup(jwt2, budgetID, "Business Capital", "Categories related to company capital"), http.StatusCreated)
+	category1Name := "Surplus"
+	c.Request(c.CreateCategory(jwt2, budgetID, "Business Capital", category1Name, "Category representing surplus funding to be spent on elective improvements to organization headquarters or employee bonuses."), http.StatusCreated)
+	category2Name := "Expenses"
+	c.Request(c.CreateCategory(jwt2, budgetID, "Business Capital", category2Name, "Category representing funds to be used for employee expenses while on the job."), http.StatusCreated)
 
 	// user3 CONTRIBUTOR: Adding transactions (EX: gas station).
-	c.Request(c.CreateBudgetPayee(jwt3, budget1, "Smash & Dash", "A gas & convenience store"), http.StatusCreated)
+	c.Request(c.CreateBudgetPayee(jwt3, budgetID, "Smash & Dash", "A gas & convenience store"), http.StatusCreated)
 	payee1ID, _ := c.GetJSONFieldAsString("id")
 
-	c.Request(c.LogTransaction(jwt3, budget1, "Employee Business Credit Account", "", dateSeptember, "Smash & Dash", "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station.", true, map[string]int64{category2: -1800}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt3, budgetID, "Employee Business Credit Account", "", dateSeptember, "Smash & Dash", "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station.", true, map[string]int64{category2Name: -1800}), http.StatusCreated)
 	// transaction1, _ := c.GetJSONFieldAsString("id")
 
-	c.Request(c.LogTransaction(jwt3, budget1, "Employee Business Credit Account", "", dateSeptember, "Smash & Dash", "Yeah, I got a drink in the convenience store too; sue me. Take it out of my bonus or whatever.", true, map[string]int64{category1: -400}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt3, budgetID, "Employee Business Credit Account", "", dateSeptember, "Smash & Dash", "Yeah, I got a drink in the convenience store too; sue me. Take it out of my bonus or whatever.", true, map[string]int64{category1Name: -400}), http.StatusCreated)
 	// transaction2, _ := c.GetJSONFieldAsString("id")
 
 	// user4 VIEWER: Works for accounting; reading transactions from employees.
-	c.Request(c.GetTransactions(jwt4, budget1, account2, "", "", "", ""), http.StatusOK)
-	c.Request(c.GetTransactions(jwt4, budget1, "", "", payee1ID, "", ""), http.StatusOK)
+	c.Request(c.GetTransactions(jwt4, budgetID, account2, "", "", "", ""), http.StatusOK)
+	c.Request(c.GetTransactions(jwt4, budgetID, "", "", payee1ID, "", ""), http.StatusOK)
 
 	// Delete all users
 	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
@@ -480,60 +484,62 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 
 	// user2 ADMIN: Creating personal budget, making accounts and deposit transactions.
 	c.Request(c.CreateBudget(jwt1, "Personal Budget", "For personal accounting (user1)."), http.StatusCreated)
-	budget1, _ := c.GetJSONFieldAsString("id")
+	budget1ID, _ := c.GetJSONFieldAsString("id")
 
-	c.Request(c.CreateBudgetAccount(jwt1, budget1, "checking", "Checking (Big Banking Inc)", "Reflects my checking account opened via Big Banking, Inc."), http.StatusCreated)
-	account1, _ := c.GetJSONFieldAsString("id")
-	c.Request(c.CreateBudgetAccount(jwt1, budget1, "credit", "Credit (Big Banking Inc)", "Reflects my credit account opened via Big Banking, Inc."), http.StatusCreated)
-	account2, _ := c.GetJSONFieldAsString("id")
+	account1Name := "Checking (Big Banking Inc)"
+	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "checking", account1Name, "Reflects my checking account opened via Big Banking, Inc."), http.StatusCreated)
+	account1ID, _ := c.GetJSONFieldAsString("id")
+	account2Name := "Credit (Big Banking Inc)"
+	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "credit", account2Name, "Reflects my credit account opened via Big Banking, Inc."), http.StatusCreated)
+	account2ID, _ := c.GetJSONFieldAsString("id")
 
-	c.Request(c.CreateGroup(jwt1, budget1, "Spending", "Categories related to day-to-day spending"), http.StatusCreated)
+	c.Request(c.CreateGroup(jwt1, budget1ID, "Spending", "Categories related to day-to-day spending"), http.StatusCreated)
 
-	c.Request(c.CreateCategory(jwt1, budget1, "Spending", "Dining Out", "Money for ordering takeout or dining in."), http.StatusCreated)
-	category1, _ := c.GetJSONFieldAsString("id")
+	categoryName := "Dining Out"
+	c.Request(c.CreateCategory(jwt1, budget1ID, "Spending", "Dining Out", "Money for ordering takeout or dining in."), http.StatusCreated)
 
-	c.Request(c.CreateBudgetPayee(jwt1, budget1, "Webflyx Org", "user1 employer"), http.StatusCreated)
+	c.Request(c.CreateBudgetPayee(jwt1, budget1ID, "Webflyx Org", "user1 employer"), http.StatusCreated)
 
-	c.Request(c.CreateBudgetPayee(jwt1, budget1, "Messy Joe's", "Nice atmosphere. Food's great. It's got a bit of an edge."), http.StatusCreated)
+	c.Request(c.CreateBudgetPayee(jwt1, budget1ID, "Messy Joe's", "Nice atmosphere. Food's great. It's got a bit of an edge."), http.StatusCreated)
 
 	// deposit some money into checking account, allocated (but not explicitly assigned) to the DINING OUT category
-	c.Request(c.LogTransaction(jwt1, budget1, "Checking (Big Banking Inc)", "", dateSeptember, "Webflyx Org", "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", true, map[string]int64{category1: 10000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, account1Name, "", dateSeptember, "Webflyx Org", "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", true, map[string]int64{categoryName: 10000}), http.StatusCreated)
 
-	c.Request(c.GetBudgetCapital(jwt1, budget1, account1), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, account1ID), http.StatusOK)
 	budgetCheckingCapital, _ := c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(10000), budgetCheckingCapital)
 
-	c.Request(c.GetBudgetCapital(jwt1, budget1, account2), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, account2ID), http.StatusOK)
 	budgetCreditCapital, _ := c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(0), budgetCreditCapital)
 
-	c.Request(c.GetBudgetCapital(jwt1, budget1, ""), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, ""), http.StatusOK)
 	budgetTotalCapital, _ := c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(10000), budgetTotalCapital)
 
 	// spend money out of a credit account
-	c.Request(c.LogTransaction(jwt1, budget1, "Credit (Big Banking Inc)", "", dateSeptember, "Messy Joe's", "$50 dinner at a restaurant", true, map[string]int64{category1: -5000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, "Credit (Big Banking Inc)", "", dateSeptember, "Messy Joe's", "$50 dinner at a restaurant", true, map[string]int64{categoryName: -5000}), http.StatusCreated)
 
-	c.Request(c.GetBudgetCapital(jwt1, budget1, account2), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, account2ID), http.StatusOK)
 	budgetCreditCapital, _ = c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(-5000), budgetCreditCapital)
 
-	c.Request(c.GetBudgetCapital(jwt1, budget1, ""), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, ""), http.StatusOK)
 	budgetTotalCapital, _ = c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(5000), budgetTotalCapital)
 
 	// pay off credit account, using the checking account, using a transfer transaction
-	c.Request(c.LogTransaction(jwt1, budget1, "Checking (Big Banking Inc)", "Credit (Big Banking Inc)", dateSeptember, "ACCOUNT TRANSFER", "Pay off credit account balance", true, map[string]int64{"TRANSFER AMOUNT": -5000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, account1Name, account2Name, dateSeptember, "ACCOUNT TRANSFER", "Pay off credit account balance", true, map[string]int64{"TRANSFER": -5000}), http.StatusCreated)
 
-	c.Request(c.GetBudgetCapital(jwt1, budget1, account2), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, account2ID), http.StatusOK)
 	budgetCreditCapital, _ = c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(0), budgetCreditCapital)
 
-	c.Request(c.GetBudgetCapital(jwt1, budget1, account1), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, account1ID), http.StatusOK)
 	budgetCheckingCapital, _ = c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(5000), budgetCheckingCapital)
 
-	c.Request(c.GetBudgetCapital(jwt1, budget1, ""), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, ""), http.StatusOK)
 	budgetTotalCapital, _ = c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(5000), budgetTotalCapital)
 
@@ -567,67 +573,69 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 
 	// user1 ADMIN: Creating personal budget, making account and other resources.
 	c.Request(c.CreateBudget(jwt1, "Personal Budget", "For personal accounting (user1)."), http.StatusCreated)
-	budget1, _ := c.GetJSONFieldAsString("id")
+	budget1ID, _ := c.GetJSONFieldAsString("id")
 
-	c.Request(c.CreateBudgetAccount(jwt1, budget1, "checking", "Checking (Big Banking Inc)", "Reflects my checking account opened via Big Banking, Inc."), http.StatusCreated)
+	accountName := "Checking (Big Banking Inc)"
+	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "checking", accountName, "Reflects my checking account opened via Big Banking, Inc."), http.StatusCreated)
 
 	// Note: lack of group assignment is purposeful.
-	c.Request(c.CreateCategory(jwt1, budget1, "", "Dining Out", "Money for ordering takeout or dining in."), http.StatusCreated)
-	category1, _ := c.GetJSONFieldAsString("id")
+	categoryName := "Dining Out"
+	c.Request(c.CreateCategory(jwt1, budget1ID, "", "Dining Out", "Money for ordering takeout or dining in."), http.StatusCreated)
+	category1ID, _ := c.GetJSONFieldAsString("id")
 
-	c.Request(c.CreateCategory(jwt1, budget1, "", "Savings", "My savings fund."), http.StatusCreated)
-	category2, _ := c.GetJSONFieldAsString("id")
+	c.Request(c.CreateCategory(jwt1, budget1ID, "", "Savings", "My savings fund."), http.StatusCreated)
+	category2ID, _ := c.GetJSONFieldAsString("id")
 
-	c.Request(c.CreateBudgetPayee(jwt1, budget1, "Webflyx Org", "user1 employer"), http.StatusCreated)
-	c.Request(c.CreateBudgetPayee(jwt1, budget1, "Messy Joe's", "Nice atmosphere. Food's great. It's got a bit of an edge."), http.StatusCreated)
+	c.Request(c.CreateBudgetPayee(jwt1, budget1ID, "Webflyx Org", "user1 employer"), http.StatusCreated)
+	c.Request(c.CreateBudgetPayee(jwt1, budget1ID, "Messy Joe's", "Nice atmosphere. Food's great. It's got a bit of an edge."), http.StatusCreated)
 
 	// SEc.MBER 2025 ACTIVITIES
 	// deposit some money into the checking account, allocated (but not explicitly assigned) to the Dining Out category
-	c.Request(c.LogTransaction(jwt1, budget1, "Checking (Big Banking Inc)", "", dateSeptember, "Webflyx Org", "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", true, map[string]int64{category1: 10000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateSeptember, "Webflyx Org", "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", true, map[string]int64{categoryName: 10000}), http.StatusCreated)
 
 	// spend money out of Dining Out category
-	c.Request(c.LogTransaction(jwt1, budget1, "Checking (Big Banking Inc)", "", dateSeptember, "Messy Joe's", "$50 dinner at a restaurant", true, map[string]int64{category1: -5000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateSeptember, "Messy Joe's", "$50 dinner at a restaurant", true, map[string]int64{categoryName: -5000}), http.StatusCreated)
 
 	// we expect that there's 5000 in capital remaining, and NO assignable money.
 	// 5000 in Dining Out; 0 in Savings.
-	c.Request(c.GetBudgetCapital(jwt1, budget1, ""), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, ""), http.StatusOK)
 	budgetTotalCapital, _ := c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(5000), budgetTotalCapital)
 
-	c.Request(c.GetMonthCategoryReport(jwt1, budget1, dateSeptember, category1), http.StatusOK)
-	balanceCategory1, _ := c.GetJSONFieldAsInt64("balance")
-	assert.Equal(t, int64(5000), balanceCategory1)
+	c.Request(c.GetMonthCategoryReport(jwt1, budget1ID, dateSeptember, category1ID), http.StatusOK)
+	category1Balance, _ := c.GetJSONFieldAsInt64("balance")
+	assert.Equal(t, int64(5000), category1Balance)
 
-	c.Request(c.GetMonthCategoryReport(jwt1, budget1, dateSeptember, category2), http.StatusOK)
-	balanceCategory2, _ := c.GetJSONFieldAsInt64("balance")
-	assert.Equal(t, int64(0), balanceCategory2)
+	c.Request(c.GetMonthCategoryReport(jwt1, budget1ID, dateSeptember, category2ID), http.StatusOK)
+	category2Balance, _ := c.GetJSONFieldAsInt64("balance")
+	assert.Equal(t, int64(0), category2Balance)
 
 	// OCTOBER 2025 ACTIVITIES
 	// deposit more money into the checking account, with NO category allocation.
 	// Assign some (but not all of it, to test for underassignment) to each of two categories.
-	c.Request(c.LogTransaction(jwt1, budget1, "Checking (Big Banking Inc)", "", dateOctober, "Webflyx Org", "$100 deposit into account; no category allocation, we'll assign it manually.", true, map[string]int64{"UNCATEGORIZED": 10000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateOctober, "Webflyx Org", "$100 deposit into account; no category allocation, we'll assign it manually.", true, map[string]int64{"UNCATEGORIZED": 10000}), http.StatusCreated)
 
-	c.Request(c.AssignMoneyToCategory(jwt1, budget1, dateOctober, category1, 4000), http.StatusOK)
-	c.Request(c.AssignMoneyToCategory(jwt1, budget1, dateOctober, category2, 5000), http.StatusOK)
+	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateOctober, category1ID, 4000), http.StatusOK)
+	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateOctober, category2ID, 5000), http.StatusOK)
 
 	// spend money out of Dining Out category
-	c.Request(c.LogTransaction(jwt1, budget1, "Checking (Big Banking Inc)", "", dateOctober, "Messy Joe's", "I was very busy having fun, fun, fun!", true, map[string]int64{category1: -4000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateOctober, "Messy Joe's", "I was very busy having fun, fun, fun!", true, map[string]int64{categoryName: -4000}), http.StatusCreated)
 
 	// we expect that there's 11000 in capital remaining, and 1000 in assignable money.
 	// 5000 in Dining Out; 5000 in Savings.
-	c.Request(c.GetBudgetCapital(jwt1, budget1, ""), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, ""), http.StatusOK)
 	budgetTotalCapital, _ = c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(11000), budgetTotalCapital)
 
-	c.Request(c.GetMonthCategoryReport(jwt1, budget1, dateOctober, category1), http.StatusOK)
-	balanceCategory1, _ = c.GetJSONFieldAsInt64("balance")
-	assert.Equal(t, int64(5000), balanceCategory1)
+	c.Request(c.GetMonthCategoryReport(jwt1, budget1ID, dateOctober, category1ID), http.StatusOK)
+	category1Balance, _ = c.GetJSONFieldAsInt64("balance")
+	assert.Equal(t, int64(5000), category1Balance)
 
-	c.Request(c.GetMonthCategoryReport(jwt1, budget1, dateOctober, category2), http.StatusOK)
-	balanceCategory2, _ = c.GetJSONFieldAsInt64("balance")
-	assert.Equal(t, int64(5000), balanceCategory2)
+	c.Request(c.GetMonthCategoryReport(jwt1, budget1ID, dateOctober, category2ID), http.StatusOK)
+	category2Balance, _ = c.GetJSONFieldAsInt64("balance")
+	assert.Equal(t, int64(5000), category2Balance)
 
-	c.Request(c.GetMonthReport(jwt1, budget1, dateOctober), http.StatusOK)
+	c.Request(c.GetMonthReport(jwt1, budget1ID, dateOctober), http.StatusOK)
 	budgetTotalBalance, _ := c.GetJSONFieldAsInt64("balance")
 	assert.Equal(t, int64(1000), (budgetTotalCapital - budgetTotalBalance))
 
@@ -636,24 +644,24 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	// Assign the 1000 left available from OCTOBER to the SAVINGS category.
 	// Assign 1000 (that we don't have) to DINING OUT to test for overassignment.
 
-	c.Request(c.AssignMoneyToCategory(jwt1, budget1, dateNovember, category2, 1000), http.StatusOK)
-	c.Request(c.AssignMoneyToCategory(jwt1, budget1, dateNovember, category1, 1000), http.StatusOK)
+	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateNovember, category2ID, 1000), http.StatusOK)
+	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateNovember, category1ID, 1000), http.StatusOK)
 
 	// we expect that there's still just 11000 in capital remaining, and -1000 in assignable money, which indicates overassignment.
 	// 6000 in Dining Out; 6000 in Savings.
-	c.Request(c.GetBudgetCapital(jwt1, budget1, ""), http.StatusOK)
+	c.Request(c.GetBudgetCapital(jwt1, budget1ID, ""), http.StatusOK)
 	budgetTotalCapital, _ = c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(11000), budgetTotalCapital)
 
-	c.Request(c.GetMonthCategoryReport(jwt1, budget1, dateNovember, category1), http.StatusOK)
-	balanceCategory1, _ = c.GetJSONFieldAsInt64("balance")
-	assert.Equal(t, int64(6000), balanceCategory1)
+	c.Request(c.GetMonthCategoryReport(jwt1, budget1ID, dateNovember, category1ID), http.StatusOK)
+	category1Balance, _ = c.GetJSONFieldAsInt64("balance")
+	assert.Equal(t, int64(6000), category1Balance)
 
-	c.Request(c.GetMonthCategoryReport(jwt1, budget1, dateNovember, category2), http.StatusOK)
-	balanceCategory2, _ = c.GetJSONFieldAsInt64("balance")
-	assert.Equal(t, int64(6000), balanceCategory2)
+	c.Request(c.GetMonthCategoryReport(jwt1, budget1ID, dateNovember, category2ID), http.StatusOK)
+	category2Balance, _ = c.GetJSONFieldAsInt64("balance")
+	assert.Equal(t, int64(6000), category2Balance)
 
-	c.Request(c.GetMonthReport(jwt1, budget1, dateNovember), http.StatusOK)
+	c.Request(c.GetMonthReport(jwt1, budget1ID, dateNovember), http.StatusOK)
 	budgetTotalBalance, _ = c.GetJSONFieldAsInt64("balance")
 	assert.Equal(t, int64(-1000), (budgetTotalCapital - budgetTotalBalance))
 

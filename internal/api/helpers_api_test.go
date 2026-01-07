@@ -318,11 +318,10 @@ func (c *APITestClient) GetTransaction(token, budgetID, transactionID string) *h
 	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/transactions/"+transactionID, token, nil)
 }
 
-func (c *APITestClient) UpdateTransaction(token, budgetID, transactionID, accountName, transferAccountName, transactionType, transactionDate, payeeName, notes, isCleared string, amounts map[string]int64) *http.Request {
+func (c *APITestClient) UpdateTransaction(token, budgetID, transactionID, accountName, transferAccountName, transactionDate, payeeName, notes string, isCleared bool, amounts map[string]int64) *http.Request {
 	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID+"/transactions/"+transactionID, token, map[string]any{
 		"account_name":          accountName,
 		"transfer_account_name": transferAccountName,
-		"transaction_type":      transactionType,
 		"transaction_date":      transactionDate,
 		"payee_name":            payeeName,
 		"notes":                 notes,
