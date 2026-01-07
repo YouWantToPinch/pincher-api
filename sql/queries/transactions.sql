@@ -112,7 +112,7 @@ SELECT *
 FROM transaction_details
 WHERE id = $1;
 
--- name: UpdateTransaction :one
+-- name: UpdateTransaction :exec
 WITH
 updated_txn AS (
     UPDATE transactions t
@@ -125,16 +125,15 @@ updated_txn AS (
         notes = sqlc.arg('notes'),
         cleared = sqlc.arg('cleared')
     WHERE t.id = sqlc.arg('transaction_id')
-    RETURNING *
+    RETURNING id, transaction_type
 ),
-
--- Clear out existing splits for this transaction
+-- Delete existing splits associated with the transaction
 deleted_splits AS (
     DELETE FROM transaction_splits
     WHERE transaction_id = sqlc.arg('transaction_id')
+    RETURNING 1
 ),
-
--- Insert fresh splits from the provided JSON
+-- Insert new splits from the provided JSON
 inserted_splits AS (
     INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
     SELECT
@@ -146,16 +145,10 @@ inserted_splits AS (
             ELSE key::uuid
         END,
         value::integer
-    FROM updated_txn, json_each_text(sqlc.arg('amounts')::json)
-    RETURNING *
+    FROM updated_txn, json_each_text(sqlc.arg('amounts')::json), deleted_splits
+    RETURNING 1
 )
-SELECT
-    updated_txn.*,
-    (
-        SELECT json_agg(inserted_splits.*)
-        FROM inserted_splits
-    ) AS splits
-FROM updated_txn;
+SELECT 1;
 
 -- name: DeleteTransaction :exec
 DELETE

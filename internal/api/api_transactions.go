@@ -579,7 +579,7 @@ func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	_, err = cfg.db.UpdateTransaction(r.Context(), database.UpdateTransactionParams{
+	err = cfg.db.UpdateTransaction(r.Context(), database.UpdateTransactionParams{
 		TransactionID:   pathTransactionID,
 		AccountID:       *AccountID,
 		TransactionType: txnType,

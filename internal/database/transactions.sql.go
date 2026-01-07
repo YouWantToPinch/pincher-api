@@ -419,7 +419,7 @@ func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) 
 	return i, err
 }
 
-const updateTransaction = `-- name: UpdateTransaction :one
+const updateTransaction = `-- name: UpdateTransaction :exec
 WITH
 updated_txn AS (
     UPDATE transactions t
@@ -432,14 +432,13 @@ updated_txn AS (
         notes = $5,
         cleared = $6
     WHERE t.id = $7
-    RETURNING id, created_at, updated_at, budget_id, logger_id, account_id, transaction_type, transaction_date, payee_id, notes, cleared
+    RETURNING id, transaction_type
 ),
-
 deleted_splits AS (
     DELETE FROM transaction_splits
     WHERE transaction_id = $7
+    RETURNING 1
 ),
-
 inserted_splits AS (
     INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
     SELECT
@@ -451,16 +450,10 @@ inserted_splits AS (
             ELSE key::uuid
         END,
         value::integer
-    FROM updated_txn, json_each_text($8::json)
-    RETURNING id, transaction_id, category_id, amount
+    FROM updated_txn, json_each_text($8::json), deleted_splits
+    RETURNING 1
 )
-SELECT
-    updated_txn.id, updated_txn.created_at, updated_txn.updated_at, updated_txn.budget_id, updated_txn.logger_id, updated_txn.account_id, updated_txn.transaction_type, updated_txn.transaction_date, updated_txn.payee_id, updated_txn.notes, updated_txn.cleared,
-    (
-        SELECT json_agg(inserted_splits.*)
-        FROM inserted_splits
-    ) AS splits
-FROM updated_txn
+SELECT 1
 `
 
 type UpdateTransactionParams struct {
@@ -474,25 +467,10 @@ type UpdateTransactionParams struct {
 	Amounts         json.RawMessage
 }
 
-type UpdateTransactionRow struct {
-	ID              uuid.UUID
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	BudgetID        uuid.UUID
-	LoggerID        uuid.UUID
-	AccountID       uuid.UUID
-	TransactionType string
-	TransactionDate time.Time
-	PayeeID         uuid.UUID
-	Notes           string
-	Cleared         bool
-	Splits          json.RawMessage
-}
-
-// Clear out existing splits for this transaction
-// Insert fresh splits from the provided JSON
-func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) (UpdateTransactionRow, error) {
-	row := q.db.QueryRowContext(ctx, updateTransaction,
+// Delete existing splits associated with the transaction
+// Insert new splits from the provided JSON
+func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) error {
+	_, err := q.db.ExecContext(ctx, updateTransaction,
 		arg.AccountID,
 		arg.TransactionType,
 		arg.TransactionDate,
@@ -502,20 +480,5 @@ func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionPa
 		arg.TransactionID,
 		arg.Amounts,
 	)
-	var i UpdateTransactionRow
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.BudgetID,
-		&i.LoggerID,
-		&i.AccountID,
-		&i.TransactionType,
-		&i.TransactionDate,
-		&i.PayeeID,
-		&i.Notes,
-		&i.Cleared,
-		&i.Splits,
-	)
-	return i, err
+	return err
 }
