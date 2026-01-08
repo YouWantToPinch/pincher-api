@@ -261,21 +261,43 @@ func Test_CRUD(t *testing.T) {
 	c.Request(c.CreateBudgetPayee(jwt1, budgetID1, "testPayee", "A payee for testing."), http.StatusCreated)
 
 	t.Run("Transactions", func(t *testing.T) {
-		// PREP: Create payee
+		// PREP: Create payee, account
 		c.Request(c.CreateBudgetPayee(jwt1, budgetID1, "testPayee2", "A payee for testing payee reassignment & deletion."), http.StatusCreated)
 		payeeID2, _ := c.GetJSONFieldAsString("id")
 
-		// CREATE transaction
-		c.Request(c.LogTransaction(jwt1, budgetID1, accountName, "", dateSeptember, payeeName, "A transaction for testing.", true, map[string]int64{categoryName: -500}), http.StatusCreated)
+		c.Request(c.CreateBudgetAccount(jwt1, budgetID1, "ON_BUDGET", "tempAccount", "An account for testing transfer interactions."), http.StatusCreated)
+		accountID1, _ := c.GetJSONFieldAsString("id")
+
+		// CREATE transaction (deposit)
+		c.Request(c.LogTransaction(jwt1, budgetID1, accountName, "", dateSeptember, payeeName, "A $1000 DEPOSIT test transaction.", true, map[string]int64{categoryName: 100000}), http.StatusCreated)
 		transactionID1, _ := c.GetJSONFieldAsString("id")
 		// READ transaction
 		c.Request(c.GetTransaction(jwt1, budgetID1, transactionID1), http.StatusOK)
-		// UPDATE transaction
-		c.Request(c.UpdateTransaction(jwt1, budgetID1, transactionID1, accountName, "", dateSeptember, "testPayee2", "A transaction whose notes are now updated.", true, map[string]int64{categoryName: -500}), http.StatusNoContent)
+		// UPDATE transaction (deposit)
+		c.Request(c.UpdateTransaction(jwt1, budgetID1, transactionID1, accountName, "", dateSeptember, "testPayee2", "An updated deposit transaction (it was actually just $100)", true, map[string]int64{categoryName: 10000}), http.StatusNoContent)
 		// DELETE payee
 		c.Request(c.DeletePayee(jwt1, budgetID1, payeeID2, payeeName), http.StatusNoContent)
-		// DELETE transaction
+
+		// CREATE transaction (withdrawal)
+		c.Request(c.LogTransaction(jwt1, budgetID1, accountName, "", dateSeptember, payeeName, "A $5 WITHDRAWAL test transaction.", true, map[string]int64{categoryName: -500}), http.StatusCreated)
+		transactionID2, _ := c.GetJSONFieldAsString("id")
+
+		// CREATE transaction (transfer)
+		c.Request(c.LogTransaction(jwt1, budgetID1, accountName, "tempAccount", dateSeptember, "", "A transfer of $50 from testAccount to tempAccount.", true, map[string]int64{"TRANSFER": -5000}), http.StatusCreated)
+		transactionID3, _ := c.GetJSONFieldAsString("from_transaction.id")
+
+		// UPDATE transaction (transfer)
+		c.Request(c.UpdateTransaction(jwt1, budgetID1, transactionID3, accountName, "tempAccount", dateSeptember, "testPayee2", "An updated transfer transaction (it was actually just $10). It should update the corresponding one.", true, map[string]int64{categoryName: 1000}), http.StatusNoContent)
+
+		// DELETE transactions
 		c.Request(c.DeleteTransaction(jwt1, budgetID1, transactionID1), http.StatusNoContent)
+		c.Request(c.DeleteTransaction(jwt1, budgetID1, transactionID2), http.StatusNoContent)
+		// we expect this to delete the corresponding transfer txn as part of its own process
+		c.Request(c.DeleteTransaction(jwt1, budgetID1, transactionID3), http.StatusNoContent)
+
+		// DELETE tempAccount (should work, as we expect all of its one txn to be deleted)
+		c.Request(c.DeleteBudgetAccount(jwt1, budgetID1, accountID1, "tempAccount", false), http.StatusOK)
+		c.Request(c.DeleteBudgetAccount(jwt1, budgetID1, accountID1, "tempAccount", true), http.StatusNoContent)
 	})
 }
 
@@ -539,7 +561,7 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	assert.Equal(t, int64(5000), budgetTotalCapital)
 
 	// pay off credit account, using the checking account, using a transfer transaction
-	c.Request(c.LogTransaction(jwt1, budget1ID, account1Name, account2Name, dateSeptember, "ACCOUNT TRANSFER", "Pay off credit account balance", true, map[string]int64{"TRANSFER": -5000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, account1Name, account2Name, dateSeptember, "TRANSFER", "Pay off credit account balance", true, map[string]int64{"TRANSFER": -5000}), http.StatusCreated)
 
 	c.Request(c.GetBudgetCapital(jwt1, budget1ID, account2ID), http.StatusOK)
 	budgetCreditCapital, _ = c.GetJSONFieldAsInt64("capital")

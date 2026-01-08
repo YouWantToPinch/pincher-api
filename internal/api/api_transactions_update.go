@@ -1,19 +1,14 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 	"github.com/google/uuid"
 )
 
-func (cfg *APIConfig) ZendpUpdateTransaction(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	validatedTxn := getContextKeyValueAsTxn(r.Context(), "validated_txn")
-
-	checkIsTransfer := func(txnType string) bool {
-		return txnType == "TRANSFER_TO" || txnType == "TRANSFER_FROM"
-	}
 
 	var pathTransactionID uuid.UUID
 	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
@@ -22,85 +17,73 @@ func (cfg *APIConfig) ZendpUpdateTransaction(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Non-transfer TXNs may not be updated as transfer TXNs, and vice versa
-	dbTransaction, err := cfg.db.GetTransactionByID(r.Context(), pathTransactionID)
+	dbTxnDetails, err := cfg.db.GetTransactionDetailsByID(r.Context(), pathTransactionID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "could not get transaction", err)
 		return
 	}
-	if validatedTxn.isTransfer != checkIsTransfer(dbTransaction.TransactionType) {
+	// Non-transfer TXNs may not be updated as transfer TXNs, and vice versa
+	if validatedTxn.isTransfer != checkIsTransfer(dbTxnDetails.TransactionType) {
 		respondWithError(w, http.StatusBadRequest, "cannot change transfer txn to non-transfer txn, nor vice-versa", nil)
-	}
-
-	amountsJSONBytes, err := json.Marshal(validatedTxn.amounts)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not marshal txn splits", err)
 		return
 	}
 
-	// avoid update to transfer if the linked transfer cannot be found
-	var linkedTxn database.Transaction
-	var updateLinkedTxn bool
-	var invertedAmountsJSONBytes []byte
-	if validatedTxn.isTransfer {
-		// linkedTxn, err = cfg.db.GetLinkedTransactionID(r.Context(), pathTransactionID)
+	// DB TRANSACTION BLOCK
+	{
+		tx, err := cfg.Pool.Begin(r.Context())
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not find corresponding txn to update", err)
+			respondWithError(w, http.StatusInternalServerError, "", err)
 			return
 		}
-		// only changes to certain fields warrant further queries to keep the transfer in sync
-		updateLinkedTxn = false /* (linkedTxn.Notes != validatedTxn.notes) ||
-		(linkedTxn.TransactionType == validatedTxn.txnType) || */
-		// prepare inverse amounts for corresponding transfer transaction
-		invertedAmounts := make(map[string]int64)
-		for k, v := range validatedTxn.amounts {
-			invertedAmounts[k] = -1 * v
-		}
-		invertedAmountsJSONBytes, err = json.Marshal(invertedAmounts)
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not marshal txn splits for corresponding transfer txn", err)
-			return
-		}
-	}
+		defer tx.Rollback(r.Context())
 
-	err = cfg.db.UpdateTransaction(r.Context(), database.UpdateTransactionParams{
-		TransactionID:   pathTransactionID,
-		AccountID:       validatedTxn.accountID,
-		TransactionType: validatedTxn.txnType,
-		TransactionDate: validatedTxn.txnDate,
-		PayeeID:         uuid.Nil,
-		Notes:           validatedTxn.notes,
-		Cleared:         linkedTxn.Cleared,
-		Amounts:         json.RawMessage(amountsJSONBytes),
-	})
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not update transaction", err)
-		return
-	}
+		q := cfg.db.WithTx(tx)
 
-	if validatedTxn.isTransfer && updateLinkedTxn {
-		invertTransferType := func(s string) string {
-			if s == "TRANSFER_TO" {
-				return "TRANSFER_FROM"
-			}
-			return "TRANSFER_TO"
+		splits := map[string]int64{}
+		// if amount values did not change, splits may remain untouched
+		if dbTxnDetails.TotalAmount != totalFromAmountsMap(validatedTxn.amounts) {
+			splits = validatedTxn.amounts
 		}
-
-		err = cfg.db.UpdateTransaction(r.Context(), database.UpdateTransactionParams{
-			TransactionID:   linkedTxn.ID,
+		if msg, err := pgxUpdateTxn(q, r.Context(), database.UpdateTransactionParams{
+			TransactionID:   pathTransactionID,
 			AccountID:       validatedTxn.accountID,
-			TransactionType: invertTransferType(validatedTxn.txnType),
+			TransactionType: validatedTxn.txnType,
 			TransactionDate: validatedTxn.txnDate,
-			PayeeID:         validatedTxn.payeeID,
+			PayeeID:         uuid.Nil,
 			Notes:           validatedTxn.notes,
 			Cleared:         validatedTxn.cleared,
-			Amounts:         json.RawMessage(invertedAmountsJSONBytes),
-		})
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not update transaction", err)
+		}, splits); err != nil {
+			errMsgPrefix := "could not update transaction"
+			if validatedTxn.isTransfer {
+				errMsgPrefix = "could not update transfer transaction"
+			}
+			respondWithError(w, http.StatusInternalServerError, errMsgPrefix+": "+msg, err)
 			return
 		}
-
+		if validatedTxn.isTransfer {
+			linkedTxn, err := q.GetLinkedTransaction(r.Context(), pathTransactionID)
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "could not find corresponding txn to update", err)
+				return
+			}
+			if msg, err := pgxUpdateTxn(q, r.Context(), database.UpdateTransactionParams{
+				TransactionID:   linkedTxn.ID,
+				AccountID:       linkedTxn.AccountID,
+				TransactionType: invertTransferType(validatedTxn.txnType),
+				TransactionDate: validatedTxn.txnDate,
+				PayeeID:         validatedTxn.payeeID,
+				Notes:           validatedTxn.notes,
+				Cleared:         linkedTxn.Cleared,
+			}, invertAmountsMap(splits)); err != nil {
+				respondWithError(w, http.StatusInternalServerError, "could not update corresponding transfer transaction: "+msg, err)
+				return
+			}
+		}
+		if err := tx.Commit(r.Context()); err != nil {
+			// NOTE: Different meaning of 'transaction', here.
+			respondWithError(w, http.StatusInternalServerError, "could not complete database transaction", err)
+			return
+		}
 	}
 
 	respondWithCode(w, http.StatusNoContent)

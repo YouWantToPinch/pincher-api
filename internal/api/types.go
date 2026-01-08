@@ -118,21 +118,18 @@ type TransactionSplit struct {
 	Amount        int64      `json:"amount"`
 }
 
-type TransactionView struct {
-	ID              uuid.UUID      `json:"id"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
-	BudgetID        uuid.UUID      `json:"budget_id"`
-	LoggerID        uuid.UUID      `json:"logger_id"`
-	AccountID       uuid.UUID      `json:"account_id"`
-	TransactionType string         `json:"transaction_type"`
-	TransactionDate time.Time      `json:"transaction_date"`
-	Payee           string         `json:"payee"`
-	PayeeID         uuid.UUID      `json:"payee_id"`
-	Notes           string         `json:"notes"`
-	Cleared         bool           `json:"is_cleared"`
-	TotalAmount     int64          `json:"total_amount"`
-	Splits          map[string]int `json:"splits"`
+type TransactionDetail struct {
+	ID              uuid.UUID        `json:"id"`
+	TransactionDate time.Time        `json:"transaction_date"`
+	TransactionType string           `json:"transaction_type"`
+	Notes           string           `json:"notes"`
+	PayeeName       string           `json:"payee_name"`
+	BudgetName      string           `json:"budget_name"`
+	AccountName     string           `json:"account_name"`
+	LoggerName      string           `json:"logger_name"`
+	TotalAmount     int64            `json:"total_amount"`
+	Splits          map[string]int64 `json:"splits"`
+	Cleared         bool             `json:"cleared"`
 }
 
 type Payee struct {

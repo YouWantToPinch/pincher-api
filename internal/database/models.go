@@ -115,7 +115,7 @@ type TransactionDetail struct {
 	TransactionDate time.Time
 	TransactionType string
 	Notes           string
-	Payee           string
+	PayeeName       string
 	BudgetName      pgtype.Text
 	AccountName     pgtype.Text
 	LoggerName      pgtype.Text

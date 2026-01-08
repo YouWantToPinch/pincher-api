@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -145,12 +144,4 @@ func parseDate(dateString string, parse *time.Time) error {
 	}
 
 	return fmt.Errorf("value '%s' could not be parsed as DATE", dateString)
-}
-
-func lookupResourceIDByName[T any](ctx context.Context, arg T, dbQuery func(context.Context, T) (uuid.UUID, error)) (*uuid.UUID, error) {
-	id, err := dbQuery(ctx, arg)
-	if err != nil {
-		return &uuid.Nil, err
-	}
-	return &id, err
 }

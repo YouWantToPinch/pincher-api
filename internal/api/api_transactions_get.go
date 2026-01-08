@@ -2,8 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -11,6 +9,102 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 	"github.com/google/uuid"
 )
+
+func (cfg *APIConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Request) {
+	var pathTransactionID uuid.UUID
+	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "", err)
+		return
+	}
+
+	dbSplits, err := cfg.db.GetSplitsByTransactionID(r.Context(), pathTransactionID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not get splits associated with transaction", err)
+	}
+
+	var rspPayload []TransactionSplit
+	for _, split := range dbSplits {
+		addSplit := TransactionSplit{
+			ID:            split.ID,
+			TransactionID: split.TransactionID,
+			CategoryID:    split.CategoryID,
+			Amount:        split.Amount,
+		}
+		rspPayload = append(rspPayload, addSplit)
+	}
+
+	respondWithJSON(w, http.StatusOK, rspPayload)
+}
+
+func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request) {
+	getDetails := strings.HasSuffix(r.URL.String(), "/details")
+
+	var pathTransactionID uuid.UUID
+	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "", err)
+		return
+	}
+
+	if !getDetails {
+		dbTransaction, err := cfg.db.GetTransactionByID(r.Context(), pathTransactionID)
+		if err != nil {
+			respondWithError(w, http.StatusNotFound, "could not get transaction", err)
+			return
+		}
+
+		rspPayload := Transaction{
+			ID:              dbTransaction.ID,
+			CreatedAt:       dbTransaction.CreatedAt,
+			UpdatedAt:       dbTransaction.UpdatedAt,
+			BudgetID:        dbTransaction.BudgetID,
+			LoggerID:        dbTransaction.LoggerID,
+			AccountID:       dbTransaction.AccountID,
+			TransactionDate: dbTransaction.TransactionDate,
+			PayeeID:         dbTransaction.PayeeID,
+			Notes:           dbTransaction.Notes,
+			Cleared:         dbTransaction.Cleared,
+		}
+
+		respondWithJSON(w, http.StatusOK, rspPayload)
+		return
+	} else {
+		detailedTxn, err := cfg.db.GetTransactionDetailsByID(r.Context(), pathTransactionID)
+		if err != nil {
+			respondWithError(w, http.StatusNotFound, "could not get transaction details", err)
+			return
+		}
+
+		respSplits := make(map[string]int64)
+		{
+			data := []byte(detailedTxn.Splits)
+			source := (*json.RawMessage)(&data)
+			err := json.Unmarshal(*source, &respSplits)
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "failure unmarshalling transaction splits", err)
+				return
+			}
+		}
+
+		rspPayload := TransactionDetail{
+			ID:              detailedTxn.ID,
+			TransactionType: detailedTxn.TransactionType,
+			TransactionDate: detailedTxn.TransactionDate,
+			PayeeName:       detailedTxn.PayeeName,
+			BudgetName:      detailedTxn.BudgetName.String,
+			AccountName:     detailedTxn.AccountName.String,
+			LoggerName:      detailedTxn.LoggerName.String,
+			TotalAmount:     detailedTxn.TotalAmount,
+			Notes:           detailedTxn.Notes,
+			Cleared:         detailedTxn.Cleared,
+			Splits:          respSplits,
+		}
+
+		respondWithJSON(w, http.StatusOK, rspPayload)
+		return
+	}
+}
 
 func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
 	getDetails := strings.Contains(r.URL.String(), "/details")
@@ -51,20 +145,6 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	slog.Debug(fmt.Sprintf("Transaction paramaters: budget_id=%s, account_id=%v (nil=%v), category_id=%v (nil=%v), payee_id=%v (nil=%v), start_date=%v (zero=%v), end_date=%v (zero=%v)",
-		pathBudgetID.String(),
-		parsedAccountID,
-		parsedAccountID == uuid.Nil,
-		parsedCategoryID,
-		parsedCategoryID == uuid.Nil,
-		parsedPayeeID,
-		parsedPayeeID == uuid.Nil,
-		parsedStartDate,
-		parsedStartDate.IsZero(),
-		parsedEndDate,
-		parsedEndDate.IsZero()),
-	)
-
 	if !getDetails {
 		dbTransactions, err := cfg.db.GetTransactions(r.Context(), database.GetTransactionsParams{
 			AccountID:  parsedAccountID,
@@ -104,13 +184,11 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			Transactions: transactions,
 		}
 
-		// slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(rspPayload.Transactions)))
-
 		respondWithJSON(w, http.StatusOK, rspPayload)
 		return
 	} else {
 
-		viewTransactions, err := cfg.db.GetTransactionDetails(r.Context(), database.GetTransactionDetailsParams{
+		detailedTxns, err := cfg.db.GetTransactionDetails(r.Context(), database.GetTransactionDetailsParams{
 			AccountID:  parsedAccountID,
 			CategoryID: parsedCategoryID,
 			PayeeID:    parsedPayeeID,
@@ -123,12 +201,12 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		var transactions []TransactionView
-		for _, viewTransaction := range viewTransactions {
+		var transactions []TransactionDetail
+		for _, detailedTxn := range detailedTxns {
 
-			respSplits := make(map[string]int)
+			respSplits := make(map[string]int64)
 			{
-				data := []byte(viewTransaction.Splits)
+				data := []byte(detailedTxn.Splits)
 				source := (*json.RawMessage)(&data)
 				err := json.Unmarshal(*source, &respSplits)
 				if err != nil {
@@ -137,31 +215,28 @@ func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request
 				}
 			}
 
-			transactions = append(transactions, TransactionView{
-				ID:              viewTransaction.ID,
-				BudgetID:        viewTransaction.BudgetID,
-				LoggerID:        viewTransaction.LoggerID,
-				AccountID:       viewTransaction.AccountID,
-				TransactionType: viewTransaction.TransactionType,
-				TransactionDate: viewTransaction.TransactionDate,
-				Payee:           viewTransaction.Payee,
-				PayeeID:         viewTransaction.PayeeID,
-				TotalAmount:     viewTransaction.TotalAmount,
-				Notes:           viewTransaction.Notes,
-				Cleared:         viewTransaction.Cleared,
+			transactions = append(transactions, TransactionDetail{
+				ID:              detailedTxn.ID,
+				TransactionType: detailedTxn.TransactionType,
+				TransactionDate: detailedTxn.TransactionDate,
+				PayeeName:       detailedTxn.PayeeName,
+				BudgetName:      detailedTxn.BudgetName.String,
+				AccountName:     detailedTxn.AccountName.String,
+				LoggerName:      detailedTxn.LoggerName.String,
+				TotalAmount:     detailedTxn.TotalAmount,
+				Notes:           detailedTxn.Notes,
+				Cleared:         detailedTxn.Cleared,
 				Splits:          respSplits,
 			})
 		}
 
 		type rspSchema struct {
-			Transactions []TransactionView `json:"transactions"`
+			Transactions []TransactionDetail `json:"transactions"`
 		}
 
 		rspPayload := rspSchema{
 			Transactions: transactions,
 		}
-
-		// slog.Debug(fmt.Sprintf("TRANSACTIONS FOUND: %d", len(rspPayload.Transactions)))
 
 		respondWithJSON(w, http.StatusOK, rspPayload)
 		return

@@ -1,7 +1,6 @@
 assets/
 
 .env
-migup
-migdown
-out
 pincher-api
+out
+goose_ref

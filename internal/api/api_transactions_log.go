@@ -45,147 +45,145 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 	validatedTxn := getContextKeyValueAsTxn(r.Context(), "validated_txn")
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	amountsJSONBytes, err := json.Marshal(validatedTxn.amounts)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not marshal txn splits", err)
-		return
-	}
-
 	validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
-	dbTxn, err := cfg.db.LogTransaction(r.Context(), database.LogTransactionParams{
-		BudgetID:        pathBudgetID,
-		LoggerID:        validatedUserID,
-		AccountID:       validatedTxn.accountID,
-		TransactionType: validatedTxn.txnType,
-		TransactionDate: validatedTxn.txnDate,
-		PayeeID:         validatedTxn.payeeID,
-		Amounts:         json.RawMessage(amountsJSONBytes),
-		Notes:           validatedTxn.notes,
-		Cleared:         validatedTxn.cleared,
-	})
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not log transaction", err)
-		return
-	}
-
-	var transferTxnID *uuid.UUID
-	if validatedTxn.isTransfer {
-		// prepare inverse amounts for corresponding transaction
-		invertedAmounts := make(map[string]int64)
-		for k, v := range validatedTxn.amounts {
-			invertedAmounts[k] = -1 * v
-		}
-		invertedAmountsJSONBytes, err := json.Marshal(invertedAmounts)
+	// DB TRANSACTION BLOCK
+	{
+		tx, err := cfg.Pool.Begin(r.Context())
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, err.Error(), err)
+			respondWithError(w, http.StatusInternalServerError, "", err)
 			return
 		}
-		invertTransferType := func(s string) string {
-			if s == "TRANSFER_TO" {
-				return "TRANSFER_FROM"
+		defer tx.Rollback(r.Context())
+
+		q := cfg.db.WithTx(tx)
+
+		// getTxnDetails can be called on an ID for a return of its user-friendly
+		// values in a subsequent response
+		getTxnDetails := func(txnID uuid.UUID) (*TransactionDetail, error) {
+			detailedTxn, err := q.GetTransactionDetailsByID(r.Context(), txnID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get transaction details: %w", err)
 			}
-			return "TRANSFER_TO"
+
+			respSplits := make(map[string]int64)
+			{
+				data := []byte(detailedTxn.Splits)
+				source := (*json.RawMessage)(&data)
+				err := json.Unmarshal(*source, &respSplits)
+				if err != nil {
+					return nil, fmt.Errorf("could not unmarshal splits: %w", err)
+				}
+			}
+
+			return &TransactionDetail{
+				ID:              detailedTxn.ID,
+				TransactionType: detailedTxn.TransactionType,
+				TransactionDate: detailedTxn.TransactionDate,
+				PayeeName:       detailedTxn.PayeeName,
+				BudgetName:      detailedTxn.BudgetName.String,
+				AccountName:     detailedTxn.AccountName.String,
+				LoggerName:      detailedTxn.LoggerName.String,
+				TotalAmount:     detailedTxn.TotalAmount,
+				Notes:           detailedTxn.Notes,
+				Cleared:         detailedTxn.Cleared,
+				Splits:          respSplits,
+			}, nil
 		}
-		// log the corresponding transaction
-		transferTxn, err := cfg.db.LogTransaction(r.Context(), database.LogTransactionParams{
+
+		newTxn, msg, err := pgxLogTxn(q, r.Context(), database.LogTransactionParams{
 			BudgetID:        pathBudgetID,
 			LoggerID:        validatedUserID,
-			AccountID:       validatedTxn.transferAccountID,
-			TransactionType: invertTransferType(validatedTxn.txnType),
+			AccountID:       validatedTxn.accountID,
+			TransactionType: validatedTxn.txnType,
 			TransactionDate: validatedTxn.txnDate,
 			PayeeID:         validatedTxn.payeeID,
-			Amounts:         json.RawMessage(invertedAmountsJSONBytes),
 			Notes:           validatedTxn.notes,
 			Cleared:         validatedTxn.cleared,
-		})
+		}, validatedTxn.amounts)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not log corresponding transfer transaction", err)
-			return
-		}
-		transferTxnID = &transferTxn.ID
-		// link transfer transactions
-		getTransferIDs := func(t1, t2 *database.LogTransactionRow) (*database.LogTransactionRow, *database.LogTransactionRow) {
-			if (*t1).TransactionType == "TRANSFER_FROM" {
-				return t2, t1
-			} else {
-				return t1, t2
+			errMsgPrefix := "could not update transaction"
+			if validatedTxn.isTransfer {
+				errMsgPrefix = "could not update transfer transaction"
 			}
-		}
-		toPtr, fromPtr := getTransferIDs(&dbTxn, &transferTxn)
-		_, err = cfg.db.LogAccountTransfer(r.Context(), database.LogAccountTransferParams{
-			FromTransactionID: (*fromPtr).ID,
-			ToTransactionID:   (*toPtr).ID,
-		})
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not link transfer transactions", err)
+			respondWithError(w, http.StatusInternalServerError, errMsgPrefix+": "+msg, err)
 			return
 		}
-	}
-
-	getTxnDetails := func(txnID uuid.UUID) (*TransactionView, error) {
-		viewTransaction, err := cfg.db.GetTransactionDetailsByID(r.Context(), txnID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get transaction details: %w", err)
-		}
-
-		respSplits := make(map[string]int)
-		{
-			data := []byte(viewTransaction.Splits)
-			source := (*json.RawMessage)(&data)
-			err := json.Unmarshal(*source, &respSplits)
+		if validatedTxn.isTransfer {
+			// log the corresponding transaction
+			transferTxn, msg, err := pgxLogTxn(q, r.Context(), database.LogTransactionParams{
+				BudgetID:        pathBudgetID,
+				LoggerID:        validatedUserID,
+				AccountID:       validatedTxn.transferAccountID,
+				TransactionType: validatedTxn.txnType,
+				TransactionDate: validatedTxn.txnDate,
+				PayeeID:         validatedTxn.payeeID,
+				Notes:           validatedTxn.notes,
+				Cleared:         validatedTxn.cleared,
+			}, invertAmountsMap(validatedTxn.amounts))
 			if err != nil {
-				return nil, fmt.Errorf("failure unmarshalling transaction splits: %w", err)
+				errMsgPrefix := "could not log transaction"
+				if validatedTxn.isTransfer {
+					errMsgPrefix = "could not log corresponding transfer transaction"
+				}
+				respondWithError(w, http.StatusInternalServerError, errMsgPrefix+": "+msg, err)
+				return
 			}
-		}
+			// link transfer transactions
+			toPtr, fromPtr := getTransferIDs(newTxn, transferTxn)
+			_, err = q.LogAccountTransfer(r.Context(), database.LogAccountTransferParams{
+				FromTransactionID: (*fromPtr).ID,
+				ToTransactionID:   (*toPtr).ID,
+			})
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "could not link transfer transactions", err)
+				return
+			}
+			// if a transfer, get the details for both txns logged
+			type rspSchema struct {
+				FromTransaction TransactionDetail `json:"from_transaction"`
+				ToTransaction   TransactionDetail `json:"to_transaction"`
+			}
+			fromTxnDetails, err := getTxnDetails(fromPtr.ID)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, "", err)
+				return
+			}
+			toTxnDetails, err := getTxnDetails(toPtr.ID)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, "", err)
+				return
+			}
+			rspPayload := rspSchema{
+				FromTransaction: *fromTxnDetails,
+				ToTransaction:   *toTxnDetails,
+			}
+			if err := tx.Commit(r.Context()); err != nil {
+				respondWithError(w, http.StatusInternalServerError, "", err)
+				return
+			}
+			respondWithJSON(w, http.StatusCreated, rspPayload)
+			return
 
-		return &TransactionView{
-			ID:              viewTransaction.ID,
-			TransactionType: viewTransaction.TransactionType,
-			TransactionDate: viewTransaction.TransactionDate,
-			Payee:           viewTransaction.Payee,
-			TotalAmount:     viewTransaction.TotalAmount,
-			Notes:           viewTransaction.Notes,
-			Cleared:         viewTransaction.Cleared,
-			Splits:          respSplits,
-		}, nil
-	}
+			// if not a transfer, just get the details for txn logged
+		} else {
+			type rspSchema struct {
+				TransactionDetail
+			}
+			var rspPayload rspSchema
+			txnDetails, err := getTxnDetails(newTxn.ID)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, "", err)
+				return
+			}
+			rspPayload.TransactionDetail = *txnDetails
 
-	if validatedTxn.isTransfer {
-		type rspSchema struct {
-			Transaction         TransactionView `json:"to_transaction"`
-			TransferTransaction TransactionView `json:"transfer_transaction"`
-		}
-		var rspPayload rspSchema
-		t1, err := getTxnDetails(dbTxn.ID)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "", err)
+			if err := tx.Commit(r.Context()); err != nil {
+				respondWithError(w, http.StatusInternalServerError, "", err)
+				return
+			}
+			respondWithJSON(w, http.StatusCreated, rspPayload)
 			return
 		}
-		t2, err := getTxnDetails(*transferTxnID)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "", err)
-			return
-		}
-
-		rspPayload.Transaction = *t1
-		rspPayload.TransferTransaction = *t2
-
-		respondWithJSON(w, http.StatusCreated, rspPayload)
-		return
-	} else {
-		type rspSchema struct {
-			TransactionView
-		}
-		var rspPayload rspSchema
-		t, err := getTxnDetails(dbTxn.ID)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "", err)
-			return
-		}
-		rspPayload.TransactionView = *t
-
-		respondWithJSON(w, http.StatusCreated, rspPayload)
-		return
 	}
 }

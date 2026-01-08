@@ -5,10 +5,8 @@ import (
 	"embed"
 	"fmt"
 	"log/slog"
-	"maps"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -234,6 +232,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 				return
 			}
 			validatedTxn.transferAccountID = *transferAccountID
+			validatedTxn.payeeID = uuid.Nil
 		} else {
 			payeeID, err := lookupResourceIDByName(r.Context(),
 				database.GetBudgetPayeeIDByNameParams{
@@ -245,32 +244,28 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 				return
 			}
 			validatedTxn.payeeID = *payeeID
+			validatedTxn.transferAccountID = uuid.Nil
 		}
 
 		// convert names to IDs if needed
 		for k, v := range rqPayload.Amounts {
 			if _, ok := validatedTxn.amounts[k]; !ok {
-				slog.Info("SKIPPING ELIMINATED KEY: " + k)
 				// validation already weeded this one out; move on to the next
 				continue
 			}
 			if k == "TRANSFER" || (k == "UNCATEGORIZED" && validatedTxn.txnType == "DEPOSIT") {
-				slog.Info("SKIPPING IRRELEVANT KEY: " + k)
 				// categories are not relevant
 				continue
 			}
-			slog.Info(fmt.Sprintf("GETTING UUID FOR KEY: %s, AMOUNT: %d", k, v))
 			categoryID, err := lookupResourceIDByName(r.Context(),
 				database.GetBudgetCategoryIDByNameParams{
 					CategoryName: k,
 					BudgetID:     pathBudgetID,
 				}, cfg.db.GetBudgetCategoryIDByName)
 			if err != nil {
-				var errMessage string
+				errMessage := "could not get category id for transaction split"
 				if len(rqPayload.Amounts) > 1 {
 					errMessage = "could not get category id for one or more transaction splits"
-				} else {
-					errMessage = "could not get category id for transaction"
 				}
 				respondWithError(w, http.StatusBadRequest, errMessage, err)
 				return
@@ -303,64 +298,4 @@ func getContextKeyValueAsTxn(ctx context.Context, key string) *validatedTxnPaylo
 		return nil
 	}
 	return contextKeyValue
-}
-
-// validateTxnInput parses relevant inputs: txn amounts, txnDate, transfer status, txnType.
-// Any txn with no amount, or with amounts not matching in type, are rejected.
-// Any error returned implies a bad request.
-func validateTxnInput(rqPayload *UpsertTransactionRqSchema) (*validatedTxnPayload, error) {
-	validatedTxn := &validatedTxnPayload{amounts: map[string]int64{}}
-	var err error
-
-	validatedTxn.txnDate, err = time.Parse("2006-01-02", rqPayload.TransactionDate)
-	if err != nil {
-		return nil, fmt.Errorf("transaction date could not be parsed")
-	}
-
-	validatedTxn.isTransfer = (rqPayload.TransferAccountName != "")
-	validatedTxn.txnType = "NONE"
-
-	setTxnType := func(ptr *string, val string) error {
-		switch *ptr {
-		case "NONE":
-			*ptr = val
-			return nil
-		case val:
-			return nil
-		default:
-			return fmt.Errorf("one or more splits do not match expected type '%v'", *ptr)
-		}
-	}
-
-	maps.Copy(validatedTxn.amounts, rqPayload.Amounts)
-	for k, v := range rqPayload.Amounts {
-		if k == "" {
-			return nil, fmt.Errorf("found missing category name from one or more amount fields")
-		}
-		switch {
-		case v > 0:
-			if validatedTxn.isTransfer {
-				err = setTxnType(&validatedTxn.txnType, "TRANSFER_TO")
-			} else {
-				err = setTxnType(&validatedTxn.txnType, "DEPOSIT")
-			}
-		case v < 0:
-			if validatedTxn.isTransfer {
-				err = setTxnType(&validatedTxn.txnType, "TRANSFER_FROM")
-			} else {
-				err = setTxnType(&validatedTxn.txnType, "WITHDRAWAL")
-			}
-		default:
-			delete(validatedTxn.amounts, k)
-		}
-		// return error on txnType mismatch
-		if err != nil {
-			return nil, fmt.Errorf("inconsistent signage on amount values")
-		}
-	}
-	// return error on txn amount of 0
-	if len(validatedTxn.amounts) == 0 {
-		return nil, fmt.Errorf("no non-zero amount specified for transaction")
-	}
-	return validatedTxn, nil
 }

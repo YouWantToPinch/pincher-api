@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 	tc "github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type postgresContainer struct {

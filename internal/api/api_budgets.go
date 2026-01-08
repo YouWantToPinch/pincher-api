@@ -43,16 +43,18 @@ func (cfg *APIConfig) endpCreateBudget(w http.ResponseWriter, r *http.Request) {
 		MemberRole: "ADMIN",
 	})
 	if err != nil {
+
+		// TODO: use db transaction w/ rollback for atomicity here, as has been done with transactions!
+
 		respondWithError(w, http.StatusInternalServerError, "could not assign ADMIN to new budget", err)
-		slog.Info("Attempting deletion of new budget, as no admin could be assigned.")
+		slog.Debug("Attempting deletion of new budget, as no admin could be assigned.")
 		err := cfg.db.DeleteBudget(r.Context(), dbBudget.ID)
 		if err != nil {
 			slog.Warn("Attempted deletion of newly initialized budget, but FAILED.")
-			return
 		} else {
 			slog.Info("Initialized budget was deleted successfully.")
-			return
 		}
+		return
 	}
 
 	rspPayload := Budget{

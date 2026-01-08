@@ -70,19 +70,8 @@ SELECT
   t.notes,
   COALESCE(
     p.name,
-    (
-      SELECT a.name
-      FROM account_transfers at
-      JOIN transactions t2 ON (
-        (at.from_transaction_id = t.id AND t2.id = at.to_transaction_id)
-        OR
-        (at.to_transaction_id = t.id AND t2.id = at.from_transaction_id)
-      )
-      JOIN accounts a ON t2.account_id = a.id
-      LIMIT 1
-    ),
     'Transfer'
-  ) AS payee,
+  ) AS payee_name,
   b.name AS budget_name,
   a.name AS account_name,
   u.username AS logger_name,

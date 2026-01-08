@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const deleteTransaction = `-- name: DeleteTransaction :exec
@@ -22,6 +21,43 @@ WHERE id = $1
 func (q *Queries) DeleteTransaction(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteTransaction, id)
 	return err
+}
+
+const deleteTransactionSplits = `-- name: DeleteTransactionSplits :exec
+  DELETE FROM transaction_splits
+  WHERE transaction_id = $1
+`
+
+func (q *Queries) DeleteTransactionSplits(ctx context.Context, transactionID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteTransactionSplits, transactionID)
+	return err
+}
+
+const getLinkedTransaction = `-- name: GetLinkedTransaction :one
+SELECT t.id, t.created_at, t.updated_at, t.budget_id, t.logger_id, t.account_id, t.transaction_type, t.transaction_date, t.payee_id, t.notes, t.cleared
+FROM transactions t
+JOIN account_transfers at
+  ON (t.id = at.to_transaction_id AND at.from_transaction_id = $1)
+     OR (t.id = at.from_transaction_id AND at.to_transaction_id = $1)
+`
+
+func (q *Queries) GetLinkedTransaction(ctx context.Context, fromTransactionID uuid.UUID) (Transaction, error) {
+	row := q.db.QueryRow(ctx, getLinkedTransaction, fromTransactionID)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BudgetID,
+		&i.LoggerID,
+		&i.AccountID,
+		&i.TransactionType,
+		&i.TransactionDate,
+		&i.PayeeID,
+		&i.Notes,
+		&i.Cleared,
+	)
+	return i, err
 }
 
 const getSplitsByTransactionID = `-- name: GetSplitsByTransactionID :many
@@ -82,7 +118,7 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 
 const getTransactionDetails = `-- name: GetTransactionDetails :many
 
-SELECT td.id, td.transaction_date, td.transaction_type, td.notes, payee, budget_name, account_name, logger_name, total_amount, splits, td.cleared, t.id, created_at, updated_at, budget_id, logger_id, account_id, t.transaction_type, t.transaction_date, payee_id, t.notes, t.cleared
+SELECT td.id, td.transaction_date, td.transaction_type, td.notes, td.payee_name, td.budget_name, td.account_name, td.logger_name, td.total_amount, td.splits, td.cleared
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
@@ -115,35 +151,10 @@ type GetTransactionDetailsParams struct {
 	EndDate    time.Time
 }
 
-type GetTransactionDetailsRow struct {
-	ID                uuid.UUID
-	TransactionDate   time.Time
-	TransactionType   string
-	Notes             string
-	Payee             string
-	BudgetName        pgtype.Text
-	AccountName       pgtype.Text
-	LoggerName        pgtype.Text
-	TotalAmount       int64
-	Splits            []byte
-	Cleared           bool
-	ID_2              uuid.UUID
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	BudgetID          uuid.UUID
-	LoggerID          uuid.UUID
-	AccountID         uuid.UUID
-	TransactionType_2 string
-	TransactionDate_2 time.Time
-	PayeeID           uuid.UUID
-	Notes_2           string
-	Cleared_2         bool
-}
-
 // HACK: Where '000...' is used to represent nil UUIDs:
 // It may be wiser to set up separate queries to be called
 // based on what URL queries or URI Parameters are provided for sorting purposes.
-func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionDetailsParams) ([]GetTransactionDetailsRow, error) {
+func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionDetailsParams) ([]TransactionDetail, error) {
 	rows, err := q.db.Query(ctx, getTransactionDetails,
 		arg.BudgetID,
 		arg.AccountID,
@@ -156,32 +167,21 @@ func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionD
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetTransactionDetailsRow
+	var items []TransactionDetail
 	for rows.Next() {
-		var i GetTransactionDetailsRow
+		var i TransactionDetail
 		if err := rows.Scan(
 			&i.ID,
 			&i.TransactionDate,
 			&i.TransactionType,
 			&i.Notes,
-			&i.Payee,
+			&i.PayeeName,
 			&i.BudgetName,
 			&i.AccountName,
 			&i.LoggerName,
 			&i.TotalAmount,
 			&i.Splits,
 			&i.Cleared,
-			&i.ID_2,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.BudgetID,
-			&i.LoggerID,
-			&i.AccountID,
-			&i.TransactionType_2,
-			&i.TransactionDate_2,
-			&i.PayeeID,
-			&i.Notes_2,
-			&i.Cleared_2,
 		); err != nil {
 			return nil, err
 		}
@@ -194,7 +194,7 @@ func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionD
 }
 
 const getTransactionDetailsByID = `-- name: GetTransactionDetailsByID :one
-SELECT id, transaction_date, transaction_type, notes, payee, budget_name, account_name, logger_name, total_amount, splits, cleared
+SELECT id, transaction_date, transaction_type, notes, payee_name, budget_name, account_name, logger_name, total_amount, splits, cleared
 FROM transaction_details
 WHERE id = $1
 `
@@ -207,7 +207,7 @@ func (q *Queries) GetTransactionDetailsByID(ctx context.Context, id uuid.UUID) (
 		&i.TransactionDate,
 		&i.TransactionType,
 		&i.Notes,
-		&i.Payee,
+		&i.PayeeName,
 		&i.BudgetName,
 		&i.AccountName,
 		&i.LoggerName,
@@ -292,8 +292,8 @@ func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams
 const logAccountTransfer = `-- name: LogAccountTransfer :one
 INSERT INTO account_transfers (from_transaction_id, to_transaction_id)
 VALUES (
-    $1,
-    $2
+    $1::uuid,
+    $2::uuid
 )
 RETURNING from_transaction_id, to_transaction_id
 `
@@ -311,49 +311,24 @@ func (q *Queries) LogAccountTransfer(ctx context.Context, arg LogAccountTransfer
 }
 
 const logTransaction = `-- name: LogTransaction :one
-WITH
-tr1 AS (
-    INSERT INTO transactions (
-        id, created_at, updated_at, budget_id, logger_id,
-        account_id, transaction_type, transaction_date,
-        payee_id, notes, cleared
-    )
-    VALUES (
-        gen_random_uuid(),
-        DEFAULT,
-        DEFAULT,
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8
-    )
-    RETURNING id, created_at, updated_at, budget_id, logger_id, account_id, transaction_type, transaction_date, payee_id, notes, cleared
-),
-insert_splits AS (
-    INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
-    SELECT
-        gen_random_uuid(),
-        tr1.id,
-        CASE
-            WHEN tr1.transaction_type ILIKE '%TRANSFER%' THEN NULL
-            WHEN tr1.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
-            ELSE key::uuid
-        END,
-        value::integer
-    FROM tr1, json_each_text($9::json)
-    RETURNING id, transaction_id, category_id, amount
+INSERT INTO transactions (
+    id, created_at, updated_at, budget_id, logger_id,
+    account_id, transaction_type, transaction_date,
+    payee_id, notes, cleared)
+VALUES (
+    gen_random_uuid(),
+    DEFAULT,
+    DEFAULT,
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8
 )
-SELECT 
-    tr1.id, tr1.created_at, tr1.updated_at, tr1.budget_id, tr1.logger_id, tr1.account_id, tr1.transaction_type, tr1.transaction_date, tr1.payee_id, tr1.notes, tr1.cleared,
-    (
-        SELECT json_agg(insert_splits.*)
-        FROM insert_splits
-    ) AS splits
-FROM tr1
+RETURNING id, created_at, updated_at, budget_id, logger_id, account_id, transaction_type, transaction_date, payee_id, notes, cleared
 `
 
 type LogTransactionParams struct {
@@ -365,25 +340,9 @@ type LogTransactionParams struct {
 	PayeeID         uuid.UUID
 	Notes           string
 	Cleared         bool
-	Amounts         []byte
 }
 
-type LogTransactionRow struct {
-	ID              uuid.UUID
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	BudgetID        uuid.UUID
-	LoggerID        uuid.UUID
-	AccountID       uuid.UUID
-	TransactionType string
-	TransactionDate time.Time
-	PayeeID         uuid.UUID
-	Notes           string
-	Cleared         bool
-	Splits          []byte
-}
-
-func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) (LogTransactionRow, error) {
+func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) (Transaction, error) {
 	row := q.db.QueryRow(ctx, logTransaction,
 		arg.BudgetID,
 		arg.LoggerID,
@@ -393,9 +352,8 @@ func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) 
 		arg.PayeeID,
 		arg.Notes,
 		arg.Cleared,
-		arg.Amounts,
 	)
-	var i LogTransactionRow
+	var i Transaction
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -408,46 +366,67 @@ func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) 
 		&i.PayeeID,
 		&i.Notes,
 		&i.Cleared,
-		&i.Splits,
 	)
 	return i, err
 }
 
+const logTransactionSplits = `-- name: LogTransactionSplits :many
+INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
+SELECT
+  gen_random_uuid(),
+  $1::uuid,
+  CASE
+    WHEN t.transaction_type ILIKE '%TRANSFER%' THEN NULL
+    WHEN t.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
+    ELSE key::uuid
+  END,
+  value::integer
+FROM json_each_text($2::json)
+JOIN transactions t ON t.id = $1::uuid
+RETURNING id, transaction_id, category_id, amount
+`
+
+type LogTransactionSplitsParams struct {
+	TransactionID uuid.UUID
+	Amounts       []byte
+}
+
+func (q *Queries) LogTransactionSplits(ctx context.Context, arg LogTransactionSplitsParams) ([]TransactionSplit, error) {
+	rows, err := q.db.Query(ctx, logTransactionSplits, arg.TransactionID, arg.Amounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TransactionSplit
+	for rows.Next() {
+		var i TransactionSplit
+		if err := rows.Scan(
+			&i.ID,
+			&i.TransactionID,
+			&i.CategoryID,
+			&i.Amount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateTransaction = `-- name: UpdateTransaction :exec
-WITH
-updated_txn AS (
-    UPDATE transactions t
-    SET
-        updated_at = NOW(),
-        account_id = $1,
-        transaction_type = $2,
-        transaction_date = $3,
-        payee_id = $4,
-        notes = $5,
-        cleared = $6
-    WHERE t.id = $7
-    RETURNING id, transaction_type
-),
-deleted_splits AS (
-    DELETE FROM transaction_splits
-    WHERE transaction_id = $7
-    RETURNING 1
-),
-inserted_splits AS (
-    INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
-    SELECT
-        gen_random_uuid(),
-        updated_txn.id,
-        CASE
-            WHEN updated_txn.transaction_type ILIKE '%TRANSFER%' THEN NULL
-            WHEN updated_txn.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
-            ELSE key::uuid
-        END,
-        value::integer
-    FROM updated_txn, json_each_text($8::json), deleted_splits
-    RETURNING 1
-)
-SELECT 1
+UPDATE transactions t
+SET
+  updated_at = NOW(),
+  account_id = $1,
+  transaction_type = $2,
+  transaction_date = $3,
+  payee_id = $4,
+  notes = $5,
+  cleared = $6
+WHERE t.id = $7
 `
 
 type UpdateTransactionParams struct {
@@ -458,11 +437,8 @@ type UpdateTransactionParams struct {
 	Notes           string
 	Cleared         bool
 	TransactionID   uuid.UUID
-	Amounts         []byte
 }
 
-// Delete existing splits associated with the transaction
-// Insert new splits from the provided JSON
 func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) error {
 	_, err := q.db.Exec(ctx, updateTransaction,
 		arg.AccountID,
@@ -472,7 +448,6 @@ func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionPa
 		arg.Notes,
 		arg.Cleared,
 		arg.TransactionID,
-		arg.Amounts,
 	)
 	return err
 }

@@ -1,53 +1,43 @@
 -- name: LogTransaction :one
-WITH
-tr1 AS (
-    INSERT INTO transactions (
-        id, created_at, updated_at, budget_id, logger_id,
-        account_id, transaction_type, transaction_date,
-        payee_id, notes, cleared
-    )
-    VALUES (
-        gen_random_uuid(),
-        DEFAULT,
-        DEFAULT,
-        sqlc.arg('budget_id'),
-        sqlc.arg('logger_id'),
-        sqlc.arg('account_id'),
-        sqlc.arg('transaction_type'),
-        sqlc.arg('transaction_date'),
-        sqlc.arg('payee_id'),
-        sqlc.arg('notes'),
-        sqlc.arg('cleared')
-    )
-    RETURNING *
-),
-insert_splits AS (
-    INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
-    SELECT
-        gen_random_uuid(),
-        tr1.id,
-        CASE
-            WHEN tr1.transaction_type ILIKE '%TRANSFER%' THEN NULL
-            WHEN tr1.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
-            ELSE key::uuid
-        END,
-        value::integer
-    FROM tr1, json_each_text(sqlc.arg('amounts')::json)
-    RETURNING *
+INSERT INTO transactions (
+    id, created_at, updated_at, budget_id, logger_id,
+    account_id, transaction_type, transaction_date,
+    payee_id, notes, cleared)
+VALUES (
+    gen_random_uuid(),
+    DEFAULT,
+    DEFAULT,
+    sqlc.arg('budget_id'),
+    sqlc.arg('logger_id'),
+    sqlc.arg('account_id'),
+    sqlc.arg('transaction_type'),
+    sqlc.arg('transaction_date'),
+    sqlc.arg('payee_id'),
+    sqlc.arg('notes'),
+    sqlc.arg('cleared')
 )
-SELECT 
-    tr1.*,
-    (
-        SELECT json_agg(insert_splits.*)
-        FROM insert_splits
-    ) AS splits
-FROM tr1;
+RETURNING *;
+
+-- name: LogTransactionSplits :many
+INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
+SELECT
+  gen_random_uuid(),
+  sqlc.arg('transaction_id')::uuid,
+  CASE
+    WHEN t.transaction_type ILIKE '%TRANSFER%' THEN NULL
+    WHEN t.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
+    ELSE key::uuid
+  END,
+  value::integer
+FROM json_each_text(sqlc.arg('amounts')::json)
+JOIN transactions t ON t.id = sqlc.arg('transaction_id')::uuid
+RETURNING *;
 
 -- name: LogAccountTransfer :one
 INSERT INTO account_transfers (from_transaction_id, to_transaction_id)
 VALUES (
-    sqlc.arg('from_transaction_id'),
-    sqlc.arg('to_transaction_id')
+    sqlc.arg('from_transaction_id')::uuid,
+    sqlc.arg('to_transaction_id')::uuid
 )
 RETURNING *;
 
@@ -56,7 +46,7 @@ RETURNING *;
 -- based on what URL queries or URI Parameters are provided for sorting purposes.
 
 -- name: GetTransactionDetails :many
-SELECT *
+SELECT td.*
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
@@ -117,42 +107,27 @@ FROM transaction_details
 WHERE id = $1;
 
 -- name: UpdateTransaction :exec
-WITH
-updated_txn AS (
-    UPDATE transactions t
-    SET
-        updated_at = NOW(),
-        account_id = sqlc.arg('account_id'),
-        transaction_type = sqlc.arg('transaction_type'),
-        transaction_date = sqlc.arg('transaction_date'),
-        payee_id = sqlc.arg('payee_id'),
-        notes = sqlc.arg('notes'),
-        cleared = sqlc.arg('cleared')
-    WHERE t.id = sqlc.arg('transaction_id')
-    RETURNING id, transaction_type
-),
--- Delete existing splits associated with the transaction
-deleted_splits AS (
-    DELETE FROM transaction_splits
-    WHERE transaction_id = sqlc.arg('transaction_id')
-    RETURNING 1
-),
--- Insert new splits from the provided JSON
-inserted_splits AS (
-    INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
-    SELECT
-        gen_random_uuid(),
-        updated_txn.id,
-        CASE
-            WHEN updated_txn.transaction_type ILIKE '%TRANSFER%' THEN NULL
-            WHEN updated_txn.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
-            ELSE key::uuid
-        END,
-        value::integer
-    FROM updated_txn, json_each_text(sqlc.arg('amounts')::json), deleted_splits
-    RETURNING 1
-)
-SELECT 1;
+UPDATE transactions t
+SET
+  updated_at = NOW(),
+  account_id = sqlc.arg('account_id'),
+  transaction_type = sqlc.arg('transaction_type'),
+  transaction_date = sqlc.arg('transaction_date'),
+  payee_id = sqlc.arg('payee_id'),
+  notes = sqlc.arg('notes'),
+  cleared = sqlc.arg('cleared')
+WHERE t.id = sqlc.arg('transaction_id');
+
+-- name: DeleteTransactionSplits :exec
+  DELETE FROM transaction_splits
+  WHERE transaction_id = sqlc.arg('transaction_id');
+
+-- name: GetLinkedTransaction :one
+SELECT t.*
+FROM transactions t
+JOIN account_transfers at
+  ON (t.id = at.to_transaction_id AND at.from_transaction_id = $1)
+     OR (t.id = at.from_transaction_id AND at.to_transaction_id = $1);
 
 -- name: DeleteTransaction :exec
 DELETE
