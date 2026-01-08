@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,9 +60,9 @@ func (c *APITestClient) Request(req *http.Request, expectedCode int) {
 	}
 }
 
-// GetJSONField returns a value from the last response recorded,
-// assuming that the response content-type was JSON.
-func (c *APITestClient) GetJSONField(field string) (any, error) {
+// GetJSONField returns a field value from the last response recorded,
+// at the given JSON path, assuming that the response content-type was JSON.
+func (c *APITestClient) GetJSONField(JSONPath string) (any, error) {
 	res := c.W.Result()
 	defer res.Body.Close()
 
@@ -72,12 +73,21 @@ func (c *APITestClient) GetJSONField(field string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	val, ok := body[field]
-	if !ok {
-		return nil, fmt.Errorf("field %s not found in response", field)
+
+	var currentVal any = body
+	for part := range strings.SplitSeq(JSONPath, ".") {
+		m, ok := currentVal.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("path %q is not an object", part)
+		}
+
+		currentVal, ok = m[part]
+		if !ok {
+			return nil, fmt.Errorf("field %q not found", part)
+		}
 	}
 
-	return val, nil
+	return currentVal, nil
 }
 
 func (c *APITestClient) GetJSONFieldAsString(field string) (string, error) {
