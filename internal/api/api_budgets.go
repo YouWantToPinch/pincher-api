@@ -99,7 +99,7 @@ func (cfg *APIConfig) handleGetBudget(w http.ResponseWriter, r *http.Request) {
 func (cfg *APIConfig) handleGetUserBudgets(w http.ResponseWriter, r *http.Request) {
 	validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
-	roleFilters := r.URL.Query()["role"]
+	roleFilters := r.URL.Query()["roles"]
 
 	var dbBudgets []database.Budget
 	var err error
