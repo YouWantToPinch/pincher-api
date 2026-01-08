@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
-	"github.com/google/uuid"
 )
 
 // validateTxnInput parses relevant inputs: txn amounts, txnDate, transfer status, txnType.
@@ -72,14 +71,6 @@ func validateTxnInput(rqPayload *UpsertTransactionRqSchema) (*validatedTxnPayloa
 	return validatedTxn, nil
 }
 
-func lookupResourceIDByName[T any](ctx context.Context, arg T, dbQuery func(context.Context, T) (uuid.UUID, error)) (*uuid.UUID, error) {
-	id, err := dbQuery(ctx, arg)
-	if err != nil {
-		return &uuid.Nil, err
-	}
-	return &id, err
-}
-
 func checkIsTransfer(txnType string) bool {
 	return txnType == "TRANSFER_TO" || txnType == "TRANSFER_FROM"
 }
@@ -103,19 +94,31 @@ func totalFromAmountsMap(input map[string]int64) int64 {
 }
 
 // invertTransferType returns the counterpart of a given transfer type.
+// If the type is NOT a transfer type, it is returned without changes.
 func invertTransferType(s string) string {
-	if s == "TRANSFER_TO" {
-		return "TRANSFER_FROM"
+	if checkIsTransfer(s) {
+		if s == "TRANSFER_TO" {
+			return "TRANSFER_FROM"
+		}
+		return "TRANSFER_TO"
 	}
-	return "TRANSFER_TO"
+	return s
 }
 
-// getTransferIDs returns two given LogTransactionRow pointers labelled with their types.
-func getTransferIDs(t1, t2 *database.Transaction) (*database.Transaction, *database.Transaction) {
+// getTransferIDs returns two given LogTransactionRow pointers in 'to, from' order,
+// according to their underlying TransactionType fields.
+// If the type of either is NOT a transfer, an error is returned.
+func getOrderedTransferIDs(t1, t2 *database.Transaction) (toTxn *database.Transaction, fromTxn *database.Transaction, err error) {
+	if !checkIsTransfer(t1.TransactionType) || !checkIsTransfer(t2.TransactionType) {
+		return nil, nil, fmt.Errorf("one or more txns given is not a transfer type")
+	}
+	if t1.TransactionType == t2.TransactionType {
+		return nil, nil, fmt.Errorf("txn types given do not correspond")
+	}
 	if (*t1).TransactionType == "TRANSFER_FROM" {
-		return t2, t1
+		return t2, t1, nil
 	} else {
-		return t1, t2
+		return t1, t2, nil
 	}
 }
 

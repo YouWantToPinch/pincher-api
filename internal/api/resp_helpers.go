@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -18,6 +19,14 @@ func decodePayload[T any](r *http.Request) (T, error) {
 		return v, fmt.Errorf("failure decoding request payload: %w", err)
 	}
 	return v, err
+}
+
+func lookupResourceIDByName[T any](ctx context.Context, arg T, dbQuery func(context.Context, T) (uuid.UUID, error)) (*uuid.UUID, error) {
+	id, err := dbQuery(ctx, arg)
+	if err != nil {
+		return &uuid.Nil, err
+	}
+	return &id, err
 }
 
 func makeStatusCodeMsg(code int) string {

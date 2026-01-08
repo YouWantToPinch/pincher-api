@@ -130,7 +130,11 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 				return
 			}
 			// link transfer transactions
-			toPtr, fromPtr := getTransferIDs(newTxn, transferTxn)
+			toPtr, fromPtr, err := getOrderedTransferIDs(newTxn, transferTxn)
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "could not link transfer transactions", err)
+				return
+			}
 			_, err = q.LogAccountTransfer(r.Context(), database.LogAccountTransferParams{
 				FromTransactionID: (*fromPtr).ID,
 				ToTransactionID:   (*toPtr).ID,
