@@ -3,8 +3,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/google/uuid"
-
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
@@ -93,8 +91,7 @@ func (cfg *APIConfig) endpGetGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
-	var pathGroupID uuid.UUID
-	err := parseUUIDFromPath("group_id", r, &pathGroupID)
+	pathGroupID, err := parseUUIDFromPath("group_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -124,8 +121,7 @@ func (cfg *APIConfig) endpUpdateGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpDeleteGroup(w http.ResponseWriter, r *http.Request) {
-	var pathGroupID uuid.UUID
-	err := parseUUIDFromPath("group_id", r, &pathGroupID)
+	pathGroupID, err := parseUUIDFromPath("group_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

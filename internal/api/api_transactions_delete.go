@@ -2,13 +2,10 @@ package api
 
 import (
 	"net/http"
-
-	"github.com/google/uuid"
 )
 
 func (cfg *APIConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Request) {
-	var pathTransactionID uuid.UUID
-	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
+	pathTransactionID, err := parseUUIDFromPath("transaction_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

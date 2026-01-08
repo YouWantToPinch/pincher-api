@@ -10,8 +10,7 @@ import (
 func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	validatedTxn := getContextKeyValueAsTxn(r.Context(), "validated_txn")
 
-	var pathTransactionID uuid.UUID
-	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
+	pathTransactionID, err := parseUUIDFromPath("transaction_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

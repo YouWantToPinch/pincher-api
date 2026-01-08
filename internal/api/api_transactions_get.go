@@ -4,15 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
-	"github.com/google/uuid"
 )
 
 func (cfg *APIConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Request) {
-	var pathTransactionID uuid.UUID
-	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
+	pathTransactionID, err := parseUUIDFromPath("transaction_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -40,8 +37,7 @@ func (cfg *APIConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request) {
 	getDetails := strings.HasSuffix(r.URL.String(), "/details")
 
-	var pathTransactionID uuid.UUID
-	err := parseUUIDFromPath("transaction_id", r, &pathTransactionID)
+	pathTransactionID, err := parseUUIDFromPath("transaction_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -109,35 +105,28 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
 	getDetails := strings.Contains(r.URL.String(), "/details")
 
-	var err error
-
-	var parsedAccountID uuid.UUID
-	err = parseUUIDFromPath("account_id", r, &parsedAccountID)
+	parsedAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
-	var parsedCategoryID uuid.UUID
-	err = parseUUIDFromPath("category_id", r, &parsedCategoryID)
+	parsedCategoryID, err := parseUUIDFromPath("category_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
-	var parsedPayeeID uuid.UUID
-	err = parseUUIDFromPath("payee_id", r, &parsedPayeeID)
+	parsedPayeeID, err := parseUUIDFromPath("payee_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
-	var parsedStartDate time.Time
-	err = parseDateFromQuery("start_date", r, &parsedStartDate)
+	parsedStartDate, err := parseDateFromQuery("start_date", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
-	var parsedEndDate time.Time
-	err = parseDateFromQuery("end_date", r, &parsedEndDate)
+	parsedEndDate, err := parseDateFromQuery("end_date", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

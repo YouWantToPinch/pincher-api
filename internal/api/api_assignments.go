@@ -25,15 +25,13 @@ func (cfg *APIConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var parsedMonth time.Time
-	err = parseDateFromPath("month_id", r, &parsedMonth)
+	parsedMonth, err := parseDateFromPath("month_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
-	var parsedCategoryID uuid.UUID
-	err = parseUUIDFromPath("category_id", r, &parsedCategoryID)
+	parsedCategoryID, err := parseUUIDFromPath("category_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -65,8 +63,7 @@ func (cfg *APIConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 }
 
 func (cfg *APIConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request) {
-	var parsedMonthID time.Time
-	err := parseDateFromPath("month_id", r, &parsedMonthID)
+	parsedMonthID, err := parseDateFromPath("month_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -90,8 +87,7 @@ func (cfg *APIConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request)
 func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	var parsedMonthID time.Time
-	err := parseDateFromPath("month_id", r, &parsedMonthID)
+	parsedMonthID, err := parseDateFromPath("month_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -126,15 +122,13 @@ func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 func (cfg *APIConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	var parsedMonthID time.Time
-	err := parseDateFromPath("month_id", r, &parsedMonthID)
+	parsedMonthID, err := parseDateFromPath("month_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
-	var pathCategoryID uuid.UUID
-	err = parseUUIDFromPath("category_id", r, &pathCategoryID)
+	pathCategoryID, err := parseUUIDFromPath("category_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

@@ -3,8 +3,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/google/uuid"
-
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
@@ -84,8 +82,7 @@ func (cfg *APIConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
-	var pathPayeeID uuid.UUID
-	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
+	pathPayeeID, err := parseUUIDFromPath("payee_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -112,8 +109,7 @@ func (cfg *APIConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
-	var pathPayeeID uuid.UUID
-	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
+	pathPayeeID, err := parseUUIDFromPath("payee_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -143,8 +139,7 @@ func (cfg *APIConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
-	var pathPayeeID uuid.UUID
-	err := parseUUIDFromPath("payee_id", r, &pathPayeeID)
+	pathPayeeID, err := parseUUIDFromPath("payee_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

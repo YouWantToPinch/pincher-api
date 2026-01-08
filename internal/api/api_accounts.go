@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
-	"github.com/google/uuid"
 )
 
 func (cfg *APIConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
@@ -92,8 +91,7 @@ func (cfg *APIConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
-	var pathAccountID uuid.UUID
-	err := parseUUIDFromPath("account_id", r, &pathAccountID)
+	pathAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -121,8 +119,7 @@ func (cfg *APIConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http.Request) {
-	var pathAccountID uuid.UUID
-	err := parseUUIDFromPath("account_id", r, &pathAccountID)
+	pathAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "", err)
 		return
@@ -146,8 +143,7 @@ func (cfg *APIConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http
 }
 
 func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) {
-	var pathAccountID uuid.UUID
-	err := parseUUIDFromPath("account_id", r, &pathAccountID)
+	pathAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -179,8 +175,7 @@ func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 }
 
 func (cfg *APIConfig) endpRestoreAccount(w http.ResponseWriter, r *http.Request) {
-	var pathAccountID uuid.UUID
-	err := parseUUIDFromPath("account_id", r, &pathAccountID)
+	pathAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -206,8 +201,7 @@ func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var pathAccountID uuid.UUID
-	err = parseUUIDFromPath("account_id", r, &pathAccountID)
+	pathAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

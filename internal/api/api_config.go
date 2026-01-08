@@ -158,8 +158,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
-		var pathBudgetID uuid.UUID
-		err := parseUUIDFromPath("budget_id", r, &pathBudgetID)
+		pathBudgetID, err := parseUUIDFromPath("budget_id", r)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "", err)
 			return

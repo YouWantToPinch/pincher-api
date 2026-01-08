@@ -4,8 +4,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/google/uuid"
-
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
@@ -213,8 +211,7 @@ func (cfg *APIConfig) endpAddBudgetMemberWithRole(w http.ResponseWriter, r *http
 func (cfg *APIConfig) endpRemoveBudgetMember(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	var pathUserID uuid.UUID
-	err := parseUUIDFromPath("user_id", r, &pathUserID)
+	pathUserID, err := parseUUIDFromPath("user_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

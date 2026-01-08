@@ -116,8 +116,7 @@ func (cfg *APIConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 }
 
 func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request) {
-	var pathCategoryID uuid.UUID
-	err := parseUUIDFromPath("category_id", r, &pathCategoryID)
+	pathCategoryID, err := parseUUIDFromPath("category_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
@@ -165,8 +164,7 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *APIConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) {
-	var pathCategoryID uuid.UUID
-	err := parseUUIDFromPath("category_id", r, &pathCategoryID)
+	pathCategoryID, err := parseUUIDFromPath("category_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

@@ -96,45 +96,49 @@ func respondWithText(w http.ResponseWriter, code int, msg string) {
 }
 
 // Try to parse input path parameter; store uuid.Nil into 'parse' on failure
-func parseUUIDFromPath(pathParam string, r *http.Request, parse *uuid.UUID) error {
+// parseUUIDFromPath attempts to find the path parameter value from the given
+// request and return it as a pointer to a UUID.
+func parseUUIDFromPath(pathParam string, r *http.Request) (uuid.UUID, error) {
 	uuidString := r.PathValue(pathParam)
 	if uuidString != "" {
 		parsedID, err := uuid.Parse(uuidString)
 		if err != nil {
-			return fmt.Errorf("value '%s' for path parameter '%s' could not be parsed as UUID: %w", uuidString, pathParam, err)
+			return uuid.UUID{}, fmt.Errorf("value '%s' for path parameter '%s' could not be parsed as UUID: %w", uuidString, pathParam, err)
 		}
-		*parse = parsedID
+		return parsedID, nil
 	} else {
-		*parse = uuid.Nil
+		// FIXME: Uncomment this error return after removing path-parameter optional queries
+		// (which is terrible design, and the reason why I haven't cared to actually get that working with the way it's implemented...)
+
+		// return uuid.UUID{}, fmt.Errorf("value '%s' for path parameter '%s' is empty", uuidString, pathParam)
+		return uuid.UUID{}, nil
 	}
-	return nil
 }
 
 // Try to parse input query parameter; store time.Time{} into 'parse' on failure
-func parseDateFromQuery(queryParam string, r *http.Request, parse *time.Time) error {
+func parseDateFromQuery(queryParam string, r *http.Request) (time.Time, error) {
 	dateString := r.URL.Query().Get(queryParam)
-	err := parseDate(dateString, parse)
+	parsedDate, err := parseDate(dateString)
 	if err != nil {
-		return fmt.Errorf("invalid query parameter value '%s': %w", queryParam, err)
+		return time.Time{}, fmt.Errorf("invalid query parameter value '%s': %w", queryParam, err)
 	}
-	return nil
+	return parsedDate, nil
 }
 
-func parseDateFromPath(pathParam string, r *http.Request, parse *time.Time) error {
+func parseDateFromPath(pathParam string, r *http.Request) (time.Time, error) {
 	dateString := r.PathValue(pathParam)
-	err := parseDate(dateString, parse)
+	parsedDate, err := parseDate(dateString)
 	if err != nil {
-		return fmt.Errorf("invalid path parameter value '%s': %w", pathParam, err)
+		return time.Time{}, fmt.Errorf("invalid path parameter value '%s': %w", pathParam, err)
 	}
-	return nil
+	return parsedDate, nil
 }
 
 // Try to parse input dateString according to available time layouts.
 // Store time.Time{} into 'parse' on failure.
-func parseDate(dateString string, parse *time.Time) error {
+func parseDate(dateString string) (time.Time, error) {
 	if dateString == "" {
-		*parse = time.Time{}
-		return nil
+		return time.Time{}, nil
 	}
 
 	var parsedDate time.Time
@@ -147,10 +151,9 @@ func parseDate(dateString string, parse *time.Time) error {
 	for _, layout := range timeLayouts {
 		parsedDate, err = time.Parse(layout, dateString)
 		if err == nil {
-			*parse = parsedDate
-			return nil
+			return parsedDate, nil
 		}
 	}
 
-	return fmt.Errorf("value '%s' could not be parsed as DATE", dateString)
+	return time.Time{}, fmt.Errorf("value '%s' could not be parsed as DATE", dateString)
 }
