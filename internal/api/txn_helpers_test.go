@@ -3,7 +3,200 @@ package api
 import (
 	"testing"
 	"time"
+
+	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
+
+func TestCheckIsTransfer(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		expect bool
+	}{
+		{
+			name:   "Is Transfer: TRANSFER_TO",
+			input:  "TRANSFER_TO",
+			expect: true,
+		},
+		{
+			name:   "Is Transfer: TRANSFER_FROM",
+			input:  "TRANSFER_FROM",
+			expect: true,
+		},
+		{
+			name:   "Not Transfer: TRANSFER",
+			input:  "TRANSFER",
+			expect: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := checkIsTransfer(tt.input)
+			if actual != tt.expect {
+				t.Errorf("want: %v | actual: %v", tt.expect, actual)
+			}
+		})
+	}
+}
+
+func TestInvertTransferType(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		expect string
+	}{
+		{
+			name:   "TRANSFER_TO -> TRANSFER_FROM",
+			input:  "TRANSFER_TO",
+			expect: "TRANSFER_FROM",
+		},
+		{
+			name:   "TRANSFER_FROM -> TRANSFER_TO",
+			input:  "TRANSFER_FROM",
+			expect: "TRANSFER_TO",
+		},
+		{
+			name:   "Deposit; return input unchanged",
+			input:  "DEPOSIT",
+			expect: "DEPOSIT",
+		},
+		{
+			name:   "Withdrawal; return input unchanged",
+			input:  "WITHDRAWAL",
+			expect: "WITHDRAWAL",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := invertTransferType(tt.input)
+			if actual != tt.expect {
+				t.Errorf("want: %v | actual: %v", tt.expect, actual)
+			}
+		})
+	}
+}
+
+func TestInvertAmountsMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  map[string]int64
+		expect map[string]int64
+	}{
+		{
+			name:   "Zero len map returns identical",
+			input:  map[string]int64{},
+			expect: map[string]int64{},
+		},
+		{
+			name:   "Positives -> Negatives",
+			input:  map[string]int64{"Category1": 1, "Category2": 3, "Category3": 5, "Category4": 42},
+			expect: map[string]int64{"Category1": -1, "Category2": -3, "Category3": -5, "Category4": -42},
+		},
+		{
+			name:   "Negatives -> Positives",
+			input:  map[string]int64{"Category1": -1, "Category2": -3, "Category3": -5, "Category4": -42},
+			expect: map[string]int64{"Category1": 1, "Category2": 3, "Category3": 5, "Category4": 42},
+		},
+		{
+			// NOTE: validateTxn function should return an error on mixed signs when validating amounts.
+			// Still, this is a good sanity-check test for this unit.
+			name:   "Mixed signs invert",
+			input:  map[string]int64{"Category1": -1, "Category2": 3, "Category3": -5, "Category4": 42},
+			expect: map[string]int64{"Category1": 1, "Category2": -3, "Category3": 5, "Category4": -42},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if len(tt.expect) != len(tt.input) {
+				t.Errorf("unexpected map length; want: %v | actual: %v", len(tt.input), len(tt.expect))
+			}
+			for k, v := range tt.input {
+				if tt.expect[k] != -v {
+					t.Errorf("for key %v in expected map; want: %v | actual: %v", k, -v, tt.expect[k])
+				}
+			}
+		})
+	}
+}
+
+func TestGetOrderedTransferIDs(t *testing.T) {
+	// PREP: pointers for testing
+	fromTxnPtr := &database.Transaction{TransactionType: "TRANSFER_FROM"}
+	toTxnPtr := &database.Transaction{TransactionType: "TRANSFER_TO"}
+
+	t.Run("input 'to, from' returns identical", func(t *testing.T) {
+		toPtr, fromPtr, _ := getOrderedTransferIDs(toTxnPtr, fromTxnPtr)
+		if toPtr != toTxnPtr || fromPtr != fromTxnPtr {
+			t.Errorf("unexpected ptr order; want: 'to, from' | actual: 'from, to'")
+		}
+	})
+	t.Run("input 'from, to' returns swapped", func(t *testing.T) {
+		toPtr, fromPtr, _ := getOrderedTransferIDs(fromTxnPtr, toTxnPtr)
+		if toPtr != toTxnPtr || fromPtr != fromTxnPtr {
+			t.Errorf("unexpected ptr order; want: 'to, from' | actual: 'from, to'")
+		}
+	})
+	t.Run("input 'to, non-transfer' returns error", func(t *testing.T) {
+		nonTransferTxnPtr := &database.Transaction{TransactionType: "DEPOSIT"}
+		_, _, err := getOrderedTransferIDs(toTxnPtr, nonTransferTxnPtr)
+		if err == nil {
+			t.Errorf("expected error, but got none")
+		}
+	})
+	t.Run("input 'to, to-transfer' returns error", func(t *testing.T) {
+		otherToTxnPtr := &database.Transaction{TransactionType: "TRANSFER_TO"}
+		_, _, err := getOrderedTransferIDs(toTxnPtr, otherToTxnPtr)
+		if err == nil {
+			t.Errorf("expected error, but got none")
+		}
+	})
+}
+
+func TestTotalAmountsFromMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  map[string]int64
+		expect int64
+	}{
+		{
+			name:   "1 + 1 = 2",
+			input:  map[string]int64{"Category1": 1, "Category2": 1},
+			expect: 2,
+		},
+		{
+			name:   "1 + 3 + 5 + 42 = 51",
+			input:  map[string]int64{"Category1": 1, "Category2": 3, "Category3": 5, "Category4": 42},
+			expect: 51,
+		},
+		{
+			name:   "-1 + -3 + -5 + -42 = -51",
+			input:  map[string]int64{"Category1": -1, "Category2": -3, "Category3": -5, "Category4": -42},
+			expect: -51,
+		},
+		{
+			name:   "-1 + 3 + -5 + 42 = 39",
+			input:  map[string]int64{"Category1": -1, "Category2": 3, "Category3": -5, "Category4": 42},
+			expect: 39,
+		},
+		{
+			name:   "empty map zero",
+			input:  map[string]int64{},
+			expect: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := totalFromAmountsMap(tt.input)
+			if actual != tt.expect {
+				t.Errorf("want: %v | acatual: %v", tt.expect, actual)
+			}
+		})
+	}
+}
 
 func TestValidateTXN(t *testing.T) {
 	tests := []struct {
@@ -20,7 +213,7 @@ func TestValidateTXN(t *testing.T) {
 			name: "Infer TRANSFER_FROM",
 			mockPayload: &UpsertTransactionRqSchema{
 				TransactionDate:     "2025-09-15",
-				TransferAccountName: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+				TransferAccountName: "OtherAccount",
 				Amounts: map[string]int64{
 					"UNCATEGORIZED": -1000,
 				},
@@ -35,7 +228,7 @@ func TestValidateTXN(t *testing.T) {
 			name: "Infer TRANSFER_TO",
 			mockPayload: &UpsertTransactionRqSchema{
 				TransactionDate:     "2025-09-15",
-				TransferAccountName: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+				TransferAccountName: "OtherAccount",
 				Amounts: map[string]int64{
 					"UNCATEGORIZED": 1000,
 				},

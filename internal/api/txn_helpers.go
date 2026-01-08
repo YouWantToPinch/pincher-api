@@ -165,7 +165,6 @@ func pgxUpdateTxn(q *database.Queries, ctx context.Context, params database.Upda
 // pgxLogTxn performs an insert on the transasction table given the parameters,
 // and inserts the relevant transaction splits as well.
 func pgxLogTxn(q *database.Queries, ctx context.Context, params database.LogTransactionParams, splits map[string]int64) (txn *database.Transaction, errMsg string, err error) {
-	// TODO: Add unit tests for all of this business logic I've been able to separate! :)
 	if checkIsTransfer(params.TransactionType) {
 		amount := totalFromAmountsMap(splits)
 		slog.Debug("TRANSFER TXN", slog.Int64("amount", amount))
