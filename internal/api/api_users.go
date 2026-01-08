@@ -7,7 +7,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *APIConfig) endpCreateUser(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		Password string `json:"password"`
 		Username string `json:"username"`
@@ -48,7 +48,7 @@ func (cfg *APIConfig) endpCreateUser(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *APIConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		Password string `json:"password"`
 		Username string `json:"username"`
@@ -85,7 +85,7 @@ func (cfg *APIConfig) endpUpdateUserCredentials(w http.ResponseWriter, r *http.R
 	respondWithCode(w, http.StatusNoContent)
 }
 
-func (cfg *APIConfig) endpDeleteUser(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		Password string `json:"password"`
 		Username string `json:"username"`

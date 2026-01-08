@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-func (cfg *APIConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleDeleteAllUsers(w http.ResponseWriter, r *http.Request) {
 	if cfg.platform != "dev" {
 		respondWithText(w, http.StatusForbidden, "platform not dev")
 	}
@@ -17,7 +17,7 @@ func (cfg *APIConfig) endpDeleteAllUsers(w http.ResponseWriter, r *http.Request)
 	respondWithCode(w, http.StatusNoContent)
 }
 
-func (cfg *APIConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	if cfg.platform != "dev" {
 		respondWithText(w, http.StatusForbidden, "platform not dev")
 	}
@@ -50,7 +50,7 @@ func (cfg *APIConfig) endpGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
 	if cfg.platform != "dev" {
 		respondWithText(w, http.StatusForbidden, "platform not dev")
 	}

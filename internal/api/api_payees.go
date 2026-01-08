@@ -6,7 +6,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *APIConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleCreatePayee(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		Meta
 	}
@@ -48,7 +48,7 @@ func (cfg *APIConfig) endpCreatePayee(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetPayees(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 	dbPayees, err := cfg.db.GetBudgetPayees(r.Context(), pathBudgetID)
 	if err != nil {
@@ -81,7 +81,7 @@ func (cfg *APIConfig) endpGetPayees(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetPayee(w http.ResponseWriter, r *http.Request) {
 	pathPayeeID, err := parseUUIDFromPath("payee_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
@@ -108,7 +108,7 @@ func (cfg *APIConfig) endpGetPayee(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleUpdatePayee(w http.ResponseWriter, r *http.Request) {
 	pathPayeeID, err := parseUUIDFromPath("payee_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
@@ -138,7 +138,7 @@ func (cfg *APIConfig) endpUpdatePayee(w http.ResponseWriter, r *http.Request) {
 	respondWithCode(w, http.StatusNoContent)
 }
 
-func (cfg *APIConfig) endpDeletePayee(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleDeletePayee(w http.ResponseWriter, r *http.Request) {
 	pathPayeeID, err := parseUUIDFromPath("payee_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)

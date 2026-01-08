@@ -41,7 +41,7 @@ type validatedTxnPayload struct {
 	cleared           bool
 }
 
-func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleLogTransaction(w http.ResponseWriter, r *http.Request) {
 	validatedTxn := getContextKeyValueAsTxn(r.Context(), "validated_txn")
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 

@@ -8,7 +8,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		GroupName string `json:"group_name"`
 		Meta
@@ -67,7 +67,7 @@ func (cfg *APIConfig) endpCreateCategory(w http.ResponseWriter, r *http.Request)
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetCategories(w http.ResponseWriter, r *http.Request) {
 	queryGroupID := r.URL.Query().Get("group_id")
 	var parsedGroupID uuid.UUID
 	if queryGroupID != "" {
@@ -115,7 +115,7 @@ func (cfg *APIConfig) endpGetCategories(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleUpdateCategory(w http.ResponseWriter, r *http.Request) {
 	pathCategoryID, err := parseUUIDFromPath("category_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
@@ -163,7 +163,7 @@ func (cfg *APIConfig) endpUpdateCategory(w http.ResponseWriter, r *http.Request)
 	respondWithCode(w, http.StatusNoContent)
 }
 
-func (cfg *APIConfig) endpDeleteCategory(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleDeleteCategory(w http.ResponseWriter, r *http.Request) {
 	pathCategoryID, err := parseUUIDFromPath("category_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)

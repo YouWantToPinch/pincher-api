@@ -8,7 +8,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *APIConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetTransactionSplits(w http.ResponseWriter, r *http.Request) {
 	pathTransactionID, err := parseUUIDFromPath("transaction_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
@@ -34,7 +34,7 @@ func (cfg *APIConfig) endpGetTransactionSplits(w http.ResponseWriter, r *http.Re
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetTransaction(w http.ResponseWriter, r *http.Request) {
 	getDetails := strings.HasSuffix(r.URL.String(), "/details")
 
 	pathTransactionID, err := parseUUIDFromPath("transaction_id", r)
@@ -102,7 +102,7 @@ func (cfg *APIConfig) endpGetTransaction(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (cfg *APIConfig) endpGetTransactions(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Request) {
 	getDetails := strings.Contains(r.URL.String(), "/details")
 
 	parsedAccountID, err := parseUUIDFromPath("account_id", r)

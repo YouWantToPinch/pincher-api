@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (cfg *APIConfig) endpUpdateTransaction(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleUpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	validatedTxn := getContextKeyValueAsTxn(r.Context(), "validated_txn")
 
 	pathTransactionID, err := parseUUIDFromPath("transaction_id", r)

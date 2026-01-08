@@ -6,7 +6,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *APIConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleAddAccount(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		AccountType string `json:"account_type"`
 		Meta
@@ -51,7 +51,7 @@ func (cfg *APIConfig) endpAddAccount(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetAccounts(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 	dbAccounts, err := cfg.db.GetAccountsFromBudget(r.Context(), pathBudgetID)
 	if err != nil {
@@ -90,7 +90,7 @@ func (cfg *APIConfig) endpGetAccounts(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetAccount(w http.ResponseWriter, r *http.Request) {
 	pathAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
@@ -118,7 +118,7 @@ func (cfg *APIConfig) endpGetAccount(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetBudgetAccountCapital(w http.ResponseWriter, r *http.Request) {
 	pathAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "", err)
@@ -142,7 +142,7 @@ func (cfg *APIConfig) endpGetBudgetAccountCapital(w http.ResponseWriter, r *http
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleUpdateAccount(w http.ResponseWriter, r *http.Request) {
 	pathAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
@@ -174,7 +174,7 @@ func (cfg *APIConfig) endpUpdateAccount(w http.ResponseWriter, r *http.Request) 
 	respondWithCode(w, http.StatusNoContent)
 }
 
-func (cfg *APIConfig) endpRestoreAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleRestoreAccount(w http.ResponseWriter, r *http.Request) {
 	pathAccountID, err := parseUUIDFromPath("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
@@ -190,7 +190,7 @@ func (cfg *APIConfig) endpRestoreAccount(w http.ResponseWriter, r *http.Request)
 	respondWithText(w, http.StatusOK, "Account restored")
 }
 
-func (cfg *APIConfig) endpDeleteAccount(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		DeleteHard bool `json:"delete_hard"`
 	}

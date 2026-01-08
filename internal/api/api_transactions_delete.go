@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-func (cfg *APIConfig) endpDeleteTransaction(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleDeleteTransaction(w http.ResponseWriter, r *http.Request) {
 	pathTransactionID, err := parseUUIDFromPath("transaction_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)

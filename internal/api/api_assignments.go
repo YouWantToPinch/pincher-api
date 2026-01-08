@@ -9,7 +9,7 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
-func (cfg *APIConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
 		Amount int64 `json:"amount"`
 	}
@@ -62,7 +62,7 @@ func (cfg *APIConfig) endpAssignAmountToCategory(w http.ResponseWriter, r *http.
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetMonthReport(w http.ResponseWriter, r *http.Request) {
 	parsedMonthID, err := parseDateFromPath("month_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
@@ -84,7 +84,7 @@ func (cfg *APIConfig) endpGetMonthReport(w http.ResponseWriter, r *http.Request)
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetMonthCategories(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	parsedMonthID, err := parseDateFromPath("month_id", r)
@@ -119,7 +119,7 @@ func (cfg *APIConfig) endpGetMonthCategories(w http.ResponseWriter, r *http.Requ
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
-func (cfg *APIConfig) endpGetMonthCategoryReport(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleGetMonthCategoryReport(w http.ResponseWriter, r *http.Request) {
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	parsedMonthID, err := parseDateFromPath("month_id", r)
