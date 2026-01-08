@@ -115,7 +115,7 @@ func (cfg *APIConfig) endpLogTransaction(w http.ResponseWriter, r *http.Request)
 				BudgetID:        pathBudgetID,
 				LoggerID:        validatedUserID,
 				AccountID:       validatedTxn.transferAccountID,
-				TransactionType: validatedTxn.txnType,
+				TransactionType: invertTransferType(validatedTxn.txnType),
 				TransactionDate: validatedTxn.txnDate,
 				PayeeID:         validatedTxn.payeeID,
 				Notes:           validatedTxn.notes,
