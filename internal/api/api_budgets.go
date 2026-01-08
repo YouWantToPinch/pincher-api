@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log/slog"
 	"net/http"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
@@ -25,44 +24,53 @@ func (cfg *APIConfig) handleCreateBudget(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	dbBudget, err := cfg.db.CreateBudget(r.Context(), database.CreateBudgetParams{
-		AdminID: validatedUserID,
-		Name:    rqPayload.Name,
-		Notes:   rqPayload.Notes,
-	})
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not create budget", err)
-		return
-	}
-
-	_, err = cfg.db.AssignBudgetMemberWithRole(r.Context(), database.AssignBudgetMemberWithRoleParams{
-		BudgetID:   dbBudget.ID,
-		UserID:     validatedUserID,
-		MemberRole: "ADMIN",
-	})
-	if err != nil {
-
-		// TODO: use db transaction w/ rollback for atomicity here, as has been done with transactions!
-
-		respondWithError(w, http.StatusInternalServerError, "could not assign ADMIN to new budget", err)
-		slog.Debug("Attempting deletion of new budget, as no admin could be assigned.")
-		err := cfg.db.DeleteBudget(r.Context(), dbBudget.ID)
+	// DB TRANSACTION BLOCK
+	{
+		tx, err := cfg.Pool.Begin(r.Context())
 		if err != nil {
-			slog.Warn("Attempted deletion of newly initialized budget, but FAILED.")
-		} else {
-			slog.Info("Initialized budget was deleted successfully.")
+			respondWithError(w, http.StatusInternalServerError, "", err)
+			return
 		}
-		return
-	}
+		defer tx.Rollback(r.Context())
 
-	rspPayload := Budget{
-		ID:        dbBudget.ID,
-		CreatedAt: dbBudget.CreatedAt,
-		UpdatedAt: dbBudget.UpdatedAt,
-		AdminID:   dbBudget.AdminID,
-	}
+		q := cfg.db.WithTx(tx)
 
-	respondWithJSON(w, http.StatusCreated, rspPayload)
+		dbBudget, err := q.CreateBudget(r.Context(), database.CreateBudgetParams{
+			AdminID: validatedUserID,
+			Name:    rqPayload.Name,
+			Notes:   rqPayload.Notes,
+		})
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "could not create budget", err)
+			return
+		}
+
+		_, err = q.AssignBudgetMemberWithRole(r.Context(), database.AssignBudgetMemberWithRoleParams{
+			BudgetID:   dbBudget.ID,
+			UserID:     validatedUserID,
+			MemberRole: "ADMIN",
+		})
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "could not assign ADMIN to new budget", err)
+			return
+		}
+		rspPayload := Budget{
+			ID:        dbBudget.ID,
+			CreatedAt: dbBudget.CreatedAt,
+			UpdatedAt: dbBudget.UpdatedAt,
+			AdminID:   dbBudget.AdminID,
+			Meta: Meta{
+				Name:  dbBudget.Name,
+				Notes: dbBudget.Notes,
+			},
+		}
+		if err := tx.Commit(r.Context()); err != nil {
+			respondWithError(w, http.StatusInternalServerError, "", err)
+			return
+		}
+
+		respondWithJSON(w, http.StatusCreated, rspPayload)
+	}
 }
 
 func (cfg *APIConfig) handleGetBudget(w http.ResponseWriter, r *http.Request) {
