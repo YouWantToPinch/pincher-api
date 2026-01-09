@@ -219,20 +219,16 @@ func (q *Queries) GetBudgetPayeeIDByName(ctx context.Context, arg GetBudgetPayee
 }
 
 const getUserBudgets = `-- name: GetUserBudgets :many
-(
-  SELECT budgets.id, budgets.created_at, budgets.updated_at, budgets.admin_id, budgets.name, budgets.notes
-  FROM budgets
-  JOIN budgets_users
-    ON budgets.id = budgets_users.budget_id
-  WHERE budgets_users.user_id = $1
-    AND ($2::text[] IS NULL OR budgets_users.member_role = ANY($2::text[]))
-)
-UNION
-(
-  SELECT budgets.id, budgets.created_at, budgets.updated_at, budgets.admin_id, budgets.name, budgets.notes
-  FROM budgets
-  WHERE admin_id = $1
-)
+SELECT budgets.id, budgets.created_at, budgets.updated_at, budgets.admin_id, budgets.name, budgets.notes
+FROM budgets
+JOIN budgets_users
+  ON budgets.id = budgets_users.budget_id
+WHERE budgets_users.user_id = $1
+  AND (
+    $2::text[] IS NULL
+    OR cardinality($2::text[]) = 0
+    OR budgets_users.member_role = ANY($2::text[])
+  )
 `
 
 type GetUserBudgetsParams struct {

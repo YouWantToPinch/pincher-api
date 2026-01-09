@@ -11,20 +11,16 @@ VALUES (
 RETURNING *;
 
 -- name: GetUserBudgets :many
-(
-  SELECT budgets.*
-  FROM budgets
-  JOIN budgets_users
-    ON budgets.id = budgets_users.budget_id
-  WHERE budgets_users.user_id = $1
-    AND (sqlc.arg('roles')::text[] IS NULL OR budgets_users.member_role = ANY(sqlc.arg('roles')::text[]))
-)
-UNION
-(
-  SELECT budgets.*
-  FROM budgets
-  WHERE admin_id = $1
-);
+SELECT budgets.*
+FROM budgets
+JOIN budgets_users
+  ON budgets.id = budgets_users.budget_id
+WHERE budgets_users.user_id = $1
+  AND (
+    sqlc.arg('roles')::text[] IS NULL
+    OR cardinality(sqlc.arg('roles')::text[]) = 0
+    OR budgets_users.member_role = ANY(sqlc.arg('roles')::text[])
+  );
 
 -- name: GetBudgetByID :one
 SELECT *

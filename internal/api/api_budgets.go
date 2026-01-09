@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
@@ -99,27 +100,19 @@ func (cfg *APIConfig) handleGetBudget(w http.ResponseWriter, r *http.Request) {
 func (cfg *APIConfig) handleGetUserBudgets(w http.ResponseWriter, r *http.Request) {
 	validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
-	roleFilters := r.URL.Query()["roles"]
+	roleFilters := []string{}
+	rolesParam := r.URL.Query().Get("roles")
+	if rolesParam != "" {
+		roleFilters = strings.Split(rolesParam, ",")
+	}
 
-	var dbBudgets []database.Budget
-	var err error
-	if len(roleFilters) == 0 {
-		dbBudgets, err = cfg.db.GetUserBudgets(r.Context(), database.GetUserBudgetsParams{
-			UserID: validatedUserID,
-		})
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not retrieve user budgets", err)
-			return
-		}
-	} else {
-		dbBudgets, err = cfg.db.GetUserBudgets(r.Context(), database.GetUserBudgetsParams{
-			UserID: validatedUserID,
-			Roles:  roleFilters,
-		})
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not retrieve user budgets", err)
-			return
-		}
+	dbBudgets, err := cfg.db.GetUserBudgets(r.Context(), database.GetUserBudgetsParams{
+		UserID: validatedUserID,
+		Roles:  roleFilters,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not retrieve user budgets", err)
+		return
 	}
 
 	var budgets []Budget
