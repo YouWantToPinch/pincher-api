@@ -43,40 +43,56 @@ func (cfg *APIConfig) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "could not create refresh token", err)
 		return
 	}
-	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
-		Token:     refreshToken,
-		UserID:    dbUser.ID,
-		ExpiresAt: time.Now().UTC().UTC().Add(time.Hour * 24 * 30),
-	})
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not save refresh token", err)
-		return
-	}
 
-	accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.secret, time.Hour)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not create new access token", err)
-		return
-	}
+	// DB TRANSACTION BLOCK
+	{
+		tx, err := cfg.Pool.Begin(r.Context())
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "", err)
+			return
+		}
+		defer tx.Rollback(r.Context())
 
-	type rspSchema struct {
-		User
-		Token        string `json:"token"`
-		RefreshToken string `json:"refresh_token"`
-	}
+		q := cfg.db.WithTx(tx)
 
-	rspPayload := rspSchema{
-		User: User{
-			ID:        dbUser.ID,
-			CreatedAt: dbUser.CreatedAt,
-			UpdatedAt: dbUser.UpdatedAt,
-			Username:  dbUser.Username,
-		},
-		Token:        accessToken,
-		RefreshToken: refreshToken,
-	}
+		_, err = q.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+			Token:     refreshToken,
+			UserID:    dbUser.ID,
+			ExpiresAt: time.Now().UTC().UTC().Add(time.Hour * 24 * 30),
+		})
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "could not save refresh token", err)
+			return
+		}
 
-	respondWithJSON(w, http.StatusOK, rspPayload)
+		accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.secret, time.Hour)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "could not create new access token", err)
+			return
+		}
+
+		type rspSchema struct {
+			User
+			Token        string `json:"token"`
+			RefreshToken string `json:"refresh_token"`
+		}
+
+		rspPayload := rspSchema{
+			User: User{
+				ID:        dbUser.ID,
+				CreatedAt: dbUser.CreatedAt,
+				UpdatedAt: dbUser.UpdatedAt,
+				Username:  dbUser.Username,
+			},
+			Token:        accessToken,
+			RefreshToken: refreshToken,
+		}
+		if err := tx.Commit(r.Context()); err != nil {
+			respondWithError(w, http.StatusInternalServerError, "", err)
+			return
+		}
+		respondWithJSON(w, http.StatusOK, rspPayload)
+	}
 }
 
 func (cfg *APIConfig) handleCheckRefreshToken(w http.ResponseWriter, r *http.Request) {
