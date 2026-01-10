@@ -105,17 +105,17 @@ func (cfg *APIConfig) handleGetTransaction(w http.ResponseWriter, r *http.Reques
 func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Request) {
 	getDetails := strings.Contains(r.URL.String(), "/details")
 
-	parsedAccountID, err := parseUUIDFromPath("account_id", r)
+	parsedAccountID, err := parseUUIDFromQuery("account_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
-	parsedCategoryID, err := parseUUIDFromPath("category_id", r)
+	parsedCategoryID, err := parseUUIDFromQuery("category_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
-	parsedPayeeID, err := parseUUIDFromPath("payee_id", r)
+	parsedPayeeID, err := parseUUIDFromQuery("payee_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return

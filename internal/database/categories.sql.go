@@ -68,8 +68,6 @@ SELECT id, created_at, updated_at, budget_id, name, group_id, notes
 FROM categories c
 WHERE c.budget_id = $1
   AND (
-    -- HACK: It may be wiser to set up separate queries to be called
-    -- based on what URL queries or URI Parameters are provided for sorting purposes.
     $2::uuid = '00000000-0000-0000-0000-000000000000'
     OR c.group_id = $2::uuid
   )

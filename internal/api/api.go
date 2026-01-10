@@ -62,9 +62,6 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.handleDeleteAccount)))
 	// Transactions
 	mux.HandleFunc("POST /api/budgets/{budget_id}/transactions", mdAuth(mdClear(CONTRIBUTOR, mdValidateTxn(cfg.handleLogTransaction))))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts/{account_id}/transactions", mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/categories/{category_id}/transactions", mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/payees/{payee_id}/transactions", mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions", mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/details", mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(VIEWER, cfg.handleGetTransaction)))

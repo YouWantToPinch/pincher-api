@@ -480,14 +480,14 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	payee1ID, _ := c.GetJSONFieldAsString("id")
 
 	c.Request(c.LogTransaction(jwt3, budgetID, "Employee Business Credit Account", "", dateSeptember, "Smash & Dash", "I filled up vehicle w/ plate no. 555-555 @ the Smash & Pass gas station.", true, map[string]int64{category2Name: -1800}), http.StatusCreated)
-	// transaction1, _ := c.GetJSONFieldAsString("id")
 
 	c.Request(c.LogTransaction(jwt3, budgetID, "Employee Business Credit Account", "", dateSeptember, "Smash & Dash", "Yeah, I got a drink in the convenience store too; sue me. Take it out of my bonus or whatever.", true, map[string]int64{category1Name: -400}), http.StatusCreated)
-	// transaction2, _ := c.GetJSONFieldAsString("id")
 
 	// user4 VIEWER: Works for accounting; reading transactions from employees.
 	c.Request(c.GetTransactions(jwt4, budgetID, account2, "", "", "", ""), http.StatusOK)
 	c.Request(c.GetTransactions(jwt4, budgetID, "", "", payee1ID, "", ""), http.StatusOK)
+	txnQuery, _ := c.GetJSONField("transactions")
+	assert.Len(t, txnQuery.([]any), 2)
 
 	// Delete all users
 	c.Request(c.DeleteAllUsers(), http.StatusNoContent)

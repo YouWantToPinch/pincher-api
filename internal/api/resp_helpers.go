@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func decodePayload[T any](r *http.Request) (T, error) {
@@ -103,15 +104,24 @@ func parseUUIDFromPath(pathParam string, r *http.Request) (uuid.UUID, error) {
 	if uuidString != "" {
 		parsedID, err := uuid.Parse(uuidString)
 		if err != nil {
-			return uuid.UUID{}, fmt.Errorf("value '%s' for path parameter '%s' could not be parsed as UUID: %w", uuidString, pathParam, err)
+			return uuid.Nil, fmt.Errorf("value '%s' for path parameter '%s' could not be parsed as UUID: %w", uuidString, pathParam, err)
 		}
 		return parsedID, nil
 	} else {
-		// FIXME: Uncomment this error return after removing path-parameter optional queries
-		// (which is terrible design, and the reason why I haven't cared to actually get that working with the way it's implemented...)
+		return uuid.Nil, fmt.Errorf("value '%s' for path parameter '%s' is empty", uuidString, pathParam)
+	}
+}
 
-		// return uuid.UUID{}, fmt.Errorf("value '%s' for path parameter '%s' is empty", uuidString, pathParam)
-		return uuid.UUID{}, nil
+func parseUUIDFromQuery(queryParam string, r *http.Request) (uuid.UUID, error) {
+	uuidString := r.URL.Query().Get(queryParam)
+	if uuidString != "" {
+		parsedID, err := uuid.Parse(uuidString)
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("value '%s' for query parameter '%s' could not be parsed as UUID: %w", uuidString, queryParam, err)
+		}
+		return parsedID, nil
+	} else {
+		return uuid.Nil, nil
 	}
 }
 
@@ -156,4 +166,12 @@ func parseDate(dateString string) (time.Time, error) {
 	}
 
 	return time.Time{}, fmt.Errorf("value '%s' could not be parsed as DATE", dateString)
+}
+
+// pgxUUID converts a uuid.UUID to pgtype.UUID for pgx compatibility
+func pgxUUID(uuid uuid.UUID) pgtype.UUID {
+	return pgtype.UUID{
+		Bytes: uuid,
+		Valid: true,
+	}
 }

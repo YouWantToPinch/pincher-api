@@ -122,44 +122,51 @@ SELECT td.id, td.transaction_date, td.transaction_type, td.notes, td.payee_name,
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
-
-    t.budget_id = $1
-    AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = $2::uuid)
-    AND (
-        $3::uuid = '00000000-0000-0000-0000-000000000000'
-        OR EXISTS (
-            SELECT 1
-            FROM transaction_splits ts
-            WHERE ts.transaction_id = t.id AND ts.category_id = $3::uuid
-        )
+  budget_id = $1::uuid
+  AND (
+      $2::uuid = '00000000-0000-0000-0000-000000000000'
+      OR t.payee_id = $2::uuid
     )
-    AND ($4::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = $4::uuid)
-    AND (
-        ($5::date = '0001-01-01' AND $6::date = '0001-01-01')
-        OR
-        (t.transaction_date >= $5::date AND t.transaction_date <= $6::date)
+  AND (
+    $3::uuid = '00000000-0000-0000-0000-000000000000'
+    OR t.payee_id = $3::uuid
+  )
+  AND (
+    $4::uuid = '00000000-0000-0000-0000-000000000000'
+    OR EXISTS (
+      SELECT 1
+      FROM transaction_splits ts
+      WHERE ts.transaction_id = t.id AND ts.category_id = $4::uuid
     )
+  )
+  AND (
+    ($5::date = '0001-01-01' AND $6::date = '0001-01-01')
+    OR (t.transaction_date BETWEEN $5::date AND $6::date)
+  )
 ORDER BY t.transaction_date DESC
 `
 
 type GetTransactionDetailsParams struct {
 	BudgetID   uuid.UUID
 	AccountID  uuid.UUID
-	CategoryID uuid.UUID
 	PayeeID    uuid.UUID
+	CategoryID uuid.UUID
 	StartDate  time.Time
 	EndDate    time.Time
 }
 
-// HACK: Where '000...' is used to represent nil UUIDs:
-// It may be wiser to set up separate queries to be called
-// based on what URL queries or URI Parameters are provided for sorting purposes.
+// HACK:
+// When it comes to nullable values, sqlc seems to have
+// a difficult time inferring any sort of nullability
+// on query parameters. This zero-value approach
+// ensures that the zero-value UUIDs and timestamps
+// passed to the query are properly compared.
 func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionDetailsParams) ([]TransactionDetail, error) {
 	rows, err := q.db.Query(ctx, getTransactionDetails,
 		arg.BudgetID,
 		arg.AccountID,
-		arg.CategoryID,
 		arg.PayeeID,
+		arg.CategoryID,
 		arg.StartDate,
 		arg.EndDate,
 	)
@@ -219,33 +226,38 @@ func (q *Queries) GetTransactionDetailsByID(ctx context.Context, id uuid.UUID) (
 }
 
 const getTransactions = `-- name: GetTransactions :many
-SELECT id, created_at, updated_at, budget_id, logger_id, account_id, transaction_type, transaction_date, payee_id, notes, cleared
+SELECT t.id, t.created_at, t.updated_at, t.budget_id, t.logger_id, t.account_id, t.transaction_type, t.transaction_date, t.payee_id, t.notes, t.cleared
 FROM transactions t
 WHERE
-    t.budget_id = $1
-    AND ($2::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = $2::uuid)
-    AND (
-        $3::uuid = '00000000-0000-0000-0000-000000000000'
-        OR EXISTS (
-            SELECT 1
-            FROM transaction_splits ts
-            WHERE ts.transaction_id = t.id AND ts.category_id = $3::uuid
-        )
+  budget_id = $1::uuid
+  AND (
+      $2::uuid = '00000000-0000-0000-0000-000000000000'
+      OR t.payee_id = $2::uuid
     )
-    AND ($4::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = $4::uuid)
-    AND (
-        ($5::date = '0001-01-01' AND $6::date = '0001-01-01')
-        OR
-        (t.transaction_date >= $5::date AND t.transaction_date <= $6::date)
+  AND (
+    $3::uuid = '00000000-0000-0000-0000-000000000000'
+    OR t.payee_id = $3::uuid
+  )
+  AND (
+    $4::uuid = '00000000-0000-0000-0000-000000000000'
+    OR EXISTS (
+      SELECT 1
+      FROM transaction_splits ts
+      WHERE ts.transaction_id = t.id AND ts.category_id = $4::uuid
     )
+  )
+  AND (
+    ($5::date = '0001-01-01' AND $6::date = '0001-01-01')
+    OR (t.transaction_date BETWEEN $5::date AND $6::date)
+  )
 ORDER BY t.transaction_date DESC
 `
 
 type GetTransactionsParams struct {
 	BudgetID   uuid.UUID
 	AccountID  uuid.UUID
-	CategoryID uuid.UUID
 	PayeeID    uuid.UUID
+	CategoryID uuid.UUID
 	StartDate  time.Time
 	EndDate    time.Time
 }
@@ -254,8 +266,8 @@ func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams
 	rows, err := q.db.Query(ctx, getTransactions,
 		arg.BudgetID,
 		arg.AccountID,
-		arg.CategoryID,
 		arg.PayeeID,
+		arg.CategoryID,
 		arg.StartDate,
 		arg.EndDate,
 	)

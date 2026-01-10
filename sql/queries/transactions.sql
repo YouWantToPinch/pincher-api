@@ -41,54 +41,66 @@ VALUES (
 )
 RETURNING *;
 
--- HACK: Where '000...' is used to represent nil UUIDs:
--- It may be wiser to set up separate queries to be called
--- based on what URL queries or URI Parameters are provided for sorting purposes.
+-- HACK:
+-- When it comes to nullable values, sqlc seems to have
+-- a difficult time inferring any sort of nullability
+-- on query parameters. This zero-value approach
+-- ensures that the zero-value UUIDs and timestamps
+-- passed to the query are properly compared.
 
 -- name: GetTransactionDetails :many
 SELECT td.*
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
-
-    t.budget_id = sqlc.arg('budget_id')
-    AND (sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = sqlc.arg('account_id')::uuid)
-    AND (
-        sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
-        OR EXISTS (
-            SELECT 1
-            FROM transaction_splits ts
-            WHERE ts.transaction_id = t.id AND ts.category_id = sqlc.arg('category_id')::uuid
-        )
+  budget_id = sqlc.arg('budget_id')::uuid
+  AND (
+      sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000'
+      OR t.payee_id = sqlc.arg('account_id')::uuid
     )
-    AND (sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = sqlc.arg('payee_id')::uuid)
-    AND (
-        (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
-        OR
-        (t.transaction_date >= sqlc.arg('start_date')::date AND t.transaction_date <= sqlc.arg('end_date')::date)
+  AND (
+    sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000'
+    OR t.payee_id = sqlc.arg('payee_id')::uuid
+  )
+  AND (
+    sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
+    OR EXISTS (
+      SELECT 1
+      FROM transaction_splits ts
+      WHERE ts.transaction_id = t.id AND ts.category_id = sqlc.arg('category_id')::uuid
     )
+  )
+  AND (
+    (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
+    OR (t.transaction_date BETWEEN sqlc.arg('start_date')::date AND sqlc.arg('end_date')::date)
+  )
 ORDER BY t.transaction_date DESC;
 
 -- name: GetTransactions :many
-SELECT *
+SELECT t.*
 FROM transactions t
 WHERE
-    t.budget_id = sqlc.arg('budget_id')
-    AND (sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.account_id = sqlc.arg('account_id')::uuid)
-    AND (
-        sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
-        OR EXISTS (
-            SELECT 1
-            FROM transaction_splits ts
-            WHERE ts.transaction_id = t.id AND ts.category_id = sqlc.arg('category_id')::uuid
-        )
+  budget_id = sqlc.arg('budget_id')::uuid
+  AND (
+      sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000'
+      OR t.payee_id = sqlc.arg('account_id')::uuid
     )
-    AND (sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000' OR t.payee_id = sqlc.arg('payee_id')::uuid)
-    AND (
-        (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
-        OR
-        (t.transaction_date >= sqlc.arg('start_date')::date AND t.transaction_date <= sqlc.arg('end_date')::date)
+  AND (
+    sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000'
+    OR t.payee_id = sqlc.arg('payee_id')::uuid
+  )
+  AND (
+    sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
+    OR EXISTS (
+      SELECT 1
+      FROM transaction_splits ts
+      WHERE ts.transaction_id = t.id AND ts.category_id = sqlc.arg('category_id')::uuid
     )
+  )
+  AND (
+    (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
+    OR (t.transaction_date BETWEEN sqlc.arg('start_date')::date AND sqlc.arg('end_date')::date)
+  )
 ORDER BY t.transaction_date DESC;
 
 -- name: GetSplitsByTransactionID :many

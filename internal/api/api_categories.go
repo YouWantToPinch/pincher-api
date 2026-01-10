@@ -68,14 +68,10 @@ func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Reques
 }
 
 func (cfg *APIConfig) handleGetCategories(w http.ResponseWriter, r *http.Request) {
-	queryGroupID := r.URL.Query().Get("group_id")
-	var parsedGroupID uuid.UUID
-	if queryGroupID != "" {
-		var err error
-		parsedGroupID, err = uuid.Parse(queryGroupID)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "could not parse group ID from query", err)
-		}
+	parsedGroupID, err := parseUUIDFromQuery("group_id", r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "", err)
+		return
 	}
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")

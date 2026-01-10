@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -301,19 +302,25 @@ func (c *APITestClient) LogTransaction(token, budgetID, accountName, transferAcc
 }
 
 func (c *APITestClient) GetTransactions(token, budgetID, accountID, categoryID, payeeID, startDate, endDate string) *http.Request {
-	pathParam := ""
-	if accountID != "" {
-		pathParam += "/accounts/" + accountID
-	} else if categoryID != "" {
-		pathParam += "/categories/" + categoryID
-	} else if payeeID != "" {
-		pathParam += "/payees/" + payeeID
-	}
-	query := ""
+	query := url.Values{}
 	if startDate != "" && endDate != "" {
-		query += "?start_date=" + startDate + "&end_date=" + endDate
+		query.Set("start_date", startDate)
+		query.Set("end_date", endDate)
 	}
-	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+pathParam+"/transactions"+query, token, nil)
+	if accountID != "" {
+		query.Set("account_id", accountID)
+	}
+	if categoryID != "" {
+		query.Set("category_id", categoryID)
+	}
+	if payeeID != "" {
+		query.Set("payee_id", payeeID)
+	}
+	path := "/api/budgets/" + budgetID + "/transactions"
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	return MakeRequest(http.MethodGet, path, token, nil)
 }
 
 func (c *APITestClient) GetTransaction(token, budgetID, transactionID string) *http.Request {
