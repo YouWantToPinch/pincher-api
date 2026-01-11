@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func decodePayload[T any](r *http.Request) (T, error) {
@@ -166,12 +165,4 @@ func parseDate(dateString string) (time.Time, error) {
 	}
 
 	return time.Time{}, fmt.Errorf("value '%s' could not be parsed as DATE", dateString)
-}
-
-// pgxUUID converts a uuid.UUID to pgtype.UUID for pgx compatibility
-func pgxUUID(uuid uuid.UUID) pgtype.UUID {
-	return pgtype.UUID{
-		Bytes: uuid,
-		Valid: true,
-	}
 }
