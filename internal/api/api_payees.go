@@ -145,62 +145,79 @@ func (cfg *APIConfig) handleDeletePayee(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	dbPayee, err := cfg.db.GetPayeeByID(r.Context(), pathPayeeID)
-	if err != nil {
-		respondWithError(w, http.StatusNotFound, "could not get payee", err)
-		return
-	}
-
-	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
-	if pathBudgetID != dbPayee.BudgetID {
-		respondWithCode(w, http.StatusForbidden)
-		return
-	}
-
-	type rqSchema struct {
-		NewPayeeName string `json:"new_payee_name"`
-	}
-
-	rqPayload, err := decodePayload[rqSchema](r)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "", err)
-		return
-	}
-
-	payeeInUse, err := cfg.db.IsPayeeInUse(r.Context(), pathPayeeID)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not determine whether payee in use", err)
-	}
-
-	if payeeInUse {
-		if rqPayload.NewPayeeName == "" {
-			respondWithError(w, http.StatusBadRequest, "payee ID not provided", nil)
-			return
-		}
-		PayeeID, err := lookupResourceIDByName(r.Context(),
-			database.GetBudgetPayeeIDByNameParams{
-				PayeeName: rqPayload.NewPayeeName,
-				BudgetID:  pathBudgetID,
-			}, cfg.db.GetBudgetPayeeIDByName)
+	// DB TRANSACTION BLOCK
+	{
+		tx, err := cfg.Pool.Begin(r.Context())
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "could not get payee id", err)
+			respondWithError(w, http.StatusInternalServerError, "", err)
 			return
 		}
+		defer tx.Rollback(r.Context())
 
-		err = cfg.db.ReassignTransactions(r.Context(), database.ReassignTransactionsParams{
-			OldPayeeID: pathPayeeID,
-			NewPayeeID: *PayeeID,
-		})
+		q := cfg.db.WithTx(tx)
+
+		dbPayee, err := q.GetPayeeByID(r.Context(), pathPayeeID)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not reassign payee for transactions", err)
+			respondWithError(w, http.StatusNotFound, "could not get payee", err)
 			return
 		}
-	}
 
-	err = cfg.db.DeletePayee(r.Context(), pathPayeeID)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not delete payee", err)
-		return
+		pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
+		if pathBudgetID != dbPayee.BudgetID {
+			respondWithCode(w, http.StatusForbidden)
+			return
+		}
+
+		payeeInUse, err := q.IsPayeeInUse(r.Context(), pathPayeeID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "could not determine whether payee in use", err)
+		}
+
+		if payeeInUse {
+
+			type rqSchema struct {
+				NewPayeeName string `json:"new_payee_name"`
+			}
+
+			rqPayload, err := decodePayload[rqSchema](r)
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "", err)
+				return
+			}
+
+			if rqPayload.NewPayeeName == "" {
+				respondWithError(w, http.StatusBadRequest, "replacement payee name not provided", nil)
+				return
+			}
+			PayeeID, err := lookupResourceIDByName(r.Context(),
+				database.GetBudgetPayeeIDByNameParams{
+					PayeeName: rqPayload.NewPayeeName,
+					BudgetID:  pathBudgetID,
+				}, q.GetBudgetPayeeIDByName)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, "no payee found for replacement with given name", err)
+				return
+			}
+
+			err = q.ReassignTransactions(r.Context(), database.ReassignTransactionsParams{
+				OldPayeeID: pathPayeeID,
+				NewPayeeID: *PayeeID,
+			})
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "could not reassign payee for transactions", err)
+				return
+			}
+		}
+
+		err = q.DeletePayee(r.Context(), pathPayeeID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "could not delete payee", err)
+			return
+		}
+		if err := tx.Commit(r.Context()); err != nil {
+			respondWithError(w, http.StatusInternalServerError, "", err)
+			return
+		}
 	}
 
 	respondWithCode(w, http.StatusNoContent)
