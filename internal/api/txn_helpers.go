@@ -68,6 +68,7 @@ func validateTxnInput(rqPayload *UpsertTransactionRqSchema) (*validatedTxnPayloa
 	if len(validatedTxn.amounts) == 0 {
 		return nil, fmt.Errorf("no non-zero amount specified for transaction")
 	}
+	validatedTxn.notes = rqPayload.Notes
 	return validatedTxn, nil
 }
 
