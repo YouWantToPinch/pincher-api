@@ -96,6 +96,8 @@ func (cfg *APIConfig) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *APIConfig) handleCheckRefreshToken(w http.ResponseWriter, r *http.Request) {
+	returnUser := r.URL.Query().Has("with-user")
+
 	refreshToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "could not get refresh token from header", err)
@@ -114,15 +116,34 @@ func (cfg *APIConfig) handleCheckRefreshToken(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	type rspSchema struct {
-		NewAccessToken string `json:"token"`
-	}
+	if returnUser {
+		type rspSchema struct {
+			User
+			Token        string `json:"token"`
+			RefreshToken string `json:"refresh_token"`
+		}
 
-	rspPayload := rspSchema{
-		NewAccessToken: accessToken,
-	}
+		rspPayload := rspSchema{
+			User: User{
+				ID:        dbUser.ID,
+				CreatedAt: dbUser.CreatedAt,
+				UpdatedAt: dbUser.UpdatedAt,
+				Username:  dbUser.Username,
+			},
+			Token:        accessToken,
+			RefreshToken: refreshToken,
+		}
+		respondWithJSON(w, http.StatusOK, rspPayload)
+	} else {
+		type rspSchema struct {
+			Token string `json:"token"`
+		}
+		rspPayload := rspSchema{
+			Token: accessToken,
+		}
 
-	respondWithJSON(w, http.StatusOK, rspPayload)
+		respondWithJSON(w, http.StatusOK, rspPayload)
+	}
 }
 
 func (cfg *APIConfig) handleRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
