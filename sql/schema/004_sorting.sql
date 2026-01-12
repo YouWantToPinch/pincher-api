@@ -16,7 +16,7 @@ CREATE TABLE categories (
     created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     budget_id UUID NOT NULL,
-    name VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL,
     group_id UUID,
     notes TEXT NOT NULL DEFAULT '',
     UNIQUE(budget_id, name),
