@@ -34,10 +34,8 @@ func (cfg *APIConfig) handleDeleteTransaction(w http.ResponseWriter, r *http.Req
 		q := cfg.db.WithTx(tx)
 
 		if err = q.DeleteTransaction(r.Context(), pathTransactionID); err != nil {
-			if err != nil {
-				respondWithError(w, http.StatusInternalServerError, "could not delete transaction", err)
-				return
-			}
+			respondWithError(w, http.StatusInternalServerError, "could not delete transaction", err)
+			return
 		}
 		if checkIsTransfer(dbTransaction.TransactionType) {
 			linkedTxn, err := cfg.db.GetLinkedTransaction(r.Context(), pathTransactionID)
@@ -46,7 +44,6 @@ func (cfg *APIConfig) handleDeleteTransaction(w http.ResponseWriter, r *http.Req
 				return
 			}
 			if err := q.DeleteTransaction(r.Context(), linkedTxn.ID); err != nil {
-				// NOTE: Different meaning of 'transaction', here.
 				respondWithError(w, http.StatusInternalServerError, "could not complete database transaction", err)
 				return
 			}
