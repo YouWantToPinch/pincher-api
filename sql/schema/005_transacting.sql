@@ -21,7 +21,7 @@ CREATE TABLE transactions (
     logger_id UUID NOT NULL,
     account_id UUID NOT NULL,
     transaction_type VARCHAR(15) NOT NULL,
-    transaction_date TIMESTAMP NOT NULL DEFAULT (DATE_TRUNC('day', NOW() AT TIME ZONE 'utc')),
+    transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,
     payee_id UUID NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
     cleared BOOLEAN NOT NULL DEFAULT FALSE,

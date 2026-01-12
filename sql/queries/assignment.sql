@@ -17,17 +17,18 @@ SELECT
     COALESCE(SUM(activity), 0)::bigint AS activity,
     COALESCE(SUM(balance), 0)::bigint AS balance
 FROM category_reports mr
-WHERE mr.month = date_trunc('month', sqlc.arg('month_id')::timestamp);
+WHERE mr.month = date_trunc('month', sqlc.arg('month_id')::date);
 
 -- name: GetMonthCategoryReports :many
 SELECT * FROM category_reports cr
 JOIN categories ON cr.category_id = categories.id
-WHERE cr.month = date_trunc('month', sqlc.arg('month_id')::timestamp) AND categories.budget_id = sqlc.arg('budget_id')::uuid;
+WHERE cr.month = date_trunc('month', sqlc.arg('month_id')::date) 
+  AND categories.budget_id = sqlc.arg('budget_id')::uuid;
 
 -- name: GetMonthCategoryReport :one
 SELECT * FROM category_reports cr
 JOIN categories ON cr.category_id = categories.id
-WHERE cr.month = date_trunc('month', sqlc.arg('month_id')::timestamp) 
+WHERE cr.month = date_trunc('month', sqlc.arg('month_id')::date) 
   AND cr.category_id = sqlc.arg('category_id')::uuid
   AND categories.budget_id = sqlc.arg('budget_id')::uuid;
 

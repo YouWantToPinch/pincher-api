@@ -56,7 +56,7 @@ func (q *Queries) DeleteMonthAssignmentForCat(ctx context.Context, arg DeleteMon
 const getMonthCategoryReport = `-- name: GetMonthCategoryReport :one
 SELECT month, category_name, category_id, assigned, activity, balance, id, created_at, updated_at, budget_id, name, group_id, notes FROM category_reports cr
 JOIN categories ON cr.category_id = categories.id
-WHERE cr.month = date_trunc('month', $1::timestamp) 
+WHERE cr.month = date_trunc('month', $1::date) 
   AND cr.category_id = $2::uuid
   AND categories.budget_id = $3::uuid
 `
@@ -107,7 +107,8 @@ func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCatego
 const getMonthCategoryReports = `-- name: GetMonthCategoryReports :many
 SELECT month, category_name, category_id, assigned, activity, balance, id, created_at, updated_at, budget_id, name, group_id, notes FROM category_reports cr
 JOIN categories ON cr.category_id = categories.id
-WHERE cr.month = date_trunc('month', $1::timestamp) AND categories.budget_id = $2::uuid
+WHERE cr.month = date_trunc('month', $1::date) 
+  AND categories.budget_id = $2::uuid
 `
 
 type GetMonthCategoryReportsParams struct {
@@ -171,7 +172,7 @@ SELECT
     COALESCE(SUM(activity), 0)::bigint AS activity,
     COALESCE(SUM(balance), 0)::bigint AS balance
 FROM category_reports mr
-WHERE mr.month = date_trunc('month', $1::timestamp)
+WHERE mr.month = date_trunc('month', $1::date)
 `
 
 type GetMonthReportRow struct {
