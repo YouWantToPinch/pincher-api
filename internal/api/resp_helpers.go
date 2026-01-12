@@ -21,12 +21,12 @@ func decodePayload[T any](r *http.Request) (T, error) {
 	return v, err
 }
 
-func lookupResourceIDByName[T any](ctx context.Context, arg T, dbQuery func(context.Context, T) (uuid.UUID, error)) (*uuid.UUID, error) {
+func lookupResourceIDByName[T any](ctx context.Context, arg T, dbQuery func(context.Context, T) (uuid.UUID, error)) (uuid.UUID, error) {
 	id, err := dbQuery(ctx, arg)
 	if err != nil {
-		return &uuid.Nil, err
+		return uuid.Nil, err
 	}
-	return &id, err
+	return id, nil
 }
 
 func makeStatusCodeMsg(code int) string {

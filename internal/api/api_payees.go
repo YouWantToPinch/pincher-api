@@ -201,7 +201,7 @@ func (cfg *APIConfig) handleDeletePayee(w http.ResponseWriter, r *http.Request) 
 
 			err = q.ReassignTransactions(r.Context(), database.ReassignTransactionsParams{
 				OldPayeeID: pathPayeeID,
-				NewPayeeID: *PayeeID,
+				NewPayeeID: PayeeID,
 			})
 			if err != nil {
 				respondWithError(w, http.StatusInternalServerError, "could not reassign payee for transactions", err)

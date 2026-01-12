@@ -27,7 +27,7 @@ func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Reques
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	var assignedGroupID *uuid.UUID
+	var assignedGroupID uuid.UUID
 	if rqPayload.GroupName != "" {
 		groupID, err := lookupResourceIDByName(r.Context(),
 			database.GetBudgetGroupIDByNameParams{
@@ -43,7 +43,7 @@ func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Reques
 
 	dbCategory, err := cfg.db.CreateCategory(r.Context(), database.CreateCategoryParams{
 		BudgetID: pathBudgetID,
-		GroupID:  assignedGroupID,
+		GroupID:  &assignedGroupID,
 		Name:     rqPayload.Name,
 		Notes:    rqPayload.Notes,
 	})
@@ -131,7 +131,7 @@ func (cfg *APIConfig) handleUpdateCategory(w http.ResponseWriter, r *http.Reques
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	var assignedGroupID *uuid.UUID
+	var assignedGroupID uuid.UUID
 	if rqPayload.GroupName != "" {
 		groupID, err := lookupResourceIDByName(r.Context(),
 			database.GetBudgetGroupIDByNameParams{
@@ -147,7 +147,7 @@ func (cfg *APIConfig) handleUpdateCategory(w http.ResponseWriter, r *http.Reques
 
 	_, err = cfg.db.UpdateCategory(r.Context(), database.UpdateCategoryParams{
 		ID:      pathCategoryID,
-		GroupID: assignedGroupID,
+		GroupID: &assignedGroupID,
 		Name:    rqPayload.Name,
 		Notes:   rqPayload.Notes,
 	})

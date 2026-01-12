@@ -218,7 +218,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 			respondWithError(w, http.StatusBadRequest, "could not get account id", err)
 			return
 		}
-		validatedTxn.accountID = *accountID
+		validatedTxn.accountID = accountID
 
 		if validatedTxn.isTransfer {
 			transferAccountID, err := lookupResourceIDByName(r.Context(),
@@ -230,7 +230,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 				respondWithError(w, http.StatusBadRequest, "could not get transfer account id", err)
 				return
 			}
-			validatedTxn.transferAccountID = *transferAccountID
+			validatedTxn.transferAccountID = transferAccountID
 			validatedTxn.payeeID = uuid.Nil
 		} else {
 			payeeID, err := lookupResourceIDByName(r.Context(),
@@ -242,7 +242,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 				respondWithError(w, http.StatusBadRequest, "could not get payee id", err)
 				return
 			}
-			validatedTxn.payeeID = *payeeID
+			validatedTxn.payeeID = payeeID
 			validatedTxn.transferAccountID = uuid.Nil
 		}
 
