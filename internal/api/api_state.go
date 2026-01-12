@@ -4,6 +4,6 @@ import (
 	"net/http"
 )
 
-func (c *APIConfig) handleReadiness(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handleReadiness(w http.ResponseWriter, r *http.Request) {
 	respondWithText(w, http.StatusOK, "OK")
 }
