@@ -23,11 +23,6 @@ SELECT *
 FROM groups
 WHERE budget_id = $1;
 
--- name: GetGroupByBudgetIDAndName :one
-SELECT *
-FROM groups
-WHERE name = $1 AND budget_id = $2;
-
 -- name: UpdateGroup :one
 UPDATE groups
 SET updated_at = NOW(), name = $2, notes = $3

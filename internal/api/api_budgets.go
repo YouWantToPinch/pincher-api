@@ -42,7 +42,7 @@ func (cfg *APIConfig) handleCreateBudget(w http.ResponseWriter, r *http.Request)
 			Notes:   rqPayload.Notes,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "could not create budget", err)
+			respondWithError(w, http.StatusConflict, "could not create budget", err)
 			return
 		}
 

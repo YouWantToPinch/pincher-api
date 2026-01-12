@@ -50,7 +50,7 @@ func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Reques
 		Notes:    rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not create category", err)
+		respondWithError(w, http.StatusConflict, "could not create category", err)
 		return
 	}
 

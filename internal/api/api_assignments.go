@@ -43,7 +43,7 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 		Amount:     rqPayload.Amount,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not assign amount to category for month specified"+parsedMonth.String(), err)
+		respondWithError(w, http.StatusInternalServerError, "could not assign amount to category for month specified", err)
 		return
 	}
 

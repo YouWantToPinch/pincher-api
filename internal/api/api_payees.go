@@ -30,7 +30,7 @@ func (cfg *APIConfig) handleCreatePayee(w http.ResponseWriter, r *http.Request) 
 		Notes:    rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not create payee", err)
+		respondWithError(w, http.StatusConflict, "could not create payee", err)
 		return
 	}
 

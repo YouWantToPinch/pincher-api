@@ -102,11 +102,11 @@ func (cfg *APIConfig) handleLogTransaction(w http.ResponseWriter, r *http.Reques
 			Cleared:         validatedTxn.cleared,
 		}, validatedTxn.amounts)
 		if err != nil {
-			errMsgPrefix := "could not update transaction"
+			errMsgPrefix := "could not log transaction"
 			if validatedTxn.isTransfer {
-				errMsgPrefix = "could not update transfer transaction"
+				errMsgPrefix = "could not log transfer transaction"
 			}
-			respondWithError(w, http.StatusInternalServerError, errMsgPrefix+": "+msg, err)
+			respondWithError(w, http.StatusConflict, errMsgPrefix+": "+msg, err)
 			return
 		}
 		if validatedTxn.isTransfer {
@@ -140,7 +140,7 @@ func (cfg *APIConfig) handleLogTransaction(w http.ResponseWriter, r *http.Reques
 				ToTransactionID:   (*toPtr).ID,
 			})
 			if err != nil {
-				respondWithError(w, http.StatusInternalServerError, "could not link transfer transactions", err)
+				respondWithError(w, http.StatusConflict, "could not link transfer transactions", err)
 				return
 			}
 			// if a transfer, get the details for both txns logged

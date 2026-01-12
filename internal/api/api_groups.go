@@ -24,22 +24,13 @@ func (cfg *APIConfig) handleCreateGroup(w http.ResponseWriter, r *http.Request) 
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	_, err = cfg.db.GetGroupByBudgetIDAndName(r.Context(), database.GetGroupByBudgetIDAndNameParams{
-		Name:     rqPayload.Name,
-		BudgetID: pathBudgetID,
-	})
-	if err == nil {
-		respondWithError(w, http.StatusConflict, "a group with provided name already exists", err)
-		return
-	}
-
 	dbGroup, err := cfg.db.CreateGroup(r.Context(), database.CreateGroupParams{
 		BudgetID: pathBudgetID,
 		Name:     rqPayload.Name,
 		Notes:    rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not create group", err)
+		respondWithError(w, http.StatusConflict, "could not create group", err)
 		return
 	}
 	rspPayload := Group{

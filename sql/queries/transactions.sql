@@ -74,7 +74,7 @@ WHERE
     (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
     OR (t.transaction_date BETWEEN sqlc.arg('start_date')::date AND sqlc.arg('end_date')::date)
   )
-ORDER BY t.transaction_date DESC;
+ORDER BY t.transaction_date DESC, t.id DESC;
 
 -- name: GetTransactions :many
 SELECT t.*
@@ -101,7 +101,8 @@ WHERE
     (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
     OR (t.transaction_date BETWEEN sqlc.arg('start_date')::date AND sqlc.arg('end_date')::date)
   )
-ORDER BY t.transaction_date DESC;
+ORDER BY t.transaction_date DESC, t.id DESC;
+LIMIT sqlc.
 
 -- name: GetSplitsByTransactionID :many
 SELECT *
