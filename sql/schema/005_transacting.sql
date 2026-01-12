@@ -4,7 +4,7 @@ CREATE TABLE accounts (
     created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     budget_id UUID NOT NULL,
-    account_type TEXT NOT NULL,
+    account_type VARCHAR(15) NOT NULL DEFAULT 'ON_BUDGET',
     name VARCHAR(50) NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
