@@ -388,13 +388,14 @@ SELECT
   gen_random_uuid(),
   $1::uuid,
   CASE
-    WHEN t.transaction_type ILIKE '%TRANSFER%' THEN NULL
+    WHEN t.transaction_type ILIKE '%TRANSFER%' OR a.account_type ILIKE '%OFF_BUDGET%' THEN NULL
     WHEN t.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
     ELSE key::uuid
   END,
   value::integer
 FROM json_each_text($2::json)
 JOIN transactions t ON t.id = $1::uuid
+JOIN accounts a ON t.account_id = a.id
 RETURNING id, transaction_id, category_id, amount
 `
 

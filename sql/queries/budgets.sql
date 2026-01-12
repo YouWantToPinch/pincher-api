@@ -49,7 +49,10 @@ RETURNING *;
 SELECT CAST(COALESCE(SUM(td.total_amount), 0) AS BIGINT) AS total
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
-WHERE t.budget_id = $1;
+JOIN accounts a ON t.account_id = a.id
+WHERE t.budget_id = $1
+  AND sqlc.arg('account_type')::text = ''
+  OR a.account_type = sqlc.arg('account_type');
 
 -- name: UpdateBudget :one
 UPDATE budgets
@@ -73,6 +76,12 @@ WHERE id = $1;
 
 -- name: GetBudgetAccountIDByName :one
 SELECT id
+FROM accounts
+WHERE name = sqlc.arg('account_name')
+AND budget_id = sqlc.arg('budget_id');
+
+-- name: GetBudgetAccountIDAndTypeByName :one
+SELECT id, account_type
 FROM accounts
 WHERE name = sqlc.arg('account_name')
 AND budget_id = sqlc.arg('budget_id');

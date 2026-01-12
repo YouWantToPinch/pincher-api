@@ -94,7 +94,7 @@ func MakeRequest(method, path, token string, body any) *http.Request {
 }
 
 // ------------------------
-//  APITESTCLIENT REQUESTS
+//  APITestClient REQUESTS
 // ------------------------
 
 // USER CRUD
@@ -192,11 +192,10 @@ func (c *APITestClient) AssignMemberToBudget(token, budgetID, username, memberRo
 	})
 }
 
-func (c *APITestClient) UpdateAccount(token, budgetID, accountID, accountType, newName, newNotes string) *http.Request {
+func (c *APITestClient) UpdateAccount(token, budgetID, accountID, newName, newNotes string) *http.Request {
 	return MakeRequest(http.MethodPut, "/api/budgets/"+budgetID+"/accounts/"+accountID, token, map[string]any{
-		"account_type": accountType,
-		"name":         newName,
-		"notes":        newNotes,
+		"name":  newName,
+		"notes": newNotes,
 	})
 }
 

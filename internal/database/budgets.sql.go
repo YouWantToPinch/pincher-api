@@ -88,6 +88,30 @@ func (q *Queries) DeleteBudget(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getBudgetAccountIDAndTypeByName = `-- name: GetBudgetAccountIDAndTypeByName :one
+SELECT id, account_type
+FROM accounts
+WHERE name = $1
+AND budget_id = $2
+`
+
+type GetBudgetAccountIDAndTypeByNameParams struct {
+	AccountName string
+	BudgetID    uuid.UUID
+}
+
+type GetBudgetAccountIDAndTypeByNameRow struct {
+	ID          uuid.UUID
+	AccountType string
+}
+
+func (q *Queries) GetBudgetAccountIDAndTypeByName(ctx context.Context, arg GetBudgetAccountIDAndTypeByNameParams) (GetBudgetAccountIDAndTypeByNameRow, error) {
+	row := q.db.QueryRow(ctx, getBudgetAccountIDAndTypeByName, arg.AccountName, arg.BudgetID)
+	var i GetBudgetAccountIDAndTypeByNameRow
+	err := row.Scan(&i.ID, &i.AccountType)
+	return i, err
+}
+
 const getBudgetAccountIDByName = `-- name: GetBudgetAccountIDByName :one
 
 SELECT id
@@ -133,11 +157,19 @@ const getBudgetCapital = `-- name: GetBudgetCapital :one
 SELECT CAST(COALESCE(SUM(td.total_amount), 0) AS BIGINT) AS total
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
+JOIN accounts a ON t.account_id = a.id
 WHERE t.budget_id = $1
+  AND $2::text = ''
+  OR a.account_type = $2
 `
 
-func (q *Queries) GetBudgetCapital(ctx context.Context, budgetID uuid.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, getBudgetCapital, budgetID)
+type GetBudgetCapitalParams struct {
+	BudgetID    uuid.UUID
+	AccountType string
+}
+
+func (q *Queries) GetBudgetCapital(ctx context.Context, arg GetBudgetCapitalParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getBudgetCapital, arg.BudgetID, arg.AccountType)
 	var total int64
 	err := row.Scan(&total)
 	return total, err

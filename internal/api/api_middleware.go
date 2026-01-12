@@ -98,10 +98,20 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 				BudgetID:    pathBudgetID,
 			}, cfg.db.GetBudgetAccountIDByName)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "could not get account id", err)
+			respondWithError(w, http.StatusBadRequest, "could not get account by given name", err)
 			return
 		}
 		validatedTxn.accountID = accountID
+
+		accountIDAndType, err := cfg.db.GetBudgetAccountIDAndTypeByName(r.Context(), database.GetBudgetAccountIDAndTypeByNameParams{
+			AccountName: rqPayload.AccountName,
+			BudgetID:    pathBudgetID,
+		})
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "could not get account by given name", err)
+			return
+		}
+		validatedTxn.accountID = accountIDAndType.ID
 
 		if validatedTxn.isTransfer {
 			transferAccountID, err := lookupResourceIDByName(r.Context(),
@@ -110,7 +120,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 					BudgetID:    pathBudgetID,
 				}, cfg.db.GetBudgetAccountIDByName)
 			if err != nil {
-				respondWithError(w, http.StatusBadRequest, "could not get transfer account id", err)
+				respondWithError(w, http.StatusBadRequest, "could not get transfer account by given name", err)
 				return
 			}
 			validatedTxn.transferAccountID = transferAccountID
@@ -122,7 +132,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 					BudgetID:  pathBudgetID,
 				}, cfg.db.GetBudgetPayeeIDByName)
 			if err != nil {
-				respondWithError(w, http.StatusBadRequest, "could not get payee id", err)
+				respondWithError(w, http.StatusBadRequest, "could not get payee by given name", err)
 				return
 			}
 			validatedTxn.payeeID = payeeID
@@ -135,7 +145,9 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 				// validation already weeded this one out; move on to the next
 				continue
 			}
-			if k == "TRANSFER" || (k == "UNCATEGORIZED" && validatedTxn.txnType == "DEPOSIT") {
+			if accountIDAndType.AccountType == "OFF_BUDGET" ||
+				k == "TRANSFER" ||
+				(k == "UNCATEGORIZED" && validatedTxn.txnType == "DEPOSIT") {
 				// categories are not relevant
 				continue
 			}
@@ -145,9 +157,9 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 					BudgetID:     pathBudgetID,
 				}, cfg.db.GetBudgetCategoryIDByName)
 			if err != nil {
-				errMessage := "could not get category id for transaction split"
+				errMessage := "could not get category by given name for transaction split"
 				if len(rqPayload.Amounts) > 1 {
-					errMessage = "could not get category id for one or more transaction splits"
+					errMessage = "could not get category by given name for one or more transaction splits"
 				}
 				respondWithError(w, http.StatusBadRequest, errMessage, err)
 				return

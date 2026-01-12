@@ -225,15 +225,12 @@ func Test_CRUD(t *testing.T) {
 
 	t.Run("Accounts", func(t *testing.T) {
 		// CREATE account
-		c.Request(c.CreateBudgetAccount(jwt1, budgetID1, "CHECKING", "testAccount", "An account for testing."), http.StatusCreated)
+		c.Request(c.CreateBudgetAccount(jwt1, budgetID1, "ON_BUDGET", "testAccount", "An account for testing."), http.StatusCreated)
 		accountID1, _ := c.GetJSONFieldAsString("id")
 		// READ account(s)
 		c.Request(c.GetBudgetAccounts(jwt1, budgetID1), http.StatusOK)
 		// UPDATE account
-		// NOTE: As of this commit, Account Types mean nothing, so updates to an account
-		// 	may include changing them. This may need to be prohibited when Account Types
-		// 	logic is implemented.
-		c.Request(c.UpdateAccount(jwt1, budgetID1, accountID1, "ON_BUDGET", "Test Account", "Test user's first account, now updated."), http.StatusNoContent)
+		c.Request(c.UpdateAccount(jwt1, budgetID1, accountID1, "Test Account", "Test user's first account, now updated."), http.StatusNoContent)
 		// DELETE account SOFT
 		c.Request(c.DeleteBudgetAccount(jwt1, budgetID1, accountID1, "Test Account", false), http.StatusOK)
 		// DELETE account HARD
@@ -466,8 +463,8 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	c.Request(c.AssignMemberToBudget(jwt1, budgetID, username4, roleViewer), http.StatusCreated)
 
 	// user2 MANAGER: Adding account, groups, & categories.
-	c.Request(c.CreateBudgetAccount(jwt2, budgetID, "savings", "Saved Org Funds", "Represents a bank account holding business capital."), http.StatusCreated)
-	c.Request(c.CreateBudgetAccount(jwt2, budgetID, "credit", "Employee Business Credit Account", "Employees use cards that pull from this account to pay for business expenses."), http.StatusCreated)
+	c.Request(c.CreateBudgetAccount(jwt2, budgetID, "ON_BUDGET", "Saved Org Funds", "Represents a bank account holding business capital."), http.StatusCreated)
+	c.Request(c.CreateBudgetAccount(jwt2, budgetID, "ON_BUDGET", "Employee Business Credit Account", "Employees use cards that pull from this account to pay for business expenses."), http.StatusCreated)
 	account2, _ := c.GetJSONFieldAsString("id")
 	c.Request(c.CreateGroup(jwt2, budgetID, "Business Capital", "Categories related to company capital"), http.StatusCreated)
 	category1Name := "Surplus"
@@ -519,10 +516,10 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	budget1ID, _ := c.GetJSONFieldAsString("id")
 
 	account1Name := "Checking (Big Banking Inc)"
-	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "checking", account1Name, "Reflects my checking account opened via Big Banking, Inc."), http.StatusCreated)
+	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "ON_BUDGET", account1Name, "Reflects my checking account opened via Big Banking, Inc."), http.StatusCreated)
 	account1ID, _ := c.GetJSONFieldAsString("id")
 	account2Name := "Credit (Big Banking Inc)"
-	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "credit", account2Name, "Reflects my credit account opened via Big Banking, Inc."), http.StatusCreated)
+	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "ON_BUDGET", account2Name, "Reflects my credit account opened via Big Banking, Inc."), http.StatusCreated)
 	account2ID, _ := c.GetJSONFieldAsString("id")
 
 	c.Request(c.CreateGroup(jwt1, budget1ID, "Spending", "Categories related to day-to-day spending"), http.StatusCreated)
@@ -608,7 +605,7 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	budget1ID, _ := c.GetJSONFieldAsString("id")
 
 	accountName := "Checking (Big Banking Inc)"
-	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "checking", accountName, "Reflects my checking account opened via Big Banking, Inc."), http.StatusCreated)
+	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "ON_BUDGET", accountName, "Reflects my checking account opened via Big Banking, Inc."), http.StatusCreated)
 
 	// Note: lack of group assignment is purposeful.
 	categoryName := "Dining Out"

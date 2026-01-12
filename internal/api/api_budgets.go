@@ -142,8 +142,13 @@ func (cfg *APIConfig) handleGetUserBudgets(w http.ResponseWriter, r *http.Reques
 }
 
 func (cfg *APIConfig) handleGetBudgetCapital(w http.ResponseWriter, r *http.Request) {
+	accountTypeQuery := r.URL.Query().Get("account_type")
+
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
-	capitalAmount, err := cfg.db.GetBudgetCapital(r.Context(), pathBudgetID)
+	capitalAmount, err := cfg.db.GetBudgetCapital(r.Context(), database.GetBudgetCapitalParams{
+		BudgetID:    pathBudgetID,
+		AccountType: accountTypeQuery,
+	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not calculate budget capital", err)
 		return

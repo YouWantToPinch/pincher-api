@@ -23,6 +23,11 @@ func (cfg *APIConfig) handleAddAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if rqPayload.AccountType != "ON_BUDGET" && rqPayload.AccountType != "OFF_BUDGET" {
+		respondWithError(w, http.StatusBadRequest, "invalid account type", nil)
+		return
+	}
+
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
 	dbAccount, err := cfg.db.AddAccount(r.Context(), database.AddAccountParams{
@@ -150,7 +155,6 @@ func (cfg *APIConfig) handleUpdateAccount(w http.ResponseWriter, r *http.Request
 	}
 
 	type rqSchema struct {
-		AccountType string `json:"account_type"`
 		Meta
 	}
 
@@ -161,10 +165,9 @@ func (cfg *APIConfig) handleUpdateAccount(w http.ResponseWriter, r *http.Request
 	}
 
 	_, err = cfg.db.UpdateAccount(r.Context(), database.UpdateAccountParams{
-		ID:          pathAccountID,
-		AccountType: rqPayload.AccountType,
-		Name:        rqPayload.Name,
-		Notes:       rqPayload.Notes,
+		ID:    pathAccountID,
+		Name:  rqPayload.Name,
+		Notes: rqPayload.Notes,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "could not update account", err)

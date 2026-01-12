@@ -24,13 +24,14 @@ SELECT
   gen_random_uuid(),
   sqlc.arg('transaction_id')::uuid,
   CASE
-    WHEN t.transaction_type ILIKE '%TRANSFER%' THEN NULL
+    WHEN t.transaction_type ILIKE '%TRANSFER%' OR a.account_type ILIKE '%OFF_BUDGET%' THEN NULL
     WHEN t.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
     ELSE key::uuid
   END,
   value::integer
 FROM json_each_text(sqlc.arg('amounts')::json)
 JOIN transactions t ON t.id = sqlc.arg('transaction_id')::uuid
+JOIN accounts a ON t.account_id = a.id
 RETURNING *;
 
 -- name: LogAccountTransfer :one
@@ -74,7 +75,7 @@ WHERE
     (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
     OR (t.transaction_date BETWEEN sqlc.arg('start_date')::date AND sqlc.arg('end_date')::date)
   )
-ORDER BY t.transaction_date DESC, t.id DESC;
+ORDER BY t.transaction_date DESC;
 
 -- name: GetTransactions :many
 SELECT t.*
@@ -101,8 +102,8 @@ WHERE
     (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
     OR (t.transaction_date BETWEEN sqlc.arg('start_date')::date AND sqlc.arg('end_date')::date)
   )
-ORDER BY t.transaction_date DESC, t.id DESC;
-LIMIT sqlc.
+ORDER BY t.transaction_date DESC;
+
 
 -- name: GetSplitsByTransactionID :many
 SELECT *
