@@ -56,7 +56,7 @@ WHERE
   budget_id = sqlc.arg('budget_id')::uuid
   AND (
       sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000'
-      OR t.payee_id = sqlc.arg('account_id')::uuid
+      OR t.account_id = sqlc.arg('account_id')::uuid
     )
   AND (
     sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000'
@@ -83,7 +83,7 @@ WHERE
   budget_id = sqlc.arg('budget_id')::uuid
   AND (
       sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000'
-      OR t.payee_id = sqlc.arg('account_id')::uuid
+      OR t.account_id = sqlc.arg('account_id')::uuid
     )
   AND (
     sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000'

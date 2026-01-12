@@ -125,7 +125,7 @@ WHERE
   budget_id = $1::uuid
   AND (
       $2::uuid = '00000000-0000-0000-0000-000000000000'
-      OR t.payee_id = $2::uuid
+      OR t.account_id = $2::uuid
     )
   AND (
     $3::uuid = '00000000-0000-0000-0000-000000000000'
@@ -232,7 +232,7 @@ WHERE
   budget_id = $1::uuid
   AND (
       $2::uuid = '00000000-0000-0000-0000-000000000000'
-      OR t.payee_id = $2::uuid
+      OR t.account_id = $2::uuid
     )
   AND (
     $3::uuid = '00000000-0000-0000-0000-000000000000'
