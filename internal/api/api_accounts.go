@@ -64,11 +64,11 @@ func (cfg *APIConfig) handleGetAccounts(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	queryInclude := r.URL.Query().Get("include")
+	viewDeleted := r.URL.Query().Has("deleted")
 
 	var accounts []Account
 	for _, account := range dbAccounts {
-		if account.IsDeleted && queryInclude != "deleted" {
+		if account.IsDeleted != viewDeleted {
 			continue
 		}
 		accounts = append(accounts, Account{
