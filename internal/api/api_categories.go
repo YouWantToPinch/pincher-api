@@ -27,7 +27,7 @@ func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Reques
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	var assignedGroupID uuid.UUID
+	var assignedGroupID *uuid.UUID
 	if rqPayload.GroupName != "" {
 		groupID, err := lookupResourceIDByName(r.Context(),
 			database.GetBudgetGroupIDByNameParams{
@@ -38,12 +38,14 @@ func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Reques
 			respondWithError(w, http.StatusBadRequest, "could not get group id", err)
 			return
 		}
-		assignedGroupID = groupID
+		if groupID != uuid.Nil {
+			assignedGroupID = &groupID
+		}
 	}
 
 	dbCategory, err := cfg.db.CreateCategory(r.Context(), database.CreateCategoryParams{
 		BudgetID: pathBudgetID,
-		GroupID:  &assignedGroupID,
+		GroupID:  assignedGroupID,
 		Name:     rqPayload.Name,
 		Notes:    rqPayload.Notes,
 	})
@@ -68,13 +70,23 @@ func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Reques
 }
 
 func (cfg *APIConfig) handleGetCategories(w http.ResponseWriter, r *http.Request) {
-	parsedGroupID, err := parseUUIDFromQuery("group_id", r)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "", err)
-		return
-	}
-
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
+
+	var err error
+
+	groupNameQuery := r.URL.Query().Get("group_name")
+	parsedGroupID := uuid.Nil
+	if groupNameQuery != "" {
+		parsedGroupID, err = lookupResourceIDByName(r.Context(),
+			database.GetBudgetGroupIDByNameParams{
+				GroupName: groupNameQuery,
+				BudgetID:  pathBudgetID,
+			}, cfg.db.GetBudgetGroupIDByName)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "could not get account id", err)
+			return
+		}
+	}
 
 	categories, err := cfg.db.GetCategories(r.Context(), database.GetCategoriesParams{
 		BudgetID: pathBudgetID,
@@ -131,7 +143,7 @@ func (cfg *APIConfig) handleUpdateCategory(w http.ResponseWriter, r *http.Reques
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	var assignedGroupID uuid.UUID
+	var assignedGroupID *uuid.UUID
 	if rqPayload.GroupName != "" {
 		groupID, err := lookupResourceIDByName(r.Context(),
 			database.GetBudgetGroupIDByNameParams{
@@ -142,12 +154,14 @@ func (cfg *APIConfig) handleUpdateCategory(w http.ResponseWriter, r *http.Reques
 			respondWithError(w, http.StatusBadRequest, "could not get group id", err)
 			return
 		}
-		assignedGroupID = groupID
+		if groupID != uuid.Nil {
+			assignedGroupID = &groupID
+		}
 	}
 
 	_, err = cfg.db.UpdateCategory(r.Context(), database.UpdateCategoryParams{
 		ID:      pathCategoryID,
-		GroupID: &assignedGroupID,
+		GroupID: assignedGroupID,
 		Name:    rqPayload.Name,
 		Notes:   rqPayload.Notes,
 	})
