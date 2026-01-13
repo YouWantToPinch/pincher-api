@@ -6,7 +6,8 @@ import (
 
 func (cfg *APIConfig) handleDeleteAllUsers(w http.ResponseWriter, r *http.Request) {
 	if cfg.platform != "dev" {
-		respondWithText(w, http.StatusForbidden, "platform not dev")
+		respondWithError(w, http.StatusForbidden, "environment variable PLATFORM must be 'dev'", nil)
+		return
 	}
 
 	err := cfg.db.DeleteUsers(r.Context())
@@ -51,7 +52,7 @@ func (cfg *APIConfig) handleGetAllUsers(w http.ResponseWriter, r *http.Request) 
 }
 
 func (cfg *APIConfig) handleGetTotalUserCount(w http.ResponseWriter, r *http.Request) {
-	if cfg.platform != "dev" {
+	if pl := cfg.platform; pl != "dev" && pl != "test" {
 		respondWithText(w, http.StatusForbidden, "platform not dev")
 	}
 

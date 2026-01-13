@@ -23,10 +23,14 @@ func main() {
 	const port = "8080"
 
 	cfg := &api.APIConfig{}
-	defer shutdown(cfg)
-	cfg.Init(".env", "")
+
+	err := cfg.Init(".env")
+	if err != nil {
+		panic(err)
+	}
+
 	cfg.ConnectToDB(embedMigrations, "sql/schema")
-	defer cfg.Pool.Close()
+	defer shutdown(cfg)
 
 	pincher := &http.Server{
 		Addr:    ":" + port,

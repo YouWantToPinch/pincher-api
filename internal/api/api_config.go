@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,29 +17,44 @@ import (
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
+type DBConfig struct {
+	DBUser     string
+	DBPassword string
+	DBHost     string
+	DBPort     string
+	DBName     string
+}
+
 type APIConfig struct {
-	db       *database.Queries
-	Pool     *pgxpool.Pool
-	dbURL    string
-	platform string
-	secret   string
-	logger   *slog.Logger
+	db        *database.Queries
+	Pool      *pgxpool.Pool
+	dbURL     string
+	platform  string
+	jwtSecret string
+	logger    *slog.Logger
 	// apiKeys  *map[string]string
 }
 
-func (cfg *APIConfig) Init(envPath string, altDBUrl string) {
-	// get environment variables
+func (cfg *APIConfig) Init(envPath string) error {
+	// get environment variables from .env where not set,
+	// if platform is set to dev
 	if len(envPath) != 0 {
 		_ = godotenv.Load(envPath)
 	}
 
 	cfg.platform = os.Getenv("PLATFORM")
-	cfg.secret = os.Getenv("SECRET")
 
-	if len(altDBUrl) != 0 {
+	cfg.jwtSecret = os.Getenv("JWT_SECRET")
+
+	altDBUrl := os.Getenv("DB_URL")
+	if len(altDBUrl) > 0 {
 		cfg.dbURL = altDBUrl
 	} else {
-		cfg.GenerateDBConnectionString()
+		var err error
+		cfg.dbURL, err = cfg.GenerateDBConnectionString()
+		if err != nil {
+			return err
+		}
 	}
 
 	{
@@ -46,6 +62,8 @@ func (cfg *APIConfig) Init(envPath string, altDBUrl string) {
 		switch slogLevel {
 		case "DEBUG":
 			cfg.NewLogger(slog.LevelDebug)
+		case "INFO":
+			cfg.NewLogger(slog.LevelInfo)
 		case "WARN":
 			cfg.NewLogger(slog.LevelWarn)
 		case "ERROR":
@@ -54,6 +72,7 @@ func (cfg *APIConfig) Init(envPath string, altDBUrl string) {
 			cfg.NewLogger(slog.LevelInfo)
 		}
 	}
+	return nil
 }
 
 func (cfg *APIConfig) NewLogger(level slog.Level) {
@@ -62,29 +81,49 @@ func (cfg *APIConfig) NewLogger(level slog.Level) {
 	slog.SetDefault(cfg.logger)
 }
 
-func (cfg *APIConfig) GenerateDBConnectionString() *string {
-	envOrDefault := func(envVar string, defaultVal string) string {
-		envVal := os.Getenv(envVar)
-		if len(envVal) == 0 {
-			envVal = defaultVal
-		}
-		return envVal
+func (cfg *APIConfig) GenerateDBConnectionString() (string, error) {
+	const (
+		USER = "DB_USER"
+		PSWD = "DB_PASSWORD"
+		HOST = "DB_HOST"
+		PORT = "DB_PORT"
+		NAME = "DB_NAME"
+		SSLM = "DB_SSLMODE"
+	)
+	dbURLMap := map[string]string{
+		USER: os.Getenv(USER), // postgres
+		PSWD: os.Getenv(PSWD), // postgres
+		HOST: os.Getenv(HOST), // localhost
+		PORT: os.Getenv(PORT), // 5432
+		NAME: os.Getenv(NAME), // pincher
+		SSLM: os.Getenv(SSLM), // pincher
 	}
 
-	dbUser := envOrDefault("DB_USER", "postgres")
-	dbPassword := envOrDefault("DB_PASSWORD", "postgres")
-	dbHost := envOrDefault("DB_HOST", "localhost")
-	dbPort := envOrDefault("DB_PORT", "5432")
-	dbName := envOrDefault("DB_NAME", "pincher")
+	var missing []string
+	for k, v := range dbURLMap {
+		if v == "" {
+			missing = append(missing, k)
+		}
+	}
+	if len(missing) > 0 {
+		return "", fmt.Errorf("missing environment variables: %s", strings.Join(missing, ", "))
+	}
 
-	cfg.dbURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		dbUser,
-		dbPassword,
-		dbHost,
-		dbPort,
-		dbName,
+	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		dbURLMap[USER],
+		dbURLMap[PSWD],
+		dbURLMap[HOST],
+		dbURLMap[PORT],
+		dbURLMap[NAME],
+		dbURLMap[SSLM],
 	)
-	return &cfg.dbURL
+
+	/*
+		postgres://DB_USER:DB_PASSWORD@DB_HOST:DB_PORT/DB_NAME?sslmode=disable"
+		postgres://postgres:postgres@localhost:5432/pincher?sslmode=disable"
+	*/
+
+	return url, nil
 }
 
 func (cfg *APIConfig) ConnectToDB(fs embed.FS, migrationsDir string) {
@@ -100,21 +139,30 @@ func (cfg *APIConfig) ConnectToDB(fs embed.FS, migrationsDir string) {
 		panic(err)
 	}
 
-	// Create a temporary *sql.DB so that goose can apply migrations
-	pgxConfig, err := pgx.ParseConfig(cfg.dbURL)
-	if err != nil {
-		slog.Error("could not apply database migrations with goose: " + err.Error())
-		panic(err)
-	}
-	sqlDB := stdlib.OpenDB(*pgxConfig)
+	// TODO: When documentation can recommend a more graceful and
+	// conventional method of migration, limit this feature to
+	// ONLY be available while PLATFORM == 'dev'.
+	//
+	// if pl := cfg.platform; pl == "dev" || pl == "test" {}
 
-	if err := goose.Up(sqlDB, migrationsDir); err != nil {
-		slog.Error("could not apply database migrations with goose " + err.Error())
-		panic(err)
-	} else {
-		err := sqlDB.Close()
+	migrate := os.Getenv("MIGRATE_ON_START")
+	if migrate == "true" {
+		// Create a temporary *sql.DB so that goose can apply migrations
+		pgxConfig, err := pgx.ParseConfig(cfg.dbURL)
 		if err != nil {
+			slog.Error("could not apply database migrations with goose: " + err.Error())
 			panic(err)
+		}
+		sqlDB := stdlib.OpenDB(*pgxConfig)
+
+		if err := goose.Up(sqlDB, migrationsDir); err != nil {
+			slog.Error("could not apply database migrations with goose " + err.Error())
+			panic(err)
+		} else {
+			err := sqlDB.Close()
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 

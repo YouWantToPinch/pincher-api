@@ -23,7 +23,7 @@ func (cfg *APIConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 			respondWithError(w, http.StatusBadRequest, "no token found", err)
 			return
 		}
-		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.secret, "HS256")
+		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.jwtSecret, "HS256")
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, "invalid token provided", nil)
 			return

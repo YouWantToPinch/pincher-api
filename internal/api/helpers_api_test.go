@@ -58,7 +58,7 @@ func SetupPostgres(t testing.TB) *postgresContainer {
 			Consumers: []tc.LogConsumer{&g},
 		}),
 		postgres.BasicWaitStrategies(),
-		tc.WithReuseByName("pinchdb-integration-tests"),
+		tc.WithReuseByName("pincherdb-integration-tests"),
 	)
 	defer tc.CleanupContainer(t, pgc)
 	require.NoError(t, err)

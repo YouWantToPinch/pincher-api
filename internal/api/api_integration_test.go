@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -127,13 +128,27 @@ func (c *APITestClient) GetJSONFieldAsInt64(field string) (int64, error) {
 // return an APITestClient for testing
 func doServerSetup(t *testing.T) *http.Server {
 	pgdb := SetupPostgres(t)
+
+	t.Setenv("MIGRATE_ON_START", "true")
+	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("PLATFORM", "test")
+	slog.Error("DB_URL: " + pgdb.URI)
+	t.Setenv("DB_URL", pgdb.URI)
+
 	t.Cleanup(func() {
 		err := pgdb.Container.Restore(pgdb.Ctx)
 		require.NoError(t, err)
 	})
+
 	cfg := &APIConfig{}
-	cfg.Init("../../.env", pgdb.URI)
+	err := cfg.Init("")
+	require.NoError(t, err)
+
 	cfg.ConnectToDB(embed.FS{}, "")
+	t.Cleanup(func() {
+		cfg.Pool.Close()
+	})
+
 	return &http.Server{Handler: SetupMux(cfg)}
 }
 
@@ -148,9 +163,6 @@ func Test_CRUD(t *testing.T) {
 	}
 	pincherServer := doServerSetup(t)
 	c := &APITestClient{Mux: pincherServer.Handler, testState: t}
-
-	// PREP: Delete all users
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 
 	// REQUESTS
 
@@ -307,13 +319,11 @@ func Test_MakeAndResetUsers(t *testing.T) {
 	c := APITestClient{Mux: pincherServer.Handler, testState: t}
 
 	// REQUESTS
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 	c.Request(c.CreateUser(username1, password1), http.StatusCreated)
 	c.Request(c.CreateUser(username2, password2), http.StatusCreated)
 	c.Request(c.GetUserCount(), http.StatusOK)
 	userCount, _ := c.GetJSONFieldAsInt64("count")
 	assert.Equal(t, int64(2), userCount)
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 }
 
 // Should make and log in 2 users,
@@ -326,7 +336,6 @@ func Test_MakeLoginDeleteUsers(t *testing.T) {
 	c := APITestClient{Mux: pincherServer.Handler, testState: t}
 
 	// REQUESTS
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 	c.Request(c.CreateUser(username1, password1), http.StatusCreated)
 	c.Request(c.CreateUser(username2, password2), http.StatusCreated)
 	c.Request(c.LoginUser(username1, password1), http.StatusOK)
@@ -353,9 +362,6 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 	c := APITestClient{Mux: pincherServer.Handler, testState: t}
 
 	// REQUESTS
-
-	// Delete all users
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 
 	// Create four users
 	c.Request(c.CreateUser(username1, password1), http.StatusCreated)
@@ -436,9 +442,6 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 
 	// REQUESTS
 
-	// Delete all users
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
-
 	// Create four users
 	c.Request(c.CreateUser(username1, password1), http.StatusCreated)
 	c.Request(c.CreateUser(username2, password2), http.StatusCreated)
@@ -485,9 +488,6 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	c.Request(c.GetTransactions(jwt4, budgetID, "", "", payee1ID, "", ""), http.StatusOK)
 	txnQuery, _ := c.GetJSONField("transactions")
 	assert.Len(t, txnQuery.([]any), 2)
-
-	// Delete all users
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 }
 
 // Build a budget and give it a predictable amount of money to operate with between 1-2 accounts.
@@ -500,9 +500,6 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	c := APITestClient{Mux: pincherServer.Handler, testState: t}
 
 	// REQUESTS
-
-	// Delete all users
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 
 	// Create user
 	c.Request(c.CreateUser(username1, password1), http.StatusCreated)
@@ -571,9 +568,6 @@ func Test_TransactionTypesAndCapital(t *testing.T) {
 	c.Request(c.GetBudgetCapital(jwt1, budget1ID, ""), http.StatusOK)
 	budgetTotalCapital, _ = c.GetJSONFieldAsInt64("capital")
 	assert.Equal(t, int64(5000), budgetTotalCapital)
-
-	// Delete all users
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 }
 
 // Build a budget and simulate 3 months of transactions and dollar assignment.
@@ -589,9 +583,6 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	c := APITestClient{Mux: pincherServer.Handler, testState: t}
 
 	// REQUESTS
-
-	// Delete all users
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 
 	// Create user
 	c.Request(c.CreateUser(username1, password1), http.StatusCreated)
@@ -693,7 +684,4 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	c.Request(c.GetMonthReport(jwt1, budget1ID, dateNovember), http.StatusOK)
 	budgetTotalBalance, _ = c.GetJSONFieldAsInt64("balance")
 	assert.Equal(t, int64(-1000), (budgetTotalCapital - budgetTotalBalance))
-
-	// Delete all users
-	c.Request(c.DeleteAllUsers(), http.StatusNoContent)
 }

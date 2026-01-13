@@ -1,6 +1,6 @@
 assets/
 
 .env
+dotenv
 pincher-api
-out
 goose_ref

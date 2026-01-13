@@ -8,11 +8,37 @@ services:
     networks:
       - pincher-network
     environment:
+      # Your secret for signing and verifying JSON Web Tokens.
+      # You can produce a better secret with openssl:
+      # `openssl rand -base64 64`
+      JWT_SECRET: replace-me
+
+      # Set platform to 'dev' to use exclusive API endpoints 
+      # for development purposes.
+      PLATFORM: prod
+
+      # While set to 'true', pincher will apply 
+      # migrations embedded within the binary on start-up.
+      MIGRATE_ON_START: true
+      
+      # Determines what logs are output by the server.
+      # Choices by increasing priority (lower levels suppressed):
+      # DEBUG<INFO<WARN<ERROR.
+      SLOG_LEVEL: ERROR
+
+      # Set DB_URL to use one full url, if it's your preference,
+      # overriding the internal use of the other DB_ environment
+      # variables.
+
+      
+      # DB_URL: postgres://postgres:postgres@db:5432/pincher?sslmode=disable
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: pincher
+      DB_SSLMODE: disable
+      
     depends_on:
       db:
         condition: service_healthy

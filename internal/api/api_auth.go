@@ -65,7 +65,7 @@ func (cfg *APIConfig) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.secret, time.Hour)
+		accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.jwtSecret, time.Hour)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "could not create new access token", err)
 			return
@@ -110,7 +110,7 @@ func (cfg *APIConfig) handleCheckRefreshToken(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.secret, time.Hour)
+	accessToken, err := auth.MakeJWT(dbUser.ID, jwt.SigningMethodHS256, cfg.jwtSecret, time.Hour)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "could not validate access token", err)
 		return
