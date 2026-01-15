@@ -56,6 +56,7 @@ type CategoryReport struct {
 	Month        time.Time
 	CategoryName string
 	CategoryID   uuid.UUID
+	BudgetID     uuid.UUID
 	Assigned     int64
 	Activity     int64
 	Balance      int64

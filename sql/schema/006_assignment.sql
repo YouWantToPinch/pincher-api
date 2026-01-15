@@ -25,7 +25,7 @@ all_months AS (
     FROM month_range
 ),
 report_identifiers AS (
-    SELECT m.month, c.id AS category_id, c.name AS category_name
+    SELECT m.month, c.budget_id AS budget_id, c.id AS category_id, c.name AS category_name
     FROM all_months m
     CROSS JOIN categories c
 ),
@@ -44,6 +44,7 @@ report AS (
     SELECT
         rep.month,
         rep.category_id,
+        rep.budget_id,
         rep.category_name,
         COALESCE(aa.assigned, 0) AS assigned,
         COALESCE(ta.activity, 0) AS activity
@@ -57,6 +58,7 @@ SELECT
     month,
     category_name,
     category_id,
+    budget_id,
     assigned,
     activity,
     (SUM(assigned + activity) OVER (PARTITION BY category_id ORDER BY month))::bigint AS balance
