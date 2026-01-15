@@ -599,22 +599,23 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	c.Request(c.CreateBudgetAccount(jwt1, budget1ID, "ON_BUDGET", accountName, "Reflects my checking account opened via Big Banking, Inc."), http.StatusCreated)
 
 	// Note: lack of group assignment is purposeful.
-	categoryName := "Dining Out"
-	c.Request(c.CreateCategory(jwt1, budget1ID, "", "Dining Out", "Money for ordering takeout or dining in."), http.StatusCreated)
+	category1Name := "Dining Out"
+	c.Request(c.CreateCategory(jwt1, budget1ID, "", category1Name, "Money for ordering takeout or dining in."), http.StatusCreated)
 	category1ID, _ := c.GetJSONFieldAsString("id")
 
-	c.Request(c.CreateCategory(jwt1, budget1ID, "", "Savings", "My savings fund."), http.StatusCreated)
+	category2Name := "Savings"
+	c.Request(c.CreateCategory(jwt1, budget1ID, "", category2Name, "My savings fund."), http.StatusCreated)
 	category2ID, _ := c.GetJSONFieldAsString("id")
 
 	c.Request(c.CreateBudgetPayee(jwt1, budget1ID, "Webflyx Org", "user1 employer"), http.StatusCreated)
 	c.Request(c.CreateBudgetPayee(jwt1, budget1ID, "Messy Joe's", "Nice atmosphere. Food's great. It's got a bit of an edge."), http.StatusCreated)
 
-	// SEc.MBER 2025 ACTIVITIES
+	// SEPTEMBER 2025 ACTIVITIES
 	// deposit some money into the checking account, allocated (but not explicitly assigned) to the Dining Out category
-	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateSeptember, "Webflyx Org", "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", true, map[string]int64{categoryName: 10000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateSeptember, "Webflyx Org", "$100 deposit into account; set category to Dining Out to automatically assign it to that category.", true, map[string]int64{category1Name: 10000}), http.StatusCreated)
 
 	// spend money out of Dining Out category
-	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateSeptember, "Messy Joe's", "$50 dinner at a restaurant", true, map[string]int64{categoryName: -5000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateSeptember, "Messy Joe's", "$50 dinner at a restaurant", true, map[string]int64{category1Name: -5000}), http.StatusCreated)
 
 	// we expect that there's 5000 in capital remaining, and NO assignable money.
 	// 5000 in Dining Out; 0 in Savings.
@@ -635,11 +636,11 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	// Assign some (but not all of it, to test for underassignment) to each of two categories.
 	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateOctober, "Webflyx Org", "$100 deposit into account; no category allocation, we'll assign it manually.", true, map[string]int64{"UNCATEGORIZED": 10000}), http.StatusCreated)
 
-	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateOctober, category1ID, 4000), http.StatusOK)
-	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateOctober, category2ID, 5000), http.StatusOK)
+	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateOctober, category1Name, 4000), http.StatusOK)
+	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateOctober, category2Name, 5000), http.StatusOK)
 
 	// spend money out of Dining Out category
-	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateOctober, "Messy Joe's", "I was very busy having fun, fun, fun!", true, map[string]int64{categoryName: -4000}), http.StatusCreated)
+	c.Request(c.LogTransaction(jwt1, budget1ID, accountName, "", dateOctober, "Messy Joe's", "I was very busy having fun, fun, fun!", true, map[string]int64{category1Name: -4000}), http.StatusCreated)
 
 	// we expect that there's 11000 in capital remaining, and 1000 in assignable money.
 	// 5000 in Dining Out; 5000 in Savings.
@@ -664,8 +665,8 @@ func Test_CategoryMoneyAssignment(t *testing.T) {
 	// Assign the 1000 left available from OCTOBER to the SAVINGS category.
 	// Assign 1000 (that we don't have) to DINING OUT to test for overassignment.
 
-	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateNovember, category2ID, 1000), http.StatusOK)
-	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateNovember, category1ID, 1000), http.StatusOK)
+	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateNovember, category2Name, 1000), http.StatusOK)
+	c.Request(c.AssignMoneyToCategory(jwt1, budget1ID, dateNovember, category1Name, 1000), http.StatusOK)
 
 	// we expect that there's still just 11000 in capital remaining, and -1000 in assignable money, which indicates overassignment.
 	// 6000 in Dining Out; 6000 in Savings.

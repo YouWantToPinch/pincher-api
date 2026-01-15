@@ -344,9 +344,11 @@ func (c *APITestClient) DeleteTransaction(token, budgetID, transactionID string)
 
 // BUDGET -> ASSIGNMENT CRUD
 
-func (c *APITestClient) AssignMoneyToCategory(token, budgetID, monthID, categoryID string, amount int64) *http.Request {
-	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/months/"+monthID+"/categories/"+categoryID, token, map[string]int64{
-		"amount": amount,
+func (c *APITestClient) AssignMoneyToCategory(token, budgetID, monthID, categoryName string, amount int64) *http.Request {
+	return MakeRequest(http.MethodPost, "/api/budgets/"+budgetID+"/months/"+monthID+"/categories", token, map[string]any{
+		"amount":        amount,
+		"to_category":   categoryName,
+		"from_category": "",
 	})
 }
 
@@ -355,7 +357,7 @@ func (c *APITestClient) GetMonthCategoryReport(token, budgetID, monthID, categor
 }
 
 func (c *APITestClient) GetMonthCategoryReports(token, budgetID, monthID string) *http.Request {
-	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/months/"+monthID+"/categories/", token, nil)
+	return MakeRequest(http.MethodGet, "/api/budgets/"+budgetID+"/months/"+monthID+"/categories", token, nil)
 }
 
 func (c *APITestClient) GetMonthReport(token, budgetID, monthID string) *http.Request {
