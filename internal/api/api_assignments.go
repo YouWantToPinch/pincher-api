@@ -5,13 +5,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *http.Request) {
 	type rqSchema struct {
-		Amount int64 `json:"amount"`
+		Amount       int64  `json:"amount"`
+		ToCategory   string `json:"to_category"`
+		FromCategory string `json:"from_category"`
 	}
 
 	rqPayload, err := decodePayload[rqSchema](r)
@@ -31,20 +34,62 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 		return
 	}
 
-	parsedCategoryID, err := parseUUIDFromPath("category_id", r)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "", err)
-		return
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
+
+	usingDBTxn := rqPayload.FromCategory != ""
+
+	q := cfg.db
+	var tx pgx.Tx
+
+	if usingDBTxn {
+		// USE DB TRANSACTION
+		{
+			tx, err = cfg.Pool.Begin(r.Context())
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "", err)
+				return
+			}
+			defer tx.Rollback(r.Context())
+
+			q = cfg.db.WithTx(tx)
+
+		}
 	}
 
-	dbAssignment, err := cfg.db.AssignAmountToCategory(r.Context(), database.AssignAmountToCategoryParams{
-		MonthID:    parsedMonth,
-		CategoryID: parsedCategoryID,
-		Amount:     rqPayload.Amount,
-	})
+	assignToCat := func(categoryName string, amount int64) (database.Assignment, error) {
+		parsedCategoryID := uuid.Nil
+		if rqPayload.ToCategory != "" {
+			parsedCategoryID, err = lookupResourceIDByName(r.Context(),
+				database.GetBudgetCategoryIDByNameParams{
+					CategoryName: categoryName,
+					BudgetID:     pathBudgetID,
+				}, q.GetBudgetCategoryIDByName)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, "could not get category by given name", err)
+				return database.Assignment{}, err
+			}
+		}
+
+		dbAssignment, err := q.AssignAmountToCategory(r.Context(), database.AssignAmountToCategoryParams{
+			MonthID:    parsedMonth,
+			CategoryID: parsedCategoryID,
+			Amount:     amount,
+		})
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "could not assign amount to category for month specified", err)
+			return database.Assignment{}, err
+		}
+		return dbAssignment, err
+	}
+	dbAssignment, err := assignToCat(rqPayload.ToCategory, rqPayload.Amount)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not assign amount to category for month specified", err)
 		return
+	}
+	if usingDBTxn {
+		_, err = assignToCat(rqPayload.FromCategory, rqPayload.Amount*-1)
+		if err != nil {
+			return
+		}
 	}
 
 	type rspSchema struct {
@@ -58,6 +103,12 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 		CategoryID: dbAssignment.CategoryID,
 		Amount:     dbAssignment.Assigned,
 	}
+	if usingDBTxn {
+		if err := tx.Commit(r.Context()); err != nil {
+			respondWithError(w, http.StatusInternalServerError, "", err)
+			return
+		}
+	}
 
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
@@ -69,7 +120,12 @@ func (cfg *APIConfig) handleGetMonthReport(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	monthReport, err := cfg.db.GetMonthReport(r.Context(), parsedMonthID)
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
+
+	monthReport, err := cfg.db.GetMonthReport(r.Context(), database.GetMonthReportParams{
+		MonthID:  parsedMonthID,
+		BudgetID: pathBudgetID,
+	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not generate report for month specified", err)
 		return
@@ -102,18 +158,23 @@ func (cfg *APIConfig) handleGetMonthCategories(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var rspPayload []CategoryReport
+	var categoryReports []CategoryReport
 	for _, report := range dbCategoryReports {
-
-		newReport := CategoryReport{
+		categoryReports = append(categoryReports, CategoryReport{
 			MonthID:  report.Month,
 			Name:     report.CategoryName,
 			Assigned: report.Assigned,
 			Activity: report.Activity,
 			Balance:  report.Balance,
-		}
+		})
+	}
 
-		rspPayload = append(rspPayload, newReport)
+	type rspSchema struct {
+		CategoryReports []CategoryReport `json:"category_reports"`
+	}
+
+	rspPayload := rspSchema{
+		CategoryReports: categoryReports,
 	}
 
 	respondWithJSON(w, http.StatusOK, rspPayload)

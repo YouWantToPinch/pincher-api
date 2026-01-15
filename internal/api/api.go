@@ -70,7 +70,7 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux.HandleFunc("PUT /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(MANAGER, mdValidateTxn(cfg.handleUpdateTransaction))))
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.handleDeleteTransaction)))
 	// Months & Dollar Assignment
-	mux.HandleFunc("POST /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.handleAssignAmountToCategory)))
+	mux.HandleFunc("POST /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(MANAGER, cfg.handleAssignAmountToCategory)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.handleGetMonthCategoryReport)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(MANAGER, cfg.handleGetMonthCategories)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}", mdAuth(mdClear(MANAGER, cfg.handleGetMonthReport)))
