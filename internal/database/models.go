@@ -42,14 +42,6 @@ type Budget struct {
 	Notes     string
 }
 
-type BudgetsUser struct {
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	BudgetID   uuid.UUID
-	UserID     uuid.UUID
-	MemberRole string
-}
-
 type Category struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
@@ -76,6 +68,14 @@ type Group struct {
 	BudgetID  uuid.UUID
 	Name      string
 	Notes     string
+}
+
+type Membership struct {
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	BudgetID   uuid.UUID
+	UserID     uuid.UUID
+	MemberRole string
 }
 
 type Payee struct {

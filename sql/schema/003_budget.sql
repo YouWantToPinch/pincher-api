@@ -11,7 +11,7 @@ CREATE TABLE budgets (
         ON DELETE CASCADE
 );
 
-CREATE TABLE budgets_users (
+CREATE TABLE memberships (
     created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     updated_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     budget_id UUID NOT NULL,

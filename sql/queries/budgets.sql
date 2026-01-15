@@ -13,13 +13,13 @@ RETURNING *;
 -- name: GetUserBudgets :many
 SELECT budgets.*
 FROM budgets
-JOIN budgets_users
-  ON budgets.id = budgets_users.budget_id
-WHERE budgets_users.user_id = $1
+JOIN memberships
+  ON budgets.id = memberships.budget_id
+WHERE memberships.user_id = $1
   AND (
     sqlc.arg('roles')::text[] IS NULL
     OR cardinality(sqlc.arg('roles')::text[]) = 0
-    OR budgets_users.member_role = ANY(sqlc.arg('roles')::text[])
+    OR memberships.member_role = ANY(sqlc.arg('roles')::text[])
   );
 
 -- name: GetBudgetByID :one
@@ -29,11 +29,11 @@ WHERE id = $1;
 
 -- name: GetBudgetMemberRole :one
 SELECT member_role
-FROM budgets_users
+FROM memberships
 WHERE budget_id = $1 AND user_id = $2;
 
 -- name: AssignBudgetMemberWithRole :one
-INSERT INTO budgets_users (created_at, updated_at, budget_id, user_id, member_role)
+INSERT INTO memberships (created_at, updated_at, budget_id, user_id, member_role)
 VALUES (
     NOW(),
     NOW(),
@@ -62,7 +62,7 @@ RETURNING *;
 
 -- name: RevokeBudgetMembership :exec
 DELETE
-FROM budgets_users
+FROM memberships
 WHERE budget_id = $1
     AND user_id = $2;
 

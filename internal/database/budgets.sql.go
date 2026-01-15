@@ -12,7 +12,7 @@ import (
 )
 
 const assignBudgetMemberWithRole = `-- name: AssignBudgetMemberWithRole :one
-INSERT INTO budgets_users (created_at, updated_at, budget_id, user_id, member_role)
+INSERT INTO memberships (created_at, updated_at, budget_id, user_id, member_role)
 VALUES (
     NOW(),
     NOW(),
@@ -31,9 +31,9 @@ type AssignBudgetMemberWithRoleParams struct {
 	MemberRole string
 }
 
-func (q *Queries) AssignBudgetMemberWithRole(ctx context.Context, arg AssignBudgetMemberWithRoleParams) (BudgetsUser, error) {
+func (q *Queries) AssignBudgetMemberWithRole(ctx context.Context, arg AssignBudgetMemberWithRoleParams) (Membership, error) {
 	row := q.db.QueryRow(ctx, assignBudgetMemberWithRole, arg.BudgetID, arg.UserID, arg.MemberRole)
-	var i BudgetsUser
+	var i Membership
 	err := row.Scan(
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -215,7 +215,7 @@ func (q *Queries) GetBudgetGroupIDByName(ctx context.Context, arg GetBudgetGroup
 
 const getBudgetMemberRole = `-- name: GetBudgetMemberRole :one
 SELECT member_role
-FROM budgets_users
+FROM memberships
 WHERE budget_id = $1 AND user_id = $2
 `
 
@@ -253,13 +253,13 @@ func (q *Queries) GetBudgetPayeeIDByName(ctx context.Context, arg GetBudgetPayee
 const getUserBudgets = `-- name: GetUserBudgets :many
 SELECT budgets.id, budgets.created_at, budgets.updated_at, budgets.admin_id, budgets.name, budgets.notes
 FROM budgets
-JOIN budgets_users
-  ON budgets.id = budgets_users.budget_id
-WHERE budgets_users.user_id = $1
+JOIN memberships
+  ON budgets.id = memberships.budget_id
+WHERE memberships.user_id = $1
   AND (
     $2::text[] IS NULL
     OR cardinality($2::text[]) = 0
-    OR budgets_users.member_role = ANY($2::text[])
+    OR memberships.member_role = ANY($2::text[])
   )
 `
 
@@ -297,7 +297,7 @@ func (q *Queries) GetUserBudgets(ctx context.Context, arg GetUserBudgetsParams) 
 
 const revokeBudgetMembership = `-- name: RevokeBudgetMembership :exec
 DELETE
-FROM budgets_users
+FROM memberships
 WHERE budget_id = $1
     AND user_id = $2
 `
