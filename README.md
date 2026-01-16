@@ -5,6 +5,8 @@
 
 A web server exposing a REST API used to manage budgetary resources that represent the components necessitated by an envelope framework of personal finance.
 
+![pincher-api](https://github.com/user-attachments/assets/6495f552-406b-4664-9731-cdbf4b3c6291)
+<sub><sup>The API in action, as seen through a CLI client!</sup></sub>
 
 ## Why Pincher?
 
