@@ -59,7 +59,7 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts/{account_id}/capital", mdAuth(mdClear(VIEWER, cfg.handleGetBudgetAccountCapital)))
 	mux.HandleFunc("PUT /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(MANAGER, cfg.handleUpdateAccount)))
 	mux.HandleFunc("PATCH /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(MANAGER, cfg.handleRestoreAccount)))
-	mux.HandleFunc("DELETE /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.handleDeleteAccount)))
+	mux.HandleFunc("DELETE /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(MANAGER, cfg.handleDeleteAccount)))
 	// Transactions
 	mux.HandleFunc("POST /api/budgets/{budget_id}/transactions", mdAuth(mdClear(CONTRIBUTOR, mdValidateTxn(cfg.handleLogTransaction))))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions", mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)))
@@ -71,8 +71,8 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux.HandleFunc("DELETE /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.handleDeleteTransaction)))
 	// Months & Dollar Assignment
 	mux.HandleFunc("POST /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(MANAGER, cfg.handleAssignAmountToCategory)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.handleGetMonthCategoryReport)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(MANAGER, cfg.handleGetMonthCategories)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}", mdAuth(mdClear(MANAGER, cfg.handleGetMonthReport)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategoryReport)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategories)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthReport)))
 	return mux
 }
