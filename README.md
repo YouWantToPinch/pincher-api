@@ -18,7 +18,7 @@ Still, while other FOSS solutions in the budgeting space are gaining a respectab
 
 Pincher's entire goal is to provide you with *options.*
 
-While others FOSS solutions to envelope budgeting do exist, they often feature a JavaScript back end infrastructure with no REST API. Pincher offers you endpoints that you can use to write custom tooling for your budgetary needs in whatever language you wish, and, being Go-based, Pincher is equipped with the benefit of leveraging Go's concurrency primitives.
+While other FOSS solutions to envelope budgeting do exist, they often feature a JavaScript back end infrastructure with no REST API. Pincher offers you endpoints that you can use to write custom tooling for your budgetary needs in whatever language you wish, and, being Go-based, Pincher is equipped with the benefit of leveraging Go's concurrency primitives.
 
 Furthermore, Pincher doesn't strive *just* to provide tooling for individuals; it is made with families and small businesses in mind. Maybe your spouse isn't interested in managing the budget, and you've taken on that task; all the same, they can be assigned the VIEWER role so that they might be able to check budget balances at will to stay up to date. Or, maybe you would like to be on the same page with your employees about the nature of the charges that come through on company cards. Give them the CONTRIBUTOR role, so that they can log transactions to the budget!
 
@@ -73,9 +73,13 @@ Until documentation is complete, for reference, all endpoints are matched direct
 - CONTRIBUTOR
 - VIEWER
 
-These are **user member roles.** That is, these endpoints will all inherently expect a JWT in the header of the requests sent to them, which can be acquired through the user login endpoint.
+These are **user member roles.** Every user membership assigned to a budget is paired with one of these.
 
 The budget MANAGER role carries almost all of the same privileges as the ADMIN role, save just for budget deletion.
+The budget CONTRIBUTOR role allows users to add and delete transactions.
+The budget VIEWER role limits users to only viewing all resources.
+
+For each endpoint wrapped in the `mdAuth` middleware, a JWT will be expected in the `Authorization` header of the request(s) sent, which can be acquired through the user login endpoint.
 
 ## Resources
 
