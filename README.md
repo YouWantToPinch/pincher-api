@@ -64,22 +64,9 @@ The Pincher API exposes endpoints which can be used to create and manage items s
 
 All of these resources are kept within a Postgres database.
 
-*Official documentation is currently being written.*
+Official documentation is in progress, and can be viewed [here](https://documenter.getpostman.com/view/51711822/2sBXVkAUL6).
 
-Until documentation is complete, for reference, all endpoints are matched directly to their function handlers within `./internal/api/api.go`. There, you will also see one of the following roles listed:
-
-- ADMIN
-- MANAGER
-- CONTRIBUTOR
-- VIEWER
-
-These are **user member roles.** Every user membership assigned to a budget is paired with one of these.
-
-The budget MANAGER role carries almost all of the same privileges as the ADMIN role, save just for budget deletion.
-The budget CONTRIBUTOR role allows users to add and delete transactions.
-The budget VIEWER role limits users to only viewing all resources.
-
-For each endpoint wrapped in the `mdAuth` middleware, a JWT will be expected in the `Authorization` header of the request(s) sent, which can be acquired through the user login endpoint.
+Where documentation may be incomplete, for reference, all endpoints are matched directly to their function handlers within `./internal/api/api.go`.
 
 ## Resources
 
