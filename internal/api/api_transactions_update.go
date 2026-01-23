@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/YouWantToPinch/pincher-api/internal/database"
-	"github.com/google/uuid"
 )
 
 func (cfg *APIConfig) handleUpdateTransaction(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +47,7 @@ func (cfg *APIConfig) handleUpdateTransaction(w http.ResponseWriter, r *http.Req
 			AccountID:       validatedTxn.accountID,
 			TransactionType: validatedTxn.txnType,
 			TransactionDate: validatedTxn.txnDate,
-			PayeeID:         uuid.Nil,
+			PayeeID:         validatedTxn.payeeID,
 			Notes:           validatedTxn.notes,
 			Cleared:         validatedTxn.cleared,
 		}, splits); err != nil {
