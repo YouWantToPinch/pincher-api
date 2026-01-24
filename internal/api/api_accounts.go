@@ -75,6 +75,7 @@ func (cfg *APIConfig) handleGetAccounts(w http.ResponseWriter, r *http.Request) 
 			ID:          account.ID,
 			CreatedAt:   account.CreatedAt,
 			UpdatedAt:   account.UpdatedAt,
+			BudgetID:    account.BudgetID,
 			AccountType: account.AccountType,
 			IsDeleted:   account.IsDeleted,
 			Meta: Meta{
@@ -112,6 +113,7 @@ func (cfg *APIConfig) handleGetAccount(w http.ResponseWriter, r *http.Request) {
 		ID:          dbAccount.ID,
 		CreatedAt:   dbAccount.CreatedAt,
 		UpdatedAt:   dbAccount.UpdatedAt,
+		BudgetID:    dbAccount.BudgetID,
 		AccountType: dbAccount.AccountType,
 		IsDeleted:   dbAccount.IsDeleted,
 		Meta: Meta{
