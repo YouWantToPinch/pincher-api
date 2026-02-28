@@ -172,7 +172,7 @@ func (cfg *APIConfig) handleUpdateAccount(w http.ResponseWriter, r *http.Request
 		Notes: rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "could not update account", err)
+		respondWithError(w, http.StatusConflict, "could not update account", err)
 		return
 	}
 

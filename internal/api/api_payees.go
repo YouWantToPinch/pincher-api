@@ -131,7 +131,7 @@ func (cfg *APIConfig) handleUpdatePayee(w http.ResponseWriter, r *http.Request) 
 		Notes: rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not update payee", err)
+		respondWithError(w, http.StatusConflict, "could not update payee", err)
 		return
 	}
 

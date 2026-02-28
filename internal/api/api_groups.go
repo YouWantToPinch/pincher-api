@@ -104,7 +104,7 @@ func (cfg *APIConfig) handleUpdateGroup(w http.ResponseWriter, r *http.Request) 
 		Notes: rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not update group", err)
+		respondWithError(w, http.StatusConflict, "could not update group", err)
 		return
 	}
 

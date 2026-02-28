@@ -79,7 +79,7 @@ func (cfg *APIConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http
 		HashedPassword: hashedPass,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not update user credentials", err)
+		respondWithError(w, http.StatusConflict, "could not update user credentials", err)
 	}
 
 	respondWithCode(w, http.StatusNoContent)

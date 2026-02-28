@@ -166,7 +166,7 @@ func (cfg *APIConfig) handleUpdateCategory(w http.ResponseWriter, r *http.Reques
 		Notes:   rqPayload.Notes,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failed to update category", err)
+		respondWithError(w, http.StatusConflict, "failed to update category", err)
 		return
 	}
 

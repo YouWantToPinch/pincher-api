@@ -55,7 +55,7 @@ func (cfg *APIConfig) handleUpdateTransaction(w http.ResponseWriter, r *http.Req
 			if validatedTxn.isTransfer {
 				errMsgPrefix = "could not update transfer transaction"
 			}
-			respondWithError(w, http.StatusInternalServerError, errMsgPrefix+": "+msg, err)
+			respondWithError(w, http.StatusConflict, errMsgPrefix+": "+msg, err)
 			return
 		}
 		if validatedTxn.isTransfer {
@@ -73,7 +73,7 @@ func (cfg *APIConfig) handleUpdateTransaction(w http.ResponseWriter, r *http.Req
 				Notes:           validatedTxn.notes,
 				Cleared:         linkedTxn.Cleared,
 			}, invertAmountsMap(splits)); err != nil {
-				respondWithError(w, http.StatusInternalServerError, "could not update corresponding transfer transaction: "+msg, err)
+				respondWithError(w, http.StatusConflict, "could not update corresponding transfer transaction: "+msg, err)
 				return
 			}
 		}
