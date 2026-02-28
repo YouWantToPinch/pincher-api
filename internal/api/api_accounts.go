@@ -86,7 +86,7 @@ func (cfg *APIConfig) handleGetAccounts(w http.ResponseWriter, r *http.Request) 
 	}
 
 	type rspSchema struct {
-		Accounts []Account `json:"accounts"`
+		Accounts []Account `json:"data"`
 	}
 
 	rspPayload := rspSchema{

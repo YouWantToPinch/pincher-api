@@ -41,7 +41,7 @@ func (cfg *APIConfig) handleGetAllUsers(w http.ResponseWriter, r *http.Request) 
 	}
 
 	type rspSchema struct {
-		Users []User `json:"users"`
+		Users []User `json:"data"`
 	}
 
 	rspPayload := rspSchema{

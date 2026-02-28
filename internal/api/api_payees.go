@@ -71,7 +71,7 @@ func (cfg *APIConfig) handleGetPayees(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type rspSchema struct {
-		Payees []Payee `json:"payees"`
+		Payees []Payee `json:"data"`
 	}
 
 	rspPayload := rspSchema{

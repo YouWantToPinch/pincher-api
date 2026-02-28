@@ -71,7 +71,7 @@ func (cfg *APIConfig) handleGetGroups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type rspSchema struct {
-		Groups []Group `json:"groups"`
+		Groups []Group `json:"data"`
 	}
 
 	rspPayload := rspSchema{

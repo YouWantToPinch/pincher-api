@@ -131,7 +131,7 @@ func (cfg *APIConfig) handleGetUserBudgets(w http.ResponseWriter, r *http.Reques
 	}
 
 	type rspSchema struct {
-		Budgets []Budget `json:"budgets"`
+		Budgets []Budget `json:"data"`
 	}
 
 	rspPayload := rspSchema{

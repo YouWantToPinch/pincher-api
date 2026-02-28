@@ -170,7 +170,7 @@ func (cfg *APIConfig) handleGetMonthCategories(w http.ResponseWriter, r *http.Re
 	}
 
 	type rspSchema struct {
-		CategoryReports []CategoryReport `json:"category_reports"`
+		CategoryReports []CategoryReport `json:"data"`
 	}
 
 	rspPayload := rspSchema{

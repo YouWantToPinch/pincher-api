@@ -113,7 +113,7 @@ func (cfg *APIConfig) handleGetCategories(w http.ResponseWriter, r *http.Request
 	}
 
 	type rspSchema struct {
-		Categories []Category `json:"categories"`
+		Categories []Category `json:"data"`
 	}
 
 	rspPayload := rspSchema{

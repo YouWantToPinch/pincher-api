@@ -205,7 +205,7 @@ func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Reque
 			}
 
 			type rspSchema struct {
-				Transactions []Transaction `json:"transactions"`
+				Transactions []Transaction `json:"data"`
 			}
 
 			rspPayload := rspSchema{
@@ -264,7 +264,7 @@ func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Reque
 			}
 
 			type rspSchema struct {
-				Transactions []TransactionDetail `json:"transactions"`
+				Transactions []TransactionDetail `json:"data"`
 			}
 
 			rspPayload := rspSchema{
