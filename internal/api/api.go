@@ -41,6 +41,8 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux.HandleFunc("POST /api/budgets/{budget_id}/groups", mdAuth(mdClear(MANAGER, cfg.handleCreateGroup)))
 	mux.HandleFunc("POST /api/budgets/{budget_id}/categories", mdAuth(mdClear(MANAGER, cfg.handleCreateCategory)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/groups", mdAuth(mdClear(VIEWER, cfg.handleGetGroups)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/groups/{group_id}", mdAuth(mdClear(VIEWER, cfg.handleGetGroups)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/categories/{category_id}", mdAuth(mdClear(VIEWER, cfg.handleGetCategories)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/categories", mdAuth(mdClear(VIEWER, cfg.handleGetCategories)))
 	mux.HandleFunc("PUT /api/budgets/{budget_id}/groups/{group_id}", mdAuth(mdClear(MANAGER, cfg.handleUpdateGroup)))
 	mux.HandleFunc("PUT /api/budgets/{budget_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.handleUpdateCategory)))
