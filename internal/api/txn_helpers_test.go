@@ -80,9 +80,9 @@ func TestInvertTransferType(t *testing.T) {
 
 func TestInvertAmountsMap(t *testing.T) {
 	tests := []struct {
-		name   string
 		input  map[string]int64
 		expect map[string]int64
+		name   string
 	}{
 		{
 			name:   "Zero len map returns identical",
@@ -158,8 +158,8 @@ func TestGetOrderedTransferIDs(t *testing.T) {
 func TestTotalAmountsFromMap(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  map[string]int64
 		expect int64
+		input  map[string]int64
 	}{
 		{
 			name:   "1 + 1 = 2",
@@ -202,10 +202,10 @@ func TestValidateTXN(t *testing.T) {
 	tests := []struct {
 		name             string
 		mockPayload      *UpsertTransactionRqSchema
-		expectAmounts    int
 		expectDate       time.Time
-		expectIsTransfer bool
 		expectType       string
+		expectAmounts    int
+		expectIsTransfer bool
 		expectedVal      bool
 		wantErr          bool
 	}{

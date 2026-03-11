@@ -49,9 +49,9 @@ type Meta struct {
 }
 
 type User struct {
-	ID             uuid.UUID `json:"id"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
 	Username       string    `json:"username"`
 	HashedPassword string    `json:"-"`
 }
@@ -63,34 +63,34 @@ type BudgetMembership struct {
 }
 
 type Budget struct {
-	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
 	AdminID   uuid.UUID `json:"admin_id"`
 	Meta
 }
 
 type Group struct {
-	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
 	BudgetID  uuid.UUID `json:"budget_id"`
 	Meta
 }
 
 type Category struct {
-	ID        uuid.UUID  `json:"id"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
+	ID        uuid.UUID  `json:"id"`
 	BudgetID  uuid.UUID  `json:"budget_id"`
 	GroupID   *uuid.UUID `json:"group_id"`
 	Meta
 }
 
 type Account struct {
-	ID          uuid.UUID `json:"id"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uuid.UUID `json:"id"`
 	BudgetID    uuid.UUID `json:"budget_id"`
 	AccountType string    `json:"account_type"`
 	IsDeleted   bool      `json:"is_deleted"`
@@ -98,9 +98,9 @@ type Account struct {
 }
 
 type Transaction struct {
-	ID              uuid.UUID `json:"id"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+	ID              uuid.UUID `json:"id"`
 	BudgetID        uuid.UUID `json:"budget_id"`
 	LoggerID        uuid.UUID `json:"logger_id"`
 	AccountID       uuid.UUID `json:"account_id"`
@@ -119,8 +119,8 @@ type TransactionSplit struct {
 }
 
 type TransactionDetail struct {
-	ID              uuid.UUID        `json:"id"`
 	TransactionDate time.Time        `json:"transaction_date"`
+	ID              uuid.UUID        `json:"id"`
 	TransactionType string           `json:"transaction_type"`
 	Notes           string           `json:"notes"`
 	PayeeName       string           `json:"payee_name"`
@@ -133,9 +133,9 @@ type TransactionDetail struct {
 }
 
 type Payee struct {
-	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
 	BudgetID  uuid.UUID `json:"budget_id"`
 	Meta
 }
