@@ -393,7 +393,7 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// user4 should be assigned to only 1 budget
 	c.Request(c.GetUserBudgets(jwt4), http.StatusOK)
-	gotBudgets, _ := c.GetJSONField("budgets")
+	gotBudgets, _ := c.GetJSONField("data")
 	assert.Len(t, gotBudgets.([]any), 1)
 
 	// As user4, try adding user2 as a MANAGER. Should fail auth check.
@@ -413,7 +413,7 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// user1 should be assigned to 2 budgets: Webflyx Org & their personal budget
 	c.Request(c.GetUserBudgets(jwt1), http.StatusOK)
-	gotBudgets, _ = c.GetJSONField("budgets")
+	gotBudgets, _ = c.GetJSONField("data")
 	assert.Len(t, gotBudgets.([]any), 2)
 
 	// Attemc.deletion of Webflyx Org budget as user1. Should succeed.
@@ -421,12 +421,12 @@ func Test_BuildOrgDoAuthChecks(t *testing.T) {
 
 	// user1 should be assigned to only 1 budget now: their personal budget.
 	c.Request(c.GetUserBudgets(jwt1), http.StatusOK)
-	gotBudgets, _ = c.GetJSONField("budgets")
+	gotBudgets, _ = c.GetJSONField("data")
 	assert.Len(t, gotBudgets.([]any), 1)
 
 	// user4 should be assigned to NO budgets, now.
 	c.Request(c.GetUserBudgets(jwt4), http.StatusOK)
-	gotBudgets, _ = c.GetJSONFieldAsString("budgets")
+	gotBudgets, _ = c.GetJSONFieldAsString("data")
 	assert.Empty(t, gotBudgets)
 }
 
@@ -486,7 +486,7 @@ func Test_BuildOrgLogTransaction(t *testing.T) {
 	// user4 VIEWER: Works for accounting; reading transactions from employees.
 	c.Request(c.GetTransactions(jwt4, budgetID, account2, "", "", "", ""), http.StatusOK)
 	c.Request(c.GetTransactions(jwt4, budgetID, "", "", payee1ID, "", ""), http.StatusOK)
-	txnQuery, _ := c.GetJSONField("transactions")
+	txnQuery, _ := c.GetJSONField("data")
 	assert.Len(t, txnQuery.([]any), 2)
 }
 
