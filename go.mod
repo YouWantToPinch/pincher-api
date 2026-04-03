@@ -1,6 +1,6 @@
 module github.com/YouWantToPinch/pincher-api
 
-go 1.24.3
+go 1.26.1
 
 require (
 	github.com/alexedwards/argon2id v1.0.0
