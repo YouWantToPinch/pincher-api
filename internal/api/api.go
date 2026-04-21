@@ -5,10 +5,11 @@ import (
 	"net/http"
 )
 
-func SetupMux(cfg *APIConfig) *http.ServeMux {
+func SetupMux(cfg *APIConfig) http.Handler {
 	mux := http.NewServeMux()
 
 	// middleware
+	mdCors := cfg.middlewareEnableCORS
 	mdAuth := cfg.middlewareAuthenticate
 	mdClear := cfg.middlewareCheckClearance
 	mdValidateTxn := cfg.middlewareValidateTxn
@@ -76,5 +77,8 @@ func SetupMux(cfg *APIConfig) *http.ServeMux {
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategoryReport)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategories)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthReport)))
-	return mux
+
+	handler := mdCors(mux)
+
+	return handler
 }

@@ -14,6 +14,31 @@ import (
 
 type ctxKey string
 
+// middlewareHandleCORS handles preflight OPTIONS requests to
+// tell browsers that cross-origin requests are permitted.
+func (cfg *APIConfig) middlewareEnableCORS(next http.Handler) http.Handler {
+	/* NOTE: Should CORS ever need to be made more restrictive,
+	* this approach ought be used, which checks for dev before being permissive:
+			allowedOrigins := []string{}
+			if cfg.platform == "dev" {
+				allowedOrigins = append(allowedOrigins, "http://localhost:*")
+			}
+	*/
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PATCH, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 // middlewareAuthenticate authenticates JSON Web Tokens
 // before passing off requests to another handler.
 func (cfg *APIConfig) middlewareAuthenticate(next http.HandlerFunc) http.HandlerFunc {
