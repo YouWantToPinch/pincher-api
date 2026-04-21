@@ -77,18 +77,18 @@ func ValidateJWT(tokenString, tokenSecret, algorithm string) (uuid.UUID, error) 
 	}
 }
 
-func GetBearerToken(headers http.Header) (tokenString string, returnErr error) {
+func GetBearerToken(headers http.Header) (string, error) {
 	authSlice, ok := headers["Authorization"]
 	if !ok || len(authSlice) == 0 {
 		return "", errors.New("authorization header missing or empty")
 	}
 	authHeaderVal := authSlice[0]
 	if !strings.HasPrefix(strings.ToLower(authHeaderVal), "bearer ") {
-		return "", errors.New("no token string found")
+		return "", errors.New("expected bearer token, found none")
 	}
 	tokenElements := strings.SplitN(authHeaderVal, " ", 2)
 	if len(tokenElements) != 2 || strings.TrimSpace(tokenElements[1]) == "" {
-		return "", errors.New("bearer presented without token")
+		return "", errors.New("bearer token value missing")
 	}
 	return tokenElements[1], nil
 }
