@@ -9,7 +9,7 @@ func SetupMux(cfg *APIConfig) http.Handler {
 	mux := http.NewServeMux()
 
 	// middleware
-	mdCors := cfg.middlewareEnableCORS
+	mdCors := cfg.middlewareHandleCORS
 	mdAuth := cfg.middlewareAuthenticate
 	mdClear := cfg.middlewareCheckClearance
 	mdValidateTxn := cfg.middlewareValidateTxn

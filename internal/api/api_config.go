@@ -32,6 +32,7 @@ type APIConfig struct {
 	platform  string
 	jwtSecret string
 	logger    *slog.Logger
+	origins   map[string]struct{}
 	// apiKeys  *map[string]string
 }
 
@@ -42,7 +43,27 @@ func (cfg *APIConfig) Init(envPath string) error {
 		_ = godotenv.Load(envPath)
 	}
 
+	cfg.origins = map[string]struct{}{}
+	originsVal := os.Getenv("ALLOWED_ORIGINS")
+	if origins := strings.Split(strings.TrimSpace(originsVal), ","); len(origins) > 0 {
+		for _, origin := range origins {
+			cfg.origins[origin] = struct{}{}
+		}
+	}
+
 	cfg.platform = os.Getenv("PLATFORM")
+	// Ensure that if some allowed_origins are provided,
+	// and the platform is dev, any localhost ports relevant
+	// to development are automatically added to the whitelist.
+	if cfg.platform == "dev" && len(cfg.origins) > 0 {
+		devPorts := map[string]struct{}{
+			"3000": {}, // React
+			"5173": {}, // Vite
+		}
+		for k := range devPorts {
+			cfg.origins["http://localhost:"+k] = struct{}{}
+		}
+	}
 
 	cfg.jwtSecret = os.Getenv("JWT_SECRET")
 
