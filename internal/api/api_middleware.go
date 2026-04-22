@@ -16,19 +16,35 @@ type ctxKey string
 
 // middlewareHandleCORS handles preflight OPTIONS requests to
 // tell browsers that cross-origin requests are permitted.
-func (cfg *APIConfig) middlewareEnableCORS(next http.Handler) http.Handler {
-	/* NOTE: Should CORS ever need to be made more restrictive,
-	* this approach ought be used, which checks for dev before being permissive:
-			allowedOrigins := []string{}
-			if cfg.platform == "dev" {
-				allowedOrigins = append(allowedOrigins, "http://localhost:*")
-			}
-	*/
-
+//
+// By default, the API allows any origin. The ALLOWED_ORIGINS
+// environment variable may be set to specify a whitelist as a
+// string separated by commas.
+func (cfg *APIConfig) middlewareHandleCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if origin := r.Header.Get("Origin"); origin != "" {
+
+			w.Header().Set("Vary", "Origin")
+
+			if len(cfg.origins) > 0 {
+				// use origin whitelist
+				if _, allowed := cfg.origins[origin]; allowed {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					w.Header().Set("Access-Control-Allow-Credentials", "true")
+				}
+			} else {
+				// allow any origins
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+			}
+
+		} else {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PATCH, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Auth-Transport, X-API-Key")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
