@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -143,7 +142,6 @@ func (cfg *APIConfig) makeAuthPayload(w http.ResponseWriter, r *http.Request, db
 
 	var user *User
 	if dbUser != nil {
-		slog.Debug("!= nil! We are doing it.")
 		user = &User{
 			ID:        dbUser.ID,
 			CreatedAt: dbUser.CreatedAt,
