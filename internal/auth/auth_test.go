@@ -227,7 +227,7 @@ func TestGetBearerToken(t *testing.T) {
 			expectErr:     true,
 		},
 		{
-			name:          "Bearer without token",
+			name:          "Bearer without token value",
 			headers:       http.Header{"Authorization": []string{"Bearer "}},
 			expectedToken: "",
 			expectErr:     true,
@@ -245,7 +245,7 @@ func TestGetBearerToken(t *testing.T) {
 			expectErr:     true,
 		},
 		{
-			name:          "Different case Bearer",
+			name:          "scheme is case-insensitive",
 			headers:       http.Header{"Authorization": []string{"bEaReR " + tokenWant}},
 			expectedToken: tokenWant,
 			expectErr:     false,

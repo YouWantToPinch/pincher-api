@@ -84,8 +84,8 @@ func GetBearerToken(headers http.Header) (string, error) {
 		return "", errors.New("authorization header missing or empty")
 	}
 	authHeaderVal := authSlice[0]
-	if !strings.HasPrefix(strings.ToLower(authHeaderVal), "bearer ") {
-		return "", errors.New("expected bearer token, found none")
+	if !strings.HasPrefix(strings.ToLower(authHeaderVal), "bearer") {
+		return "", errors.New("expected bearer token, found none: " + strings.ToLower(authHeaderVal))
 	}
 	tokenElements := strings.SplitN(authHeaderVal, " ", 2)
 	if len(tokenElements) != 2 || strings.TrimSpace(tokenElements[1]) == "" {
