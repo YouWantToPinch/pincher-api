@@ -55,18 +55,18 @@ func (cfg *APIConfig) middlewareHandleCORS(next http.Handler) http.Handler {
 	})
 }
 
-// middlewareAuthenticate authenticates JSON Web Tokens
-// before passing off requests to another handler.
+// middlewareAuthenticate authenticates an expected bearer JSON Web Token found in
+// the Authorization header before passing off requests to another handler.
 func (cfg *APIConfig) middlewareAuthenticate(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenString, err := auth.GetBearerToken(r.Header)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "no token found", err)
+			respondWithError(w, http.StatusBadRequest, "no token provided", err)
 			return
 		}
 		validatedUserID, err := auth.ValidateJWT(tokenString, cfg.jwtSecret, "HS256")
 		if err != nil {
-			respondWithError(w, http.StatusUnauthorized, "invalid token provided", nil)
+			respondWithError(w, http.StatusUnauthorized, "invalid token provided", err)
 			return
 		}
 		ctxUserID := ctxKey("user_id")
