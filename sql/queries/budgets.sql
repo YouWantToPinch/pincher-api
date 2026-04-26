@@ -11,15 +11,14 @@ VALUES (
 RETURNING *;
 
 -- name: GetUserBudgets :many
-SELECT budgets.*
+SELECT DISTINCT budgets.*
 FROM budgets
-JOIN memberships
-  ON budgets.id = memberships.budget_id
-WHERE memberships.user_id = $1
+JOIN memberships ON budgets.id = memberships.budget_id
+WHERE memberships.user_id = @user_id
   AND (
-    sqlc.arg('roles')::text[] IS NULL
-    OR cardinality(sqlc.arg('roles')::text[]) = 0
-    OR memberships.member_role = ANY(sqlc.arg('roles')::text[])
+    @roles::text[] IS NULL
+    OR cardinality(@roles::text[]) = 0
+    OR memberships.member_role = ANY(@roles::text[])
   );
 
 -- name: GetBudgetByID :one
@@ -50,9 +49,9 @@ SELECT CAST(COALESCE(SUM(td.total_amount), 0) AS BIGINT) AS total
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 JOIN accounts a ON t.account_id = a.id
-WHERE t.budget_id = $1
-  AND sqlc.arg('account_type')::text = ''
-  OR a.account_type = sqlc.arg('account_type');
+WHERE t.budget_id = @budget_id
+  AND @account_type::text = ''
+  OR a.account_type = @account_type;
 
 -- name: UpdateBudget :one
 UPDATE budgets
@@ -77,30 +76,30 @@ WHERE id = $1;
 -- name: GetBudgetAccountIDByName :one
 SELECT id
 FROM accounts
-WHERE name = sqlc.arg('account_name')
-AND budget_id = sqlc.arg('budget_id');
+WHERE name = @account_name
+AND budget_id = @budget_id;
 
 -- name: GetBudgetAccountIDAndTypeByName :one
 SELECT id, account_type
 FROM accounts
-WHERE name = sqlc.arg('account_name')
-AND budget_id = sqlc.arg('budget_id');
+WHERE name = @account_name
+AND budget_id = @budget_id;
 
 -- name: GetBudgetCategoryIDByName :one
 SELECT id
 FROM categories
-WHERE name = sqlc.arg('category_name')
-AND budget_id = sqlc.arg('budget_id');
+WHERE name = @category_name
+AND budget_id = @budget_id;
 
 -- name: GetBudgetPayeeIDByName :one
 SELECT id
 FROM payees
-WHERE name = sqlc.arg('payee_name')
-AND budget_id = sqlc.arg('budget_id');
+WHERE name = @payee_name
+AND budget_id = @budget_id;
 
 -- name: GetBudgetGroupIDByName :one
 SELECT id
 FROM groups
-WHERE name = sqlc.arg('group_name')
-AND budget_id = sqlc.arg('budget_id');
+WHERE name = @group_name
+AND budget_id = @budget_id;
 

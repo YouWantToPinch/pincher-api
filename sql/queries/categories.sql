@@ -19,10 +19,10 @@ WHERE id = $1;
 -- name: GetCategories :many
 SELECT *
 FROM categories c
-WHERE c.budget_id = sqlc.arg('budget_id')
+WHERE c.budget_id = @budget_id
   AND (
-    sqlc.arg('group_id')::uuid = '00000000-0000-0000-0000-000000000000'
-    OR c.group_id = sqlc.arg('group_id')::uuid
+    @group_id::uuid = '00000000-0000-0000-0000-000000000000'
+    OR c.group_id = @group_id::uuid
   );
 
 -- name: UpdateCategory :one

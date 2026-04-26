@@ -7,14 +7,14 @@ VALUES (
     gen_random_uuid(),
     DEFAULT,
     DEFAULT,
-    sqlc.arg('budget_id'),
-    sqlc.arg('logger_id'),
-    sqlc.arg('account_id'),
-    sqlc.arg('transaction_type'),
-    sqlc.arg('transaction_date'),
-    sqlc.arg('payee_id'),
-    sqlc.arg('notes'),
-    sqlc.arg('cleared')
+    @budget_id,
+    @logger_id,
+    @account_id,
+    @transaction_type,
+    @transaction_date,
+    @payee_id,
+    @notes,
+    @cleared
 )
 RETURNING *;
 
@@ -22,23 +22,23 @@ RETURNING *;
 INSERT INTO transaction_splits (id, transaction_id, category_id, amount)
 SELECT
   gen_random_uuid(),
-  sqlc.arg('transaction_id')::uuid,
+  @transaction_id::uuid,
   CASE
     WHEN t.transaction_type ILIKE '%TRANSFER%' OR a.account_type ILIKE '%OFF_BUDGET%' THEN NULL
     WHEN t.transaction_type ILIKE '%DEPOSIT%' AND key ILIKE '%UNCATEGORIZED%' THEN NULL
     ELSE key::uuid
   END,
   value::integer
-FROM json_each_text(sqlc.arg('amounts')::json)
-JOIN transactions t ON t.id = sqlc.arg('transaction_id')::uuid
+FROM json_each_text(@amounts::json)
+JOIN transactions t ON t.id = @transaction_id::uuid
 JOIN accounts a ON t.account_id = a.id
 RETURNING *;
 
 -- name: LogAccountTransfer :one
 INSERT INTO account_transfers (from_transaction_id, to_transaction_id)
 VALUES (
-    sqlc.arg('from_transaction_id')::uuid,
-    sqlc.arg('to_transaction_id')::uuid
+    @from_transaction_id::uuid,
+    @to_transaction_id::uuid
 )
 RETURNING *;
 
@@ -54,26 +54,26 @@ SELECT td.*
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
-  budget_id = sqlc.arg('budget_id')::uuid
+  budget_id = @budget_id::uuid
   AND (
-      sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000'
-      OR t.account_id = sqlc.arg('account_id')::uuid
+    @account_id::uuid = '00000000-0000-0000-0000-000000000000'
+    OR t.account_id = @account_id::uuid
     )
   AND (
-    sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000'
-    OR t.payee_id = sqlc.arg('payee_id')::uuid
+    @payee_id::uuid = '00000000-0000-0000-0000-000000000000'
+    OR t.payee_id = @payee_id::uuid
   )
   AND (
-    sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
+    @category_id::uuid = '00000000-0000-0000-0000-000000000000'
     OR EXISTS (
       SELECT 1
       FROM transaction_splits ts
-      WHERE ts.transaction_id = t.id AND ts.category_id = sqlc.arg('category_id')::uuid
+      WHERE ts.transaction_id = t.id AND ts.category_id = @category_id::uuid
     )
   )
   AND (
-    (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
-    OR (t.transaction_date BETWEEN sqlc.arg('start_date')::date AND sqlc.arg('end_date')::date)
+    (@start_date::date = '0001-01-01' AND @end_date::date = '0001-01-01')
+    OR (t.transaction_date BETWEEN @start_date::date AND @end_date::date)
   )
 ORDER BY t.transaction_date DESC;
 
@@ -81,26 +81,26 @@ ORDER BY t.transaction_date DESC;
 SELECT t.*
 FROM transactions t
 WHERE
-  budget_id = sqlc.arg('budget_id')::uuid
+  budget_id = @budget_id::uuid
   AND (
-      sqlc.arg('account_id')::uuid = '00000000-0000-0000-0000-000000000000'
-      OR t.account_id = sqlc.arg('account_id')::uuid
+    @account_id::uuid = '00000000-0000-0000-0000-000000000000'
+    OR t.account_id = @account_id::uuid
     )
   AND (
-    sqlc.arg('payee_id')::uuid = '00000000-0000-0000-0000-000000000000'
-    OR t.payee_id = sqlc.arg('payee_id')::uuid
+    @payee_id::uuid = '00000000-0000-0000-0000-000000000000'
+    OR t.payee_id = @payee_id::uuid
   )
   AND (
-    sqlc.arg('category_id')::uuid = '00000000-0000-0000-0000-000000000000'
+    @category_id::uuid = '00000000-0000-0000-0000-000000000000'
     OR EXISTS (
       SELECT 1
       FROM transaction_splits ts
-      WHERE ts.transaction_id = t.id AND ts.category_id = sqlc.arg('category_id')::uuid
+      WHERE ts.transaction_id = t.id AND ts.category_id = @category_id::uuid
     )
   )
   AND (
-    (sqlc.arg('start_date')::date = '0001-01-01' AND sqlc.arg('end_date')::date = '0001-01-01')
-    OR (t.transaction_date BETWEEN sqlc.arg('start_date')::date AND sqlc.arg('end_date')::date)
+    (@start_date::date = '0001-01-01' AND @end_date::date = '0001-01-01')
+    OR (t.transaction_date BETWEEN @start_date::date AND @end_date::date)
   )
 ORDER BY t.transaction_date DESC;
 
@@ -124,17 +124,17 @@ WHERE id = $1;
 UPDATE transactions t
 SET
   updated_at = NOW(),
-  account_id = sqlc.arg('account_id'),
-  transaction_type = sqlc.arg('transaction_type'),
-  transaction_date = sqlc.arg('transaction_date'),
-  payee_id = sqlc.arg('payee_id'),
-  notes = sqlc.arg('notes'),
-  cleared = sqlc.arg('cleared')
-WHERE t.id = sqlc.arg('transaction_id');
+  account_id = @account_id,
+  transaction_type = @transaction_type,
+  transaction_date = @transaction_date,
+  payee_id = @payee_id,
+  notes = @notes,
+  cleared = @cleared
+WHERE t.id = @transaction_id;
 
 -- name: DeleteTransactionSplits :exec
   DELETE FROM transaction_splits
-  WHERE transaction_id = sqlc.arg('transaction_id');
+  WHERE transaction_id = @transaction_id;
 
 -- name: GetLinkedTransaction :one
 SELECT t.*

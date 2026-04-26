@@ -3,11 +3,11 @@
 -- name: CreateRefreshToken :one
 INSERT INTO refresh_tokens (token, created_at, updated_at, user_id, expires_at, revoked_at)
 VALUES (
-    sqlc.arg('token'),
+    @token,
     NOW(),
     NOW(),
-    sqlc.arg('user_id'),
-    sqlc.arg('expires_at'),
+    @user_id,
+    @expires_at,
     NULL
 )
 RETURNING *;

@@ -28,8 +28,8 @@ RETURNING *;
 
 -- name: ReassignTransactions :exec
 UPDATE transactions
-SET payee_id = sqlc.arg('new_payee_id')
-WHERE payee_id = sqlc.arg('old_payee_id');
+SET payee_id = @new_payee_id
+WHERE payee_id = @old_payee_id;
 
 -- name: IsPayeeInUse :one
 SELECT EXISTS (
