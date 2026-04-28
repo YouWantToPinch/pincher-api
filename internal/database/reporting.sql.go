@@ -14,73 +14,62 @@ import (
 
 const getMonthCategoryReport = `-- name: GetMonthCategoryReport :one
 SELECT 
-    c.id AS category_id,
-    c.name AS category_name,
-    c.budget_id,
-    COALESCE(cr.month, t.month) AS month,
-    CASE WHEN cr.month = t.month THEN cr.activity ELSE 0 END AS activity,
-    CASE WHEN cr.month = t.month THEN cr.assigned ELSE 0 END AS assigned,
-    COALESCE(cr.balance, 0) AS balance
-FROM categories c
-CROSS JOIN (SELECT date_trunc('month', $1::date) AS month) t
-LEFT JOIN category_reports cr 
-    ON c.id = cr.category_id 
-    AND cr.month <= t.month
-WHERE c.budget_id = $2::uuid AND c.id = $3::uuid
-ORDER BY cr.month DESC
+  month::DATE AS month,
+  category_id::uuid AS category_id,
+  category_name::text AS category_name,
+  COALESCE(assigned, 0)::bigint AS assigned,
+  COALESCE(activity, 0)::bigint AS activity,
+  COALESCE(balance, 0)::bigint AS balance
+FROM rep.get_category_reports_gate(
+  $1::uuid, 
+  $2::date
+)
+WHERE category_id = $3::uuid
 LIMIT 1
 `
 
 type GetMonthCategoryReportParams struct {
-	MonthID    time.Time
 	BudgetID   uuid.UUID
+	MonthID    time.Time
 	CategoryID uuid.UUID
 }
 
 type GetMonthCategoryReportRow struct {
+	Month        time.Time
 	CategoryID   uuid.UUID
 	CategoryName string
-	BudgetID     uuid.UUID
-	Month        time.Time
-	Activity     int64
 	Assigned     int64
+	Activity     int64
 	Balance      int64
 }
 
 func (q *Queries) GetMonthCategoryReport(ctx context.Context, arg GetMonthCategoryReportParams) (GetMonthCategoryReportRow, error) {
-	row := q.db.QueryRow(ctx, getMonthCategoryReport, arg.MonthID, arg.BudgetID, arg.CategoryID)
+	row := q.db.QueryRow(ctx, getMonthCategoryReport, arg.BudgetID, arg.MonthID, arg.CategoryID)
 	var i GetMonthCategoryReportRow
 	err := row.Scan(
+		&i.Month,
 		&i.CategoryID,
 		&i.CategoryName,
-		&i.BudgetID,
-		&i.Month,
-		&i.Activity,
 		&i.Assigned,
+		&i.Activity,
 		&i.Balance,
 	)
 	return i, err
 }
 
 const getMonthCategoryReports = `-- name: GetMonthCategoryReports :many
-WITH target AS (
-    SELECT date_trunc('month', $2::date) AS month
+SELECT 
+  month::DATE AS month,
+  category_id::uuid AS category_id,
+  category_name::text AS category_name,
+  COALESCE(assigned, 0)::bigint AS assigned,
+  COALESCE(activity, 0)::bigint AS activity,
+  COALESCE(balance, 0)::bigint AS balance
+FROM rep.get_category_reports_gate(
+  $1::uuid, 
+  $2::date
 )
-SELECT DISTINCT ON (c.id)
-    c.id AS category_id,
-    c.name AS category_name,
-    c.budget_id,
-    COALESCE(cr.month, t.month) AS month, -- Use target month if View row is missing
-    CASE WHEN cr.month = t.month THEN cr.activity ELSE 0 END AS activity,
-    CASE WHEN cr.month = t.month THEN cr.assigned ELSE 0 END AS assigned,
-    COALESCE(cr.balance, 0) AS balance
-FROM categories c
-CROSS JOIN target t
-LEFT JOIN category_reports cr 
-    ON c.id = cr.category_id 
-    AND cr.month <= t.month
-WHERE c.budget_id = $1::uuid
-ORDER BY c.id, cr.month DESC
+ORDER BY category_name
 `
 
 type GetMonthCategoryReportsParams struct {
@@ -89,12 +78,11 @@ type GetMonthCategoryReportsParams struct {
 }
 
 type GetMonthCategoryReportsRow struct {
+	Month        time.Time
 	CategoryID   uuid.UUID
 	CategoryName string
-	BudgetID     uuid.UUID
-	Month        time.Time
-	Activity     int64
 	Assigned     int64
+	Activity     int64
 	Balance      int64
 }
 
@@ -108,12 +96,11 @@ func (q *Queries) GetMonthCategoryReports(ctx context.Context, arg GetMonthCateg
 	for rows.Next() {
 		var i GetMonthCategoryReportsRow
 		if err := rows.Scan(
+			&i.Month,
 			&i.CategoryID,
 			&i.CategoryName,
-			&i.BudgetID,
-			&i.Month,
-			&i.Activity,
 			&i.Assigned,
+			&i.Activity,
 			&i.Balance,
 		); err != nil {
 			return nil, err
@@ -127,38 +114,38 @@ func (q *Queries) GetMonthCategoryReports(ctx context.Context, arg GetMonthCateg
 }
 
 const getMonthReport = `-- name: GetMonthReport :one
-WITH reports AS (
-    SELECT DISTINCT ON (category_id)
-        month,
-        activity,
-        assigned,
-        balance
-    FROM category_reports
-    WHERE budget_id = $2::uuid 
-      AND month <= date_trunc('month', $1::date)
-    ORDER BY category_id, month DESC
-)
 SELECT 
-    COALESCE(SUM(assigned) FILTER (WHERE month = date_trunc('month', $1::date)), 0)::bigint AS assigned,
-    COALESCE(SUM(activity) FILTER (WHERE month = date_trunc('month', $1::date)), 0)::bigint AS activity,
-    COALESCE(SUM(balance), 0)::bigint AS balance
-FROM reports
+  month::DATE AS month,
+  COALESCE(SUM(assigned), 0)::bigint AS assigned,
+  COALESCE(SUM(activity), 0)::bigint AS activity,
+  COALESCE(SUM(balance), 0)::bigint AS balance
+FROM rep.get_category_reports_gate(
+  $1::uuid, 
+  $2::date
+)
+GROUP BY month
 `
 
 type GetMonthReportParams struct {
-	MonthID  time.Time
 	BudgetID uuid.UUID
+	MonthID  time.Time
 }
 
 type GetMonthReportRow struct {
+	Month    time.Time
 	Assigned int64
 	Activity int64
 	Balance  int64
 }
 
 func (q *Queries) GetMonthReport(ctx context.Context, arg GetMonthReportParams) (GetMonthReportRow, error) {
-	row := q.db.QueryRow(ctx, getMonthReport, arg.MonthID, arg.BudgetID)
+	row := q.db.QueryRow(ctx, getMonthReport, arg.BudgetID, arg.MonthID)
 	var i GetMonthReportRow
-	err := row.Scan(&i.Assigned, &i.Activity, &i.Balance)
+	err := row.Scan(
+		&i.Month,
+		&i.Assigned,
+		&i.Activity,
+		&i.Balance,
+	)
 	return i, err
 }
