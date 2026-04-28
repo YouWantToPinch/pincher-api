@@ -4,10 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/YouWantToPinch/pincher-api/internal/database"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-
-	"github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *http.Request) {
