@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func (cfg *APIConfig) handleCreateBudget(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +36,7 @@ func (cfg *APIConfig) handleCreateBudget(w http.ResponseWriter, r *http.Request)
 
 		q := cfg.db.WithTx(tx)
 
-		dbBudget, err := q.CreateBudget(r.Context(), database.CreateBudgetParams{
+		dbBudget, err := q.CreateBudget(r.Context(), db.CreateBudgetParams{
 			AdminID: validatedUserID,
 			Name:    rqPayload.Name,
 			Notes:   rqPayload.Notes,
@@ -46,7 +46,7 @@ func (cfg *APIConfig) handleCreateBudget(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		_, err = q.AssignBudgetMemberWithRole(r.Context(), database.AssignBudgetMemberWithRoleParams{
+		_, err = q.AssignBudgetMemberWithRole(r.Context(), db.AssignBudgetMemberWithRoleParams{
 			BudgetID:   dbBudget.ID,
 			UserID:     validatedUserID,
 			MemberRole: "ADMIN",
@@ -106,7 +106,7 @@ func (cfg *APIConfig) handleGetUserBudgets(w http.ResponseWriter, r *http.Reques
 		roleFilters = strings.Split(rolesParam, ",")
 	}
 
-	dbBudgets, err := cfg.db.GetUserBudgets(r.Context(), database.GetUserBudgetsParams{
+	dbBudgets, err := cfg.db.GetUserBudgets(r.Context(), db.GetUserBudgetsParams{
 		UserID: validatedUserID,
 		Roles:  roleFilters,
 	})
@@ -145,7 +145,7 @@ func (cfg *APIConfig) handleGetBudgetCapital(w http.ResponseWriter, r *http.Requ
 	accountTypeQuery := r.URL.Query().Get("account_type")
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
-	capitalAmount, err := cfg.db.GetBudgetCapital(r.Context(), database.GetBudgetCapitalParams{
+	capitalAmount, err := cfg.db.GetBudgetCapital(r.Context(), db.GetBudgetCapitalParams{
 		BudgetID:    pathBudgetID,
 		AccountType: accountTypeQuery,
 	})
@@ -195,7 +195,7 @@ func (cfg *APIConfig) handleAddBudgetMemberWithRole(w http.ResponseWriter, r *ht
 		return
 	}
 
-	dbBudgetMembership, err := cfg.db.AssignBudgetMemberWithRole(r.Context(), database.AssignBudgetMemberWithRoleParams{
+	dbBudgetMembership, err := cfg.db.AssignBudgetMemberWithRole(r.Context(), db.AssignBudgetMemberWithRoleParams{
 		BudgetID:   pathBudgetID,
 		UserID:     user.ID,
 		MemberRole: newMemberRole.String(),
@@ -223,7 +223,7 @@ func (cfg *APIConfig) handleRemoveBudgetMember(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	err = cfg.db.RevokeBudgetMembership(r.Context(), database.RevokeBudgetMembershipParams{
+	err = cfg.db.RevokeBudgetMembership(r.Context(), db.RevokeBudgetMembershipParams{
 		BudgetID: pathBudgetID,
 		UserID:   pathUserID,
 	})
@@ -247,7 +247,7 @@ func (cfg *APIConfig) handleUpdateBudget(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, err = cfg.db.UpdateBudget(r.Context(), database.UpdateBudgetParams{
+	_, err = cfg.db.UpdateBudget(r.Context(), db.UpdateBudgetParams{
 		ID:    pathBudgetID,
 		Name:  rqPayload.Name,
 		Notes: rqPayload.Notes,

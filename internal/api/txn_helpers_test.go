@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func TestCheckIsTransfer(t *testing.T) {
@@ -124,8 +124,8 @@ func TestInvertAmountsMap(t *testing.T) {
 
 func TestGetOrderedTransferIDs(t *testing.T) {
 	// PREP: pointers for testing
-	fromTxnPtr := &database.Transaction{TransactionType: "TRANSFER_FROM"}
-	toTxnPtr := &database.Transaction{TransactionType: "TRANSFER_TO"}
+	fromTxnPtr := &db.Transaction{TransactionType: "TRANSFER_FROM"}
+	toTxnPtr := &db.Transaction{TransactionType: "TRANSFER_TO"}
 
 	t.Run("input 'to, from' returns identical", func(t *testing.T) {
 		toPtr, fromPtr, _ := getOrderedTransferIDs(toTxnPtr, fromTxnPtr)
@@ -140,14 +140,14 @@ func TestGetOrderedTransferIDs(t *testing.T) {
 		}
 	})
 	t.Run("input 'to, non-transfer' returns error", func(t *testing.T) {
-		nonTransferTxnPtr := &database.Transaction{TransactionType: "DEPOSIT"}
+		nonTransferTxnPtr := &db.Transaction{TransactionType: "DEPOSIT"}
 		_, _, err := getOrderedTransferIDs(toTxnPtr, nonTransferTxnPtr)
 		if err == nil {
 			t.Errorf("expected error, but got none")
 		}
 	})
 	t.Run("input 'to, to-transfer' returns error", func(t *testing.T) {
-		otherToTxnPtr := &database.Transaction{TransactionType: "TRANSFER_TO"}
+		otherToTxnPtr := &db.Transaction{TransactionType: "TRANSFER_TO"}
 		_, _, err := getOrderedTransferIDs(toTxnPtr, otherToTxnPtr)
 		if err == nil {
 			t.Errorf("expected error, but got none")

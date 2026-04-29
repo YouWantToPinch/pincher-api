@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -91,7 +91,7 @@ func (cfg *APIConfig) handleLogTransaction(w http.ResponseWriter, r *http.Reques
 			}, nil
 		}
 
-		newTxn, msg, err := pgxLogTxn(q, r.Context(), database.LogTransactionParams{
+		newTxn, msg, err := pgxLogTxn(q, r.Context(), db.LogTransactionParams{
 			BudgetID:        pathBudgetID,
 			LoggerID:        validatedUserID,
 			AccountID:       validatedTxn.accountID,
@@ -111,7 +111,7 @@ func (cfg *APIConfig) handleLogTransaction(w http.ResponseWriter, r *http.Reques
 		}
 		if validatedTxn.isTransfer {
 			// log the corresponding transaction
-			transferTxn, msg, err := pgxLogTxn(q, r.Context(), database.LogTransactionParams{
+			transferTxn, msg, err := pgxLogTxn(q, r.Context(), db.LogTransactionParams{
 				BudgetID:        pathBudgetID,
 				LoggerID:        validatedUserID,
 				AccountID:       validatedTxn.transferAccountID,
@@ -135,7 +135,7 @@ func (cfg *APIConfig) handleLogTransaction(w http.ResponseWriter, r *http.Reques
 				respondWithError(w, http.StatusInternalServerError, "could not link transfer transactions", err)
 				return
 			}
-			_, err = q.LogAccountTransfer(r.Context(), database.LogAccountTransferParams{
+			_, err = q.LogAccountTransfer(r.Context(), db.LogAccountTransferParams{
 				FromTransactionID: (*fromPtr).ID,
 				ToTransactionID:   (*toPtr).ID,
 			})

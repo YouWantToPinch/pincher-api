@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func (cfg *APIConfig) handleCreateGroup(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +24,7 @@ func (cfg *APIConfig) handleCreateGroup(w http.ResponseWriter, r *http.Request) 
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	dbGroup, err := cfg.db.CreateGroup(r.Context(), database.CreateGroupParams{
+	dbGroup, err := cfg.db.CreateGroup(r.Context(), db.CreateGroupParams{
 		BudgetID: pathBudgetID,
 		Name:     rqPayload.Name,
 		Notes:    rqPayload.Notes,
@@ -98,7 +98,7 @@ func (cfg *APIConfig) handleUpdateGroup(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = cfg.db.UpdateGroup(r.Context(), database.UpdateGroupParams{
+	_, err = cfg.db.UpdateGroup(r.Context(), db.UpdateGroupParams{
 		ID:    pathGroupID,
 		Name:  rqPayload.Name,
 		Notes: rqPayload.Notes,
@@ -120,7 +120,7 @@ func (cfg *APIConfig) handleDeleteGroup(w http.ResponseWriter, r *http.Request) 
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	dbGroup, err := cfg.db.GetGroupByID(r.Context(), database.GetGroupByIDParams{
+	dbGroup, err := cfg.db.GetGroupByID(r.Context(), db.GetGroupByIDParams{
 		BudgetID: pathBudgetID,
 		ID:       pathGroupID,
 	})

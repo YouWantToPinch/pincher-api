@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func (cfg *APIConfig) handleAddAccount(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func (cfg *APIConfig) handleAddAccount(w http.ResponseWriter, r *http.Request) {
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	dbAccount, err := cfg.db.AddAccount(r.Context(), database.AddAccountParams{
+	dbAccount, err := cfg.db.AddAccount(r.Context(), db.AddAccountParams{
 		BudgetID:    pathBudgetID,
 		AccountType: rqPayload.AccountType,
 		Name:        rqPayload.Name,
@@ -166,7 +166,7 @@ func (cfg *APIConfig) handleUpdateAccount(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err = cfg.db.UpdateAccount(r.Context(), database.UpdateAccountParams{
+	_, err = cfg.db.UpdateAccount(r.Context(), db.UpdateAccountParams{
 		ID:    pathAccountID,
 		Name:  rqPayload.Name,
 		Notes: rqPayload.Notes,

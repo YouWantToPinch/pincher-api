@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func (cfg *APIConfig) handleCreatePayee(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +24,7 @@ func (cfg *APIConfig) handleCreatePayee(w http.ResponseWriter, r *http.Request) 
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	dbPayee, err := cfg.db.CreatePayee(r.Context(), database.CreatePayeeParams{
+	dbPayee, err := cfg.db.CreatePayee(r.Context(), db.CreatePayeeParams{
 		BudgetID: pathBudgetID,
 		Name:     rqPayload.Name,
 		Notes:    rqPayload.Notes,
@@ -125,7 +125,7 @@ func (cfg *APIConfig) handleUpdatePayee(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = cfg.db.UpdatePayee(r.Context(), database.UpdatePayeeParams{
+	_, err = cfg.db.UpdatePayee(r.Context(), db.UpdatePayeeParams{
 		ID:    pathPayeeID,
 		Name:  rqPayload.Name,
 		Notes: rqPayload.Notes,
@@ -190,7 +190,7 @@ func (cfg *APIConfig) handleDeletePayee(w http.ResponseWriter, r *http.Request) 
 				return
 			}
 			PayeeID, err := lookupResourceIDByName(r.Context(),
-				database.GetBudgetPayeeIDByNameParams{
+				db.GetBudgetPayeeIDByNameParams{
 					PayeeName: rqPayload.NewPayeeName,
 					BudgetID:  pathBudgetID,
 				}, q.GetBudgetPayeeIDByName)
@@ -199,7 +199,7 @@ func (cfg *APIConfig) handleDeletePayee(w http.ResponseWriter, r *http.Request) 
 				return
 			}
 
-			err = q.ReassignTransactions(r.Context(), database.ReassignTransactionsParams{
+			err = q.ReassignTransactions(r.Context(), db.ReassignTransactionsParams{
 				OldPayeeID: pathPayeeID,
 				NewPayeeID: PayeeID,
 			})

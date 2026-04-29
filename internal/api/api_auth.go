@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/YouWantToPinch/pincher-api/internal/auth"
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -57,7 +57,7 @@ func (cfg *APIConfig) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 
 		q := cfg.db.WithTx(tx)
 
-		_, err = q.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		_, err = q.CreateRefreshToken(r.Context(), db.CreateRefreshTokenParams{
 			Token:     refreshToken,
 			UserID:    dbUser.ID,
 			ExpiresAt: time.Now().UTC().UTC().Add(time.Hour * 24 * 30),
@@ -133,7 +133,7 @@ func (cfg *APIConfig) handleRevokeRefreshToken(w http.ResponseWriter, r *http.Re
 // governing management of refresh tokens. Callers may optionally omit the
 // refresh token field from the response payload, opting for an HttpOnly cookie
 // instead for browser contexts.
-func (cfg *APIConfig) makeAuthPayload(w http.ResponseWriter, r *http.Request, dbUser *database.User, accessToken, refreshToken string) any {
+func (cfg *APIConfig) makeAuthPayload(w http.ResponseWriter, r *http.Request, dbUser *db.User, accessToken, refreshToken string) any {
 	contains := func(sub string) bool { return strings.Contains(r.URL.String(), sub) }
 
 	asksForUser := (contains("/refresh") || contains("/revoke")) && r.URL.Query().Has("with-user")

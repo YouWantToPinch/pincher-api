@@ -14,7 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 type DBConfig struct {
@@ -26,7 +26,7 @@ type DBConfig struct {
 }
 
 type APIConfig struct {
-	db        *database.Queries
+	db        *db.Queries
 	Pool      *pgxpool.Pool
 	dbURL     string
 	platform  string
@@ -195,5 +195,5 @@ func (cfg *APIConfig) ConnectToDB(fs embed.FS, migrationsDir string) {
 	}
 	cfg.Pool = pool
 
-	cfg.db = database.New(pool)
+	cfg.db = db.New(pool)
 }

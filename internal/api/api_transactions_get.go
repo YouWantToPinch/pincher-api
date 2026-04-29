@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -136,7 +136,7 @@ func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Reque
 		parsedAccountID := uuid.Nil
 		if accountName != "" {
 			parsedAccountID, err = lookupResourceIDByName(r.Context(),
-				database.GetBudgetAccountIDByNameParams{
+				db.GetBudgetAccountIDByNameParams{
 					AccountName: accountName,
 					BudgetID:    pathBudgetID,
 				}, q.GetBudgetAccountIDByName)
@@ -149,7 +149,7 @@ func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Reque
 		parsedCategoryID := uuid.Nil
 		if categoryName != "" {
 			parsedCategoryID, err = lookupResourceIDByName(r.Context(),
-				database.GetBudgetCategoryIDByNameParams{
+				db.GetBudgetCategoryIDByNameParams{
 					CategoryName: categoryName,
 					BudgetID:     pathBudgetID,
 				}, q.GetBudgetCategoryIDByName)
@@ -162,7 +162,7 @@ func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Reque
 		parsedPayeeID := uuid.Nil
 		if payeeName != "" {
 			parsedPayeeID, err = lookupResourceIDByName(r.Context(),
-				database.GetBudgetPayeeIDByNameParams{
+				db.GetBudgetPayeeIDByNameParams{
 					PayeeName: payeeName,
 					BudgetID:  pathBudgetID,
 				}, q.GetBudgetPayeeIDByName)
@@ -174,7 +174,7 @@ func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Reque
 
 		if !getDetails {
 
-			dbTransactions, err := q.GetTransactions(r.Context(), database.GetTransactionsParams{
+			dbTransactions, err := q.GetTransactions(r.Context(), db.GetTransactionsParams{
 				AccountID:  parsedAccountID,
 				CategoryID: parsedCategoryID,
 				PayeeID:    parsedPayeeID,
@@ -221,7 +221,7 @@ func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Reque
 			return
 
 		} else {
-			detailedTxns, err := q.GetTransactionDetails(r.Context(), database.GetTransactionDetailsParams{
+			detailedTxns, err := q.GetTransactionDetails(r.Context(), db.GetTransactionDetailsParams{
 				AccountID:  parsedAccountID,
 				CategoryID: parsedCategoryID,
 				PayeeID:    parsedPayeeID,

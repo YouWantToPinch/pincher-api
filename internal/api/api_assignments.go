@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -55,28 +55,28 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 		}
 	}
 
-	assignToCat := func(categoryName string, amount int64) (database.Assignment, error) {
+	assignToCat := func(categoryName string, amount int64) (db.Assignment, error) {
 		parsedCategoryID := uuid.Nil
 		if rqPayload.ToCategory != "" {
 			parsedCategoryID, err = lookupResourceIDByName(r.Context(),
-				database.GetBudgetCategoryIDByNameParams{
+				db.GetBudgetCategoryIDByNameParams{
 					CategoryName: categoryName,
 					BudgetID:     pathBudgetID,
 				}, q.GetBudgetCategoryIDByName)
 			if err != nil {
 				respondWithError(w, http.StatusBadRequest, "could not get category by given name", err)
-				return database.Assignment{}, err
+				return db.Assignment{}, err
 			}
 		}
 
-		dbAssignment, err := q.AssignAmountToCategory(r.Context(), database.AssignAmountToCategoryParams{
+		dbAssignment, err := q.AssignAmountToCategory(r.Context(), db.AssignAmountToCategoryParams{
 			MonthID:    parsedMonth,
 			CategoryID: parsedCategoryID,
 			Amount:     amount,
 		})
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "could not assign amount to category for month specified", err)
-			return database.Assignment{}, err
+			return db.Assignment{}, err
 		}
 		return dbAssignment, err
 	}
@@ -121,7 +121,7 @@ func (cfg *APIConfig) handleGetMonthReport(w http.ResponseWriter, r *http.Reques
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	monthReport, err := cfg.db.GetMonthReport(r.Context(), database.GetMonthReportParams{
+	monthReport, err := cfg.db.GetMonthReport(r.Context(), db.GetMonthReportParams{
 		MonthID:  parsedMonthID,
 		BudgetID: pathBudgetID,
 	})
@@ -149,7 +149,7 @@ func (cfg *APIConfig) handleGetMonthCategories(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	dbCategoryReports, err := cfg.db.GetMonthCategoryReports(r.Context(), database.GetMonthCategoryReportsParams{
+	dbCategoryReports, err := cfg.db.GetMonthCategoryReports(r.Context(), db.GetMonthCategoryReportsParams{
 		MonthID:  parsedMonthID,
 		BudgetID: pathBudgetID,
 	})
@@ -196,7 +196,7 @@ func (cfg *APIConfig) handleGetMonthCategoryReport(w http.ResponseWriter, r *htt
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
-	dbCategoryReport, err := cfg.db.GetMonthCategoryReport(r.Context(), database.GetMonthCategoryReportParams{
+	dbCategoryReport, err := cfg.db.GetMonthCategoryReport(r.Context(), db.GetMonthCategoryReportParams{
 		MonthID:    parsedMonthID,
 		CategoryID: pathCategoryID,
 		BudgetID:   pathBudgetID,
@@ -227,7 +227,7 @@ func (cfg *APIConfig) handleGetMonthGroups(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	dbGroupReports, err := cfg.db.GetMonthGroupReports(r.Context(), database.GetMonthGroupReportsParams{
+	dbGroupReports, err := cfg.db.GetMonthGroupReports(r.Context(), db.GetMonthGroupReportsParams{
 		MonthID:  parsedMonthID,
 		BudgetID: pathBudgetID,
 	})
@@ -273,7 +273,7 @@ func (cfg *APIConfig) handleGetMonthGroupReport(w http.ResponseWriter, r *http.R
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
-	dbGroupReport, err := cfg.db.GetMonthGroupReport(r.Context(), database.GetMonthGroupReportParams{
+	dbGroupReport, err := cfg.db.GetMonthGroupReport(r.Context(), db.GetMonthGroupReportParams{
 		MonthID:  parsedMonthID,
 		GroupID:  pathGroupID,
 		BudgetID: pathBudgetID,

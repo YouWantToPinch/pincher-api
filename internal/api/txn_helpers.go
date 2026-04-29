@@ -8,7 +8,7 @@ import (
 	"maps"
 	"time"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 // validateTxnInput parses relevant inputs: txn amounts, txnDate, transfer status, txnType.
@@ -109,7 +109,7 @@ func invertTransferType(s string) string {
 // getTransferIDs returns two given LogTransactionRow pointers in 'to, from' order,
 // according to their underlying TransactionType fields.
 // If the type of either is NOT a transfer, an error is returned.
-func getOrderedTransferIDs(t1, t2 *database.Transaction) (toTxn *database.Transaction, fromTxn *database.Transaction, err error) {
+func getOrderedTransferIDs(t1, t2 *db.Transaction) (toTxn *db.Transaction, fromTxn *db.Transaction, err error) {
 	if !checkIsTransfer(t1.TransactionType) || !checkIsTransfer(t2.TransactionType) {
 		return nil, nil, fmt.Errorf("one or more txns given is not a transfer type")
 	}
@@ -125,7 +125,7 @@ func getOrderedTransferIDs(t1, t2 *database.Transaction) (toTxn *database.Transa
 
 // pgxUpdateTxn performs an update on a transaction given the parameters,
 // including deletion of existing splits and re-insertion of new ones, if necessary.
-func pgxUpdateTxn(q *database.Queries, ctx context.Context, params database.UpdateTransactionParams, splits map[string]int64) (errMsg string, err error) {
+func pgxUpdateTxn(q *db.Queries, ctx context.Context, params db.UpdateTransactionParams, splits map[string]int64) (errMsg string, err error) {
 	if checkIsTransfer(params.TransactionType) {
 		amount := totalFromAmountsMap(splits)
 		slog.Debug("TRANSFER TXN", slog.Int64("amount", amount))
@@ -152,7 +152,7 @@ func pgxUpdateTxn(q *database.Queries, ctx context.Context, params database.Upda
 			return chooseErrMsg("could not delete corresponding transfer transaction splits",
 				"could not delete transaction splits"), nil
 		}
-		if _, err = q.LogTransactionSplits(ctx, database.LogTransactionSplitsParams{
+		if _, err = q.LogTransactionSplits(ctx, db.LogTransactionSplitsParams{
 			TransactionID: params.TransactionID,
 			Amounts:       amountsJSONBytes,
 		}); err != nil {
@@ -165,7 +165,7 @@ func pgxUpdateTxn(q *database.Queries, ctx context.Context, params database.Upda
 
 // pgxLogTxn performs an insert on the transasction table given the parameters,
 // and inserts the relevant transaction splits as well.
-func pgxLogTxn(q *database.Queries, ctx context.Context, params database.LogTransactionParams, splits map[string]int64) (txn *database.Transaction, errMsg string, err error) {
+func pgxLogTxn(q *db.Queries, ctx context.Context, params db.LogTransactionParams, splits map[string]int64) (txn *db.Transaction, errMsg string, err error) {
 	if checkIsTransfer(params.TransactionType) {
 		amount := totalFromAmountsMap(splits)
 		slog.Debug("TRANSFER TXN", slog.Int64("amount", amount))
@@ -188,7 +188,7 @@ func pgxLogTxn(q *database.Queries, ctx context.Context, params database.LogTran
 			return nil, chooseErrMsg("could not marshal split for corresponding transfer transaction to log",
 				"could not marshal splits for new transaction"), nil
 		}
-		if _, err := q.LogTransactionSplits(ctx, database.LogTransactionSplitsParams{
+		if _, err := q.LogTransactionSplits(ctx, db.LogTransactionSplitsParams{
 			TransactionID: newTxn.ID,
 			Amounts:       amountsJSONBytes,
 		}); err != nil {

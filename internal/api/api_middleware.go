@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/YouWantToPinch/pincher-api/internal/auth"
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -88,7 +88,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 			return
 		}
 
-		callerRole, err := cfg.db.GetBudgetMemberRole(r.Context(), database.GetBudgetMemberRoleParams{
+		callerRole, err := cfg.db.GetBudgetMemberRole(r.Context(), db.GetBudgetMemberRoleParams{
 			BudgetID: pathBudgetID,
 			UserID:   validatedUserID,
 		})
@@ -134,7 +134,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 		}
 
 		accountID, err := lookupResourceIDByName(r.Context(),
-			database.GetBudgetAccountIDByNameParams{
+			db.GetBudgetAccountIDByNameParams{
 				AccountName: rqPayload.AccountName,
 				BudgetID:    pathBudgetID,
 			}, cfg.db.GetBudgetAccountIDByName)
@@ -144,7 +144,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 		}
 		validatedTxn.accountID = accountID
 
-		accountIDAndType, err := cfg.db.GetBudgetAccountIDAndTypeByName(r.Context(), database.GetBudgetAccountIDAndTypeByNameParams{
+		accountIDAndType, err := cfg.db.GetBudgetAccountIDAndTypeByName(r.Context(), db.GetBudgetAccountIDAndTypeByNameParams{
 			AccountName: rqPayload.AccountName,
 			BudgetID:    pathBudgetID,
 		})
@@ -156,7 +156,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 
 		if validatedTxn.isTransfer {
 			transferAccountID, err := lookupResourceIDByName(r.Context(),
-				database.GetBudgetAccountIDByNameParams{
+				db.GetBudgetAccountIDByNameParams{
 					AccountName: rqPayload.TransferAccountName,
 					BudgetID:    pathBudgetID,
 				}, cfg.db.GetBudgetAccountIDByName)
@@ -168,7 +168,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 			validatedTxn.payeeID = uuid.Nil
 		} else {
 			payeeID, err := lookupResourceIDByName(r.Context(),
-				database.GetBudgetPayeeIDByNameParams{
+				db.GetBudgetPayeeIDByNameParams{
 					PayeeName: rqPayload.PayeeName,
 					BudgetID:  pathBudgetID,
 				}, cfg.db.GetBudgetPayeeIDByName)
@@ -193,7 +193,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 				continue
 			}
 			categoryID, err := lookupResourceIDByName(r.Context(),
-				database.GetBudgetCategoryIDByNameParams{
+				db.GetBudgetCategoryIDByNameParams{
 					CategoryName: k,
 					BudgetID:     pathBudgetID,
 				}, cfg.db.GetBudgetCategoryIDByName)

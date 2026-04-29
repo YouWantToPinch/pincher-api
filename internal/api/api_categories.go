@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Reques
 	var assignedGroupID *uuid.UUID
 	if rqPayload.GroupName != "" {
 		groupID, err := lookupResourceIDByName(r.Context(),
-			database.GetBudgetGroupIDByNameParams{
+			db.GetBudgetGroupIDByNameParams{
 				GroupName: rqPayload.GroupName,
 				BudgetID:  pathBudgetID,
 			}, cfg.db.GetBudgetGroupIDByName)
@@ -43,7 +43,7 @@ func (cfg *APIConfig) handleCreateCategory(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	dbCategory, err := cfg.db.CreateCategory(r.Context(), database.CreateCategoryParams{
+	dbCategory, err := cfg.db.CreateCategory(r.Context(), db.CreateCategoryParams{
 		BudgetID: pathBudgetID,
 		GroupID:  assignedGroupID,
 		Name:     rqPayload.Name,
@@ -78,7 +78,7 @@ func (cfg *APIConfig) handleGetCategories(w http.ResponseWriter, r *http.Request
 	parsedGroupID := uuid.Nil
 	if groupNameQuery != "" {
 		parsedGroupID, err = lookupResourceIDByName(r.Context(),
-			database.GetBudgetGroupIDByNameParams{
+			db.GetBudgetGroupIDByNameParams{
 				GroupName: groupNameQuery,
 				BudgetID:  pathBudgetID,
 			}, cfg.db.GetBudgetGroupIDByName)
@@ -88,7 +88,7 @@ func (cfg *APIConfig) handleGetCategories(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	categories, err := cfg.db.GetCategories(r.Context(), database.GetCategoriesParams{
+	categories, err := cfg.db.GetCategories(r.Context(), db.GetCategoriesParams{
 		BudgetID: pathBudgetID,
 		GroupID:  parsedGroupID,
 	})
@@ -146,7 +146,7 @@ func (cfg *APIConfig) handleUpdateCategory(w http.ResponseWriter, r *http.Reques
 	var assignedGroupID *uuid.UUID
 	if rqPayload.GroupName != "" {
 		groupID, err := lookupResourceIDByName(r.Context(),
-			database.GetBudgetGroupIDByNameParams{
+			db.GetBudgetGroupIDByNameParams{
 				GroupName: rqPayload.GroupName,
 				BudgetID:  pathBudgetID,
 			}, cfg.db.GetBudgetGroupIDByName)
@@ -159,7 +159,7 @@ func (cfg *APIConfig) handleUpdateCategory(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	_, err = cfg.db.UpdateCategory(r.Context(), database.UpdateCategoryParams{
+	_, err = cfg.db.UpdateCategory(r.Context(), db.UpdateCategoryParams{
 		ID:      pathCategoryID,
 		GroupID: assignedGroupID,
 		Name:    rqPayload.Name,

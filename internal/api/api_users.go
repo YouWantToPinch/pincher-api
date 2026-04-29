@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/YouWantToPinch/pincher-api/internal/auth"
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func (cfg *APIConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func (cfg *APIConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbUser, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
+	dbUser, err := cfg.db.CreateUser(r.Context(), db.CreateUserParams{
 		Username:       rqPayload.Username,
 		HashedPassword: hashedPass,
 	})
@@ -73,7 +73,7 @@ func (cfg *APIConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http
 
 	validatedUserID := getContextKeyValueAsUUID(r.Context(), "user_id")
 
-	_, err = cfg.db.UpdateUserCredentials(r.Context(), database.UpdateUserCredentialsParams{
+	_, err = cfg.db.UpdateUserCredentials(r.Context(), db.UpdateUserCredentialsParams{
 		ID:             validatedUserID,
 		Username:       rqPayload.Username,
 		HashedPassword: hashedPass,

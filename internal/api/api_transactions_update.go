@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/YouWantToPinch/pincher-api/internal/database"
+	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
 
 func (cfg *APIConfig) handleUpdateTransaction(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +42,7 @@ func (cfg *APIConfig) handleUpdateTransaction(w http.ResponseWriter, r *http.Req
 		if dbTxnDetails.TotalAmount != totalFromAmountsMap(validatedTxn.amounts) {
 			splits = validatedTxn.amounts
 		}
-		if msg, err := pgxUpdateTxn(q, r.Context(), database.UpdateTransactionParams{
+		if msg, err := pgxUpdateTxn(q, r.Context(), db.UpdateTransactionParams{
 			TransactionID:   pathTransactionID,
 			AccountID:       validatedTxn.accountID,
 			TransactionType: validatedTxn.txnType,
@@ -64,7 +64,7 @@ func (cfg *APIConfig) handleUpdateTransaction(w http.ResponseWriter, r *http.Req
 				respondWithError(w, http.StatusInternalServerError, "could not find corresponding txn to update", err)
 				return
 			}
-			if msg, err := pgxUpdateTxn(q, r.Context(), database.UpdateTransactionParams{
+			if msg, err := pgxUpdateTxn(q, r.Context(), db.UpdateTransactionParams{
 				TransactionID:   linkedTxn.ID,
 				AccountID:       linkedTxn.AccountID,
 				TransactionType: invertTransferType(validatedTxn.txnType),
