@@ -131,6 +131,7 @@ func (cfg *APIConfig) handleGetMonthReport(w http.ResponseWriter, r *http.Reques
 	}
 
 	rspPayload := MonthReport{
+		MonthID:  monthReport.Month,
 		Assigned: monthReport.Assigned,
 		Activity: monthReport.Activity,
 		Balance:  monthReport.Balance,
@@ -160,11 +161,13 @@ func (cfg *APIConfig) handleGetMonthCategories(w http.ResponseWriter, r *http.Re
 	var categoryReports []CategoryReport
 	for _, report := range dbCategoryReports {
 		categoryReports = append(categoryReports, CategoryReport{
-			MonthID:  report.Month,
-			Name:     report.CategoryName,
-			Assigned: report.Assigned,
-			Activity: report.Activity,
-			Balance:  report.Balance,
+			MonthID:    report.Month,
+			CategoryID: report.CategoryID,
+			GroupID:    report.GroupID,
+			Name:       report.CategoryName,
+			Assigned:   report.Assigned,
+			Activity:   report.Activity,
+			Balance:    report.Balance,
 		})
 	}
 
@@ -204,11 +207,89 @@ func (cfg *APIConfig) handleGetMonthCategoryReport(w http.ResponseWriter, r *htt
 	}
 
 	rspPayload := CategoryReport{
-		MonthID:  dbCategoryReport.Month,
-		Name:     dbCategoryReport.CategoryName,
-		Assigned: dbCategoryReport.Assigned,
-		Activity: dbCategoryReport.Activity,
-		Balance:  dbCategoryReport.Balance,
+		MonthID:    dbCategoryReport.Month,
+		CategoryID: dbCategoryReport.CategoryID,
+		GroupID:    dbCategoryReport.GroupID,
+		Name:       dbCategoryReport.CategoryName,
+		Assigned:   dbCategoryReport.Assigned,
+		Activity:   dbCategoryReport.Activity,
+		Balance:    dbCategoryReport.Balance,
+	}
+	respondWithJSON(w, http.StatusOK, rspPayload)
+}
+
+func (cfg *APIConfig) handleGetMonthGroups(w http.ResponseWriter, r *http.Request) {
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
+
+	parsedMonthID, err := parseDateFromPath("month_id", r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "", err)
+		return
+	}
+
+	dbGroupReports, err := cfg.db.GetMonthGroupReports(r.Context(), database.GetMonthGroupReportsParams{
+		MonthID:  parsedMonthID,
+		BudgetID: pathBudgetID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not generate group reports for month specified", err)
+		return
+	}
+
+	var groupReports []GroupReport
+	for _, report := range dbGroupReports {
+		groupReports = append(groupReports, GroupReport{
+			MonthID:  report.Month,
+			Name:     report.GroupName,
+			GroupID:  report.GroupID,
+			Assigned: report.Assigned,
+			Activity: report.Activity,
+			Balance:  report.Balance,
+		})
+	}
+
+	type rspSchema struct {
+		GroupReports []GroupReport `json:"data"`
+	}
+
+	rspPayload := rspSchema{
+		GroupReports: groupReports,
+	}
+
+	respondWithJSON(w, http.StatusOK, rspPayload)
+}
+
+func (cfg *APIConfig) handleGetMonthGroupReport(w http.ResponseWriter, r *http.Request) {
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
+
+	parsedMonthID, err := parseDateFromPath("month_id", r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "", err)
+		return
+	}
+
+	pathGroupID, err := parseUUIDFromPath("group_id", r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "", err)
+		return
+	}
+	dbGroupReport, err := cfg.db.GetMonthGroupReport(r.Context(), database.GetMonthGroupReportParams{
+		MonthID:  parsedMonthID,
+		GroupID:  pathGroupID,
+		BudgetID: pathBudgetID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not generate group report for month specified", err)
+		return
+	}
+
+	rspPayload := GroupReport{
+		MonthID:  dbGroupReport.Month,
+		GroupID:  dbGroupReport.GroupID,
+		Name:     dbGroupReport.GroupName,
+		Assigned: dbGroupReport.Assigned,
+		Activity: dbGroupReport.Activity,
+		Balance:  dbGroupReport.Balance,
 	}
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }

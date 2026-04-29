@@ -141,15 +141,27 @@ type Payee struct {
 }
 
 type CategoryReport struct {
+	MonthID    time.Time `json:"month_id"`
+	CategoryID uuid.UUID `json:"category_id"`
+	GroupID    uuid.UUID `json:"group_id"`
+	Name       string    `json:"category_name"`
+	Assigned   int64     `json:"assigned"`
+	Activity   int64     `json:"activity"`
+	Balance    int64     `json:"balance"`
+}
+
+type GroupReport struct {
 	MonthID  time.Time `json:"month_id"`
-	Name     string    `json:"category_name"`
+	GroupID  uuid.UUID `json:"group_id"`
+	Name     string    `json:"group_name"`
 	Assigned int64     `json:"assigned"`
 	Activity int64     `json:"activity"`
 	Balance  int64     `json:"balance"`
 }
 
 type MonthReport struct {
-	Assigned int64 `json:"assigned"`
-	Activity int64 `json:"activity"`
-	Balance  int64 `json:"balance"`
+	MonthID  time.Time `json:"month_id"`
+	Assigned int64     `json:"assigned"`
+	Activity int64     `json:"activity"`
+	Balance  int64     `json:"balance"`
 }
