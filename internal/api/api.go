@@ -76,6 +76,8 @@ func SetupMux(cfg *APIConfig) http.Handler {
 	mux.HandleFunc("POST /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(MANAGER, cfg.handleAssignAmountToCategory)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategoryReport)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategories)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/groups/{group_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthGroupReport)))
+	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/groups", mdAuth(mdClear(VIEWER, cfg.handleGetMonthGroups)))
 	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthReport)))
 
 	handler := mdCors(mux)

@@ -52,16 +52,6 @@ type Category struct {
 	Notes     string
 }
 
-type CategoryReport struct {
-	Month        time.Time
-	CategoryName string
-	CategoryID   uuid.UUID
-	BudgetID     uuid.UUID
-	Assigned     int64
-	Activity     int64
-	Balance      int64
-}
-
 type Group struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
