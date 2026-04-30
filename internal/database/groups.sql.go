@@ -60,17 +60,11 @@ func (q *Queries) DeleteGroupByID(ctx context.Context, id uuid.UUID) error {
 const getGroupByID = `-- name: GetGroupByID :one
 SELECT id, created_at, updated_at, budget_id, name, notes
 FROM groups
-WHERE budget_id = $1
-    AND id = $2
+WHERE id = $1
 `
 
-type GetGroupByIDParams struct {
-	BudgetID uuid.UUID
-	ID       uuid.UUID
-}
-
-func (q *Queries) GetGroupByID(ctx context.Context, arg GetGroupByIDParams) (Group, error) {
-	row := q.db.QueryRow(ctx, getGroupByID, arg.BudgetID, arg.ID)
+func (q *Queries) GetGroupByID(ctx context.Context, id uuid.UUID) (Group, error) {
+	row := q.db.QueryRow(ctx, getGroupByID, id)
 	var i Group
 	err := row.Scan(
 		&i.ID,

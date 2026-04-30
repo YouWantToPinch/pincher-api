@@ -81,6 +81,33 @@ func (cfg *APIConfig) handleGetGroups(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
+func (cfg *APIConfig) handleGetGroup(w http.ResponseWriter, r *http.Request) {
+	pathGroupID, err := parseUUIDFromPath("group_id", r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "", err)
+		return
+	}
+
+	dbGroup, err := cfg.db.GetGroupByID(r.Context(), pathGroupID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "could not get group", err)
+		return
+	}
+
+	rspPayload := Group{
+		ID:        dbGroup.ID,
+		CreatedAt: dbGroup.CreatedAt,
+		UpdatedAt: dbGroup.UpdatedAt,
+		BudgetID:  dbGroup.BudgetID,
+		Meta: Meta{
+			Name:  dbGroup.Name,
+			Notes: dbGroup.Notes,
+		},
+	}
+
+	respondWithJSON(w, http.StatusCreated, rspPayload)
+}
+
 func (cfg *APIConfig) handleUpdateGroup(w http.ResponseWriter, r *http.Request) {
 	pathGroupID, err := parseUUIDFromPath("group_id", r)
 	if err != nil {
@@ -120,10 +147,7 @@ func (cfg *APIConfig) handleDeleteGroup(w http.ResponseWriter, r *http.Request) 
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 
-	dbGroup, err := cfg.db.GetGroupByID(r.Context(), db.GetGroupByIDParams{
-		BudgetID: pathBudgetID,
-		ID:       pathGroupID,
-	})
+	dbGroup, err := cfg.db.GetGroupByID(r.Context(), pathGroupID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "could not find group", err)
 		return

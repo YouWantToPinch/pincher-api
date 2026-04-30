@@ -15,8 +15,7 @@ RETURNING *;
 -- name: GetGroupByID :one
 SELECT *
 FROM groups
-WHERE budget_id = $1
-    AND id = $2;
+WHERE id = $1;
 
 -- name: GetGroupsByBudgetID :many
 SELECT *

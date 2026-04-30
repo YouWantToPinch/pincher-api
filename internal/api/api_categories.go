@@ -123,6 +123,33 @@ func (cfg *APIConfig) handleGetCategories(w http.ResponseWriter, r *http.Request
 	respondWithJSON(w, http.StatusOK, rspPayload)
 }
 
+func (cfg *APIConfig) handleGetCategory(w http.ResponseWriter, r *http.Request) {
+	pathCategoryID, err := parseUUIDFromPath("category_id", r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "", err)
+		return
+	}
+
+	dbCategory, err := cfg.db.GetCategoryByID(r.Context(), pathCategoryID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "could not get category", err)
+		return
+	}
+
+	rspPayload := Category{
+		ID:        dbCategory.ID,
+		CreatedAt: dbCategory.CreatedAt,
+		UpdatedAt: dbCategory.UpdatedAt,
+		BudgetID:  dbCategory.BudgetID,
+		Meta: Meta{
+			Name:  dbCategory.Name,
+			Notes: dbCategory.Notes,
+		},
+	}
+
+	respondWithJSON(w, http.StatusCreated, rspPayload)
+}
+
 func (cfg *APIConfig) handleUpdateCategory(w http.ResponseWriter, r *http.Request) {
 	pathCategoryID, err := parseUUIDFromPath("category_id", r)
 	if err != nil {
