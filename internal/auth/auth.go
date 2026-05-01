@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -92,19 +91,6 @@ func GetBearerToken(headers http.Header) (string, error) {
 		return "", errors.New("bearer token value missing")
 	}
 	return tokenElements[1], nil
-}
-
-// GetRefreshTokenFromCookie looks for a value to be used
-// as a refresh token from a valid refresh_token cookie.
-func GetRefreshTokenFromCookie(r *http.Request) (string, error) {
-	cookie, err := r.Cookie("refresh_token")
-	if err != nil {
-		return "", fmt.Errorf("no refresh_token cookie found: %w", err)
-	}
-	if cookie.Value == "" {
-		return "", errors.New("no refresh token associated with cookie")
-	}
-	return cookie.Value, nil
 }
 
 func MakeRefreshToken() (string, error) {

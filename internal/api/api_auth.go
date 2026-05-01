@@ -191,6 +191,10 @@ func (cfg *APIConfig) makeAuthPayload(w http.ResponseWriter, r *http.Request, db
 	}
 }
 
+// -----------
+//   HELPERS
+// -----------
+
 // FindRefreshToken attempts to find a refresh token in
 // the Authorization header, unless the X-Auth-Transport
 // header indicates that it should search in an existing
@@ -204,10 +208,23 @@ func FindRefreshToken(r *http.Request) (string, error) {
 			return "", fmt.Errorf("could not get refresh token from Authorization header: %w", err)
 		}
 	} else {
-		refreshToken, err = auth.GetRefreshTokenFromCookie(r)
+		refreshToken, err = GetRefreshTokenFromCookie(r)
 		if err != nil {
 			return "", fmt.Errorf("could not get refresh token from refresh_token cookie: %w", err)
 		}
 	}
 	return refreshToken, err
+}
+
+// GetRefreshTokenFromCookie looks for a value to be used
+// as a refresh token from a valid refresh_token cookie.
+func GetRefreshTokenFromCookie(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("refresh_token")
+	if err != nil {
+		return "", fmt.Errorf("no refresh_token cookie found: %w", err)
+	}
+	if cookie.Value == "" {
+		return "", fmt.Errorf("no refresh token associated with cookie")
+	}
+	return cookie.Value, nil
 }
