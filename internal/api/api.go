@@ -2,41 +2,10 @@
 package api
 
 import (
-	"fmt"
-	"log/slog"
 	"net/http"
+
+	reg "github.com/YouWantToPinch/pincher-api/internal/registrar"
 )
-
-type registrar struct {
-	registry map[string]struct{} // patterns already registered as endpoints
-	mux      *http.ServeMux      // request multiplexer to register inputs to
-}
-
-func (r *registrar) register(pattern string, fn http.HandlerFunc) {
-	if _, ok := r.registry[pattern]; ok {
-		panic(fmt.Sprintf("handler already registered with pattern: %s", pattern))
-	}
-	r.registry[pattern] = struct{}{}
-	r.mux.HandleFunc(pattern, fn)
-	slog.Info("Registered handler in mux with pattern: " + pattern)
-}
-
-func (r *registrar) validate(ef *endpointFormatter) string {
-	if ef == nil || ef.current == "" {
-		panic("could not register API handler; nil formatter provided")
-	} else if ef.current == "" {
-		panic("could not register API handler; no pattern provided")
-	}
-	if r.mux == nil {
-		panic("could not register API handler; mux was nil")
-	}
-	pattern := ef.end()
-	return pattern
-}
-
-func (r *registrar) handle(ef *endpointFormatter, fn http.HandlerFunc) {
-	r.register(r.validate(ef), fn)
-}
 
 func SetupMux(cfg *APIConfig) http.Handler {
 	mux := http.NewServeMux()
@@ -49,239 +18,246 @@ func SetupMux(cfg *APIConfig) http.Handler {
 	// REGISTER API HANDLERS
 	// ======================
 
-	r := &registrar{
-		registry: map[string]struct{}{},
-		mux:      mux,
+	r, err := reg.NewRegistrar(mux)
+	if err != nil {
+		panic(err)
 	}
-	admin := &endpointFormatter{basePath: "admin"}
-	api := &endpointFormatter{basePath: "api"}
+
+	admin, err := reg.NewBuilder("admin")
+	if err != nil {
+		panic(err)
+	}
+	api, err := reg.NewBuilder("api")
+	if err != nil {
+		panic(err)
+	}
 
 	// Admin & State
-	r.handle(
-		admin.post().add("reset"),
+	r.Handle(
+		admin.Build().Post().Add("reset"),
 		cfg.handleDeleteAllUsers,
 	)
-	r.handle(
-		admin.get().add("users"),
+	r.Handle(
+		admin.Build().Get().Add("users"),
 		cfg.handleGetAllUsers,
 	)
-	r.handle(
-		admin.get().add("users").add("count"),
+	r.Handle(
+		admin.Build().Get().Add("users").Add("count"),
 		cfg.handleGetTotalUserCount,
 	)
-	r.handle(
-		api.get().add("healthz"),
+	r.Handle(
+		api.Build().Get().Add("healthz"),
 		cfg.handleReadiness,
 	)
 
 	// User authentication
-	r.handle(
-		api.post().add("users"),
+	r.Handle(
+		api.Build().Post().Add("users"),
 		cfg.handleCreateUser,
 	)
-	r.handle(
-		api.delete().add("users"),
+	r.Handle(
+		api.Build().Delete().Add("users"),
 		mdAuth(cfg.handleDeleteUser),
 	)
-	r.handle(
-		api.put().add("users"),
+	r.Handle(
+		api.Build().Put().Add("users"),
 		mdAuth(cfg.handleUpdateUserCredentials),
 	)
-	r.handle(
-		api.post().add("login"),
+	r.Handle(
+		api.Build().Post().Add("login"),
 		cfg.handleLoginUser,
 	)
-	r.handle(
-		api.post().add("refresh"),
+	r.Handle(
+		api.Build().Post().Add("refresh"),
 		cfg.handleCheckRefreshToken,
 	)
-	r.handle(
-		api.post().add("revoke"),
+	r.Handle(
+		api.Build().Post().Add("revoke"),
 		cfg.handleRevokeRefreshToken,
 	)
 	// Budgets
-	r.handle(
-		api.post().budget().col(),
+	r.Handle(
+		api.Build().Post().Budget().Col(),
 		mdAuth(cfg.handleCreateBudget),
 	)
-	r.handle(
-		api.post().budget().member().col(),
+	r.Handle(
+		api.Build().Post().Budget().Member().Col(),
 		mdAuth(mdClear(MANAGER, cfg.handleAddBudgetMemberWithRole)),
 	)
-	r.handle(
-		api.put().budget(),
+	r.Handle(
+		api.Build().Put().Budget(),
 		mdAuth(mdClear(MANAGER, cfg.handleUpdateBudget)),
 	)
-	r.handle(
-		api.delete().budget(),
+	r.Handle(
+		api.Build().Delete().Budget(),
 		mdAuth(mdClear(ADMIN, cfg.handleDeleteBudget)),
 	)
-	r.handle(
-		api.delete().budget().member(),
+	r.Handle(
+		api.Build().Delete().Budget().Member(),
 		mdAuth(mdClear(MANAGER, cfg.handleRemoveBudgetMember)),
 	)
-	r.handle(
-		api.get().budget().col(),
+	r.Handle(
+		api.Build().Get().Budget().Col(),
 		mdAuth(cfg.handleGetUserBudgets),
 	)
-	r.handle(
-		api.get().budget(),
+	r.Handle(
+		api.Build().Get().Budget(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetBudget)),
 	)
-	r.handle(
-		api.get().budget().add("capital"),
+	r.Handle(
+		api.Build().Get().Budget().Add("capital"),
 		mdAuth(mdClear(VIEWER, cfg.handleGetBudgetCapital)),
 	)
 	// Groups
-	r.handle(
-		api.post().budget().group().col(),
+	r.Handle(
+		api.Build().Post().Budget().Group().Col(),
 		mdAuth(mdClear(MANAGER, cfg.handleCreateGroup)),
 	)
-	r.handle(
-		api.get().budget().group().col(),
+	r.Handle(
+		api.Build().Get().Budget().Group().Col(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetGroups)),
 	)
-	r.handle(
-		api.get().budget().group(),
+	r.Handle(
+		api.Build().Get().Budget().Group(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetGroup)),
 	)
-	r.handle(
-		api.put().budget().group(),
+	r.Handle(
+		api.Build().Put().Budget().Group(),
 		mdAuth(mdClear(MANAGER, cfg.handleUpdateGroup)),
 	)
-	r.handle(
-		api.delete().budget().group(),
+	r.Handle(
+		api.Build().Delete().Budget().Group(),
 		mdAuth(mdClear(MANAGER, cfg.handleDeleteGroup)),
 	)
 	// Categories
-	r.handle(
-		api.post().budget().category().col(),
+	r.Handle(
+		api.Build().Post().Budget().Category().Col(),
 		mdAuth(mdClear(MANAGER, cfg.handleCreateCategory)),
 	)
-	r.handle(
-		api.get().budget().category().col(),
+	r.Handle(
+		api.Build().Get().Budget().Category().Col(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetCategories)),
 	)
-	r.handle(
-		api.get().budget().category(),
+	r.Handle(
+		api.Build().Get().Budget().Category(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetCategory)),
 	)
-	r.handle(
-		api.put().budget().category(),
+	r.Handle(
+		api.Build().Put().Budget().Category(),
 		mdAuth(mdClear(MANAGER, cfg.handleUpdateCategory)),
 	)
-	r.handle(
-		api.delete().budget().category(),
+	r.Handle(
+		api.Build().Delete().Budget().Category(),
 		mdAuth(mdClear(MANAGER, cfg.handleDeleteCategory)),
 	)
 	// Payees
-	r.handle(
-		api.post().budget().payee().col(),
+	r.Handle(
+		api.Build().Post().Budget().Payee().Col(),
 		mdAuth(mdClear(CONTRIBUTOR, cfg.handleCreatePayee)),
 	)
-	r.handle(
-		api.get().budget().payee().col(),
+	r.Handle(
+		api.Build().Get().Budget().Payee().Col(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetPayees)),
 	)
-	r.handle(
-		api.get().budget().payee(),
+	r.Handle(
+		api.Build().Get().Budget().Payee(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetPayee)),
 	)
-	r.handle(
-		api.put().budget().payee(),
+	r.Handle(
+		api.Build().Put().Budget().Payee(),
 		mdAuth(mdClear(MANAGER, cfg.handleUpdatePayee)),
 	)
-	r.handle(
-		api.delete().budget().payee(),
+	r.Handle(
+		api.Build().Delete().Budget().Payee(),
 		mdAuth(mdClear(CONTRIBUTOR, cfg.handleDeletePayee)),
 	)
 	// Accounts
-	r.handle(
-		api.post().budget().account().col(),
+	r.Handle(
+		api.Build().Post().Budget().Account().Col(),
 		mdAuth(mdClear(CONTRIBUTOR, cfg.handleAddAccount)),
 	)
-	r.handle(
-		api.get().budget().account().col(),
+	r.Handle(
+		api.Build().Get().Budget().Account().Col(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetAccounts)),
 	)
-	r.handle(
-		api.get().budget().account(),
+	r.Handle(
+		api.Build().Get().Budget().Account(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetAccount)),
 	)
-	r.handle(
-		api.get().budget().account().add("capital"),
+	r.Handle(
+		api.Build().Get().Budget().Account().Add("capital"),
 		mdAuth(mdClear(VIEWER, cfg.handleGetBudgetAccountCapital)),
 	)
-	r.handle(
-		api.put().budget().account(),
+	r.Handle(
+		api.Build().Put().Budget().Account(),
 		mdAuth(mdClear(MANAGER, cfg.handleUpdateAccount)),
 	)
-	r.handle(
-		api.patch().budget().account(),
+	r.Handle(
+		api.Build().Patch().Budget().Account(),
 		mdAuth(mdClear(MANAGER, cfg.handleRestoreAccount)),
 	)
-	r.handle(
-		api.delete().budget().account(),
+	r.Handle(
+		api.Build().Delete().Budget().Account(),
 		mdAuth(mdClear(MANAGER, cfg.handleDeleteAccount)),
 	)
 	// Transactions
-	r.handle(
-		api.post().budget().transaction().col(),
+	r.Handle(
+		api.Build().Post().Budget().Transaction().Col(),
 		mdAuth(mdClear(CONTRIBUTOR, mdValidateTxn(cfg.handleLogTransaction))),
 	)
-	r.handle(
-		api.get().budget().transaction().col(),
+	r.Handle(
+		api.Build().Get().Budget().Transaction().Col(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)),
 	)
-	r.handle(
-		api.get().budget().transaction().col().add("details"),
+	r.Handle(
+		api.Build().Get().Budget().Transaction().Col().Add("details"),
 		mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)),
 	)
-	r.handle(
-		api.get().budget().transaction(),
+	r.Handle(
+		api.Build().Get().Budget().Transaction(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetTransaction)),
 	)
-	r.handle(
-		api.get().budget().transaction().add("details"),
+	r.Handle(
+		api.Build().Get().Budget().Transaction().Add("details"),
 		mdAuth(mdClear(VIEWER, cfg.handleGetTransaction)),
 	)
-	r.handle(
-		api.get().budget().transaction().add("splits"),
+	r.Handle(
+		api.Build().Get().Budget().Transaction().Add("splits"),
 		mdAuth(mdClear(VIEWER, cfg.handleGetTransactionSplits)),
 	)
-	r.handle(
-		api.put().budget().transaction(),
+	r.Handle(
+		api.Build().Put().Budget().Transaction(),
 		mdAuth(mdClear(MANAGER, mdValidateTxn(cfg.handleUpdateTransaction))),
 	)
-	r.handle(
-		api.delete().budget().transaction(),
+	r.Handle(
+		api.Build().Delete().Budget().Transaction(),
 		mdAuth(mdClear(MANAGER, cfg.handleDeleteTransaction)),
 	)
 
 	// Dollar Assignment
-	r.handle(
-		api.post().budget().month().category().col(),
+	r.Handle(
+		api.Build().Post().Budget().Month().Category().Col(),
 		mdAuth(mdClear(MANAGER, cfg.handleAssignAmountToCategory)),
 	)
 	// Reporting
-	r.handle(
-		api.get().budget().month().category(),
+	r.Handle(
+		api.Build().Get().Budget().Month().Category(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategoryReport)),
 	)
-	r.handle(
-		api.get().budget().month().category().col(),
+	r.Handle(
+		api.Build().Get().Budget().Month().Category().Col(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategories)),
 	)
-	r.handle(
-		api.get().budget().month().group(),
+	r.Handle(
+		api.Build().Get().Budget().Month().Group(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetMonthGroupReport)),
 	)
-	r.handle(
-		api.get().budget().month().group().col(),
+	r.Handle(
+		api.Build().Get().Budget().Month().Group().Col(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetMonthGroups)),
 	)
-	r.handle(
-		api.get().budget().month(),
+	r.Handle(
+		api.Build().Get().Budget().Month(),
 		mdAuth(mdClear(VIEWER, cfg.handleGetMonthReport)),
 	)
 

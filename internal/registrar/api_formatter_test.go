@@ -1,4 +1,4 @@
-package api
+package registrar
 
 import (
 	"strings"
@@ -9,7 +9,7 @@ import (
 
 func TestPatternStart(t *testing.T) {
 	t.Run("Test clear", func(t *testing.T) {
-		f := &endpointFormatter{}
+		f := &patternFormatter{}
 		f.current = "<current pattern>"
 		f.buffer = "<buffer value>"
 		f.clear()
@@ -18,7 +18,7 @@ func TestPatternStart(t *testing.T) {
 	})
 
 	t.Run("Test cleanPath", func(t *testing.T) {
-		f := &endpointFormatter{}
+		f := &patternFormatter{}
 
 		t.Run("prefixes with /", func(t *testing.T) {
 			assert.Equal(t, "/api", f.cleanPath("api"))
@@ -30,8 +30,8 @@ func TestPatternStart(t *testing.T) {
 	})
 
 	t.Run("Test base", func(t *testing.T) {
-		api := &endpointFormatter{basePath: "/api"}
-		apiSame := &endpointFormatter{basePath: "api"}
+		api := &patternFormatter{basePath: "/api"}
+		apiSame := &patternFormatter{basePath: "api"}
 
 		t.Run("cleans basePath", func(t *testing.T) {
 			assert.Equal(t, "/api", api.base())
@@ -42,17 +42,17 @@ func TestPatternStart(t *testing.T) {
 
 	t.Run("Test set", func(t *testing.T) {
 		t.Run("panics without basePath", func(t *testing.T) {
-			f := &endpointFormatter{}
+			f := &patternFormatter{}
 			assert.Panics(t, func() { f.set("METHOD ") })
 		})
 
 		t.Run("panics with empty method", func(t *testing.T) {
-			f := &endpointFormatter{basePath: "api"}
+			f := &patternFormatter{basePath: "api"}
 			assert.Panics(t, func() { f.set("") })
 		})
 
 		t.Run("method uppercased, space trimmed", func(t *testing.T) {
-			f := &endpointFormatter{basePath: "api"}
+			f := &patternFormatter{basePath: "api"}
 			f.set(" mEtHoD  ")
 			assert.True(t, strings.HasPrefix(f.buffer, "METHOD"))
 			assert.True(t, strings.HasPrefix(f.buffer, "METHOD "))
@@ -60,7 +60,7 @@ func TestPatternStart(t *testing.T) {
 		})
 
 		t.Run("buffer is '<method> <base>', current empty", func(t *testing.T) {
-			f := &endpointFormatter{basePath: "api"}
+			f := &patternFormatter{basePath: "api"}
 			f.set("mEtHoD")
 			assert.Equal(t, "METHOD /api", f.buffer)
 			assert.Equal(t, "", f.current)
@@ -68,9 +68,9 @@ func TestPatternStart(t *testing.T) {
 	})
 
 	t.Run("Test method starters", func(t *testing.T) {
-		api := &endpointFormatter{basePath: "api"}
-		methods := []func() *endpointFormatter{
-			api.post, api.get, api.put, api.patch, api.delete,
+		api := &patternFormatter{basePath: "api"}
+		methods := []func() pathSelector{
+			api.Post, api.Get, api.Put, api.Patch, api.Delete,
 		}
 
 		for _, method := range methods {
@@ -84,33 +84,33 @@ func TestPatternStart(t *testing.T) {
 }
 
 func TestPatternBuild(t *testing.T) {
-	t.Run("Test add", func(t *testing.T) {
-		api := &endpointFormatter{basePath: "api"}
-		api.get()
+	t.Run("Test Add", func(t *testing.T) {
+		api := &patternFormatter{basePath: "api"}
+		api.Get()
 
 		t.Run("pattern start in buffer only", func(t *testing.T) {
 			assert.Equal(t, "GET /api", api.buffer)
 			assert.Equal(t, "", api.current)
 		})
 
-		api.add("addpath")
+		api.Add("Addpath")
 
-		t.Run("pattern start added, add() val in buffer", func(t *testing.T) {
+		t.Run("pattern start Added, Add() val in buffer", func(t *testing.T) {
 			assert.Equal(t, "GET /api", api.current)
-			assert.Equal(t, "/addpath", api.buffer)
+			assert.Equal(t, "/Addpath", api.buffer)
 		})
 
-		api.add("")
+		api.Add("")
 
-		t.Run("empty add appends, but buffers nothing", func(t *testing.T) {
-			assert.Equal(t, "GET /api/addpath", api.current)
+		t.Run("empty Add appends, but buffers nothing", func(t *testing.T) {
+			assert.Equal(t, "GET /api/Addpath", api.current)
 			assert.Equal(t, "", api.buffer)
 		})
 	})
 
 	t.Run("Test single", func(t *testing.T) {
 		t.Run("Test single", func(t *testing.T) {
-			f := &endpointFormatter{}
+			f := &patternFormatter{}
 			expected := "/budgets/{budget_id}"
 
 			t.Run("returns formatted resource path", func(t *testing.T) {
@@ -120,14 +120,14 @@ func TestPatternBuild(t *testing.T) {
 		})
 
 		t.Run("Test resource wrappers", func(t *testing.T) {
-			api := &endpointFormatter{basePath: "api"}
+			api := &patternFormatter{basePath: "api"}
 
-			wrappers := []func() *endpointFormatter{
-				api.budget, api.account, api.group, api.category, api.payee, api.transaction, api.member, api.month,
+			wrappers := []func() pathSelector{
+				api.Budget, api.Account, api.Group, api.Category, api.Payee, api.Transaction, api.Member, api.Month,
 			}
 
 			for _, wrapper := range wrappers {
-				api.get()
+				api.Get()
 				wrapper()
 				expected := `^/[^/]+/\{[^/]+_id\}$`
 				assert.Regexp(t, expected, api.buffer)
@@ -137,18 +137,18 @@ func TestPatternBuild(t *testing.T) {
 
 		t.Run("Test col", func(t *testing.T) {
 			t.Run("panics with empty buffer", func(t *testing.T) {
-				api := &endpointFormatter{basePath: "api"}
+				api := &patternFormatter{basePath: "api"}
 				assert.Panics(t, func() {
-					api.get().budget().add("").col()
+					api.Get().Budget().Add("").Col()
 				})
 			})
 
-			api := &endpointFormatter{basePath: "api"}
-			api.get()
+			api := &patternFormatter{basePath: "api"}
+			api.Get()
 			collection := "/budgets"
 
 			t.Run("truncates resource to its collection path", func(t *testing.T) {
-				api.budget().col()
+				api.Budget().Col()
 				unexpected := `^/[^/]+/\{[^/]+_id\}$`
 				assert.NotRegexp(t, unexpected, api.buffer)
 				assert.Equal(t, collection, api.buffer)
@@ -160,7 +160,7 @@ func TestPatternBuild(t *testing.T) {
 func TestPatternEnd(t *testing.T) {
 	t.Run("Test end", func(t *testing.T) {
 		t.Run("panics with empty pattern", func(t *testing.T) {
-			api := &endpointFormatter{basePath: "api"}
+			api := &patternFormatter{basePath: "api"}
 			assert.Panics(t, func() {
 				api.end()
 			})
@@ -168,8 +168,8 @@ func TestPatternEnd(t *testing.T) {
 
 		expected := "GET /api/budgets/{budget_id}/transactions/{transaction_id}/details"
 
-		api := &endpointFormatter{basePath: "api"}
-		result := api.get().budget().transaction().add("details").end()
+		api := &patternFormatter{basePath: "api"}
+		result := api.Get().Budget().Transaction().Add("details").end()
 
 		t.Run("returns expected pattern", func(t *testing.T) {
 			assert.Equal(t, expected, result)
@@ -179,5 +179,19 @@ func TestPatternEnd(t *testing.T) {
 			assert.Equal(t, "", api.current)
 			assert.Equal(t, "", api.buffer)
 		})
+	})
+}
+
+func TestNewBuilder(t *testing.T) {
+	t.Run("empty basePath returns error", func(t *testing.T) {
+		_, err := NewBuilder("")
+		assert.Error(t, err)
+	})
+}
+
+func TestNewRegistrar(t *testing.T) {
+	t.Run("nil mux returns error", func(t *testing.T) {
+		_, err := NewRegistrar(nil)
+		assert.Error(t, err)
 	})
 }
