@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -19,14 +20,21 @@ func (ef *endpointFormatter) base() string {
 	return ef.cleanPath(ef.basePath)
 }
 
-func (ef *endpointFormatter) set(s string) *endpointFormatter {
+func (ef *endpointFormatter) clear() {
+	ef.buffer = ""
+	ef.current = ""
+}
+
+func (ef *endpointFormatter) set(method string) *endpointFormatter {
 	if ef.basePath == "" {
 		panic("formatter directed to begin writing endpoint pattern, but basePath was not set")
 	}
-	ef.buffer = ""
-	ef.current = ""
-	if s != "" {
-		ef.buffer = strings.TrimLeft(s, "/") + ef.base()
+	ef.clear()
+	if method != "" {
+		method = strings.ToUpper((strings.TrimSpace(method))) + " "
+		ef.buffer = strings.TrimLeft(method, "/") + ef.base()
+	} else {
+		panic("formatter directed to begin writing endpoint pattern, but method was empty")
 	}
 	return ef
 }
@@ -35,6 +43,8 @@ func (ef *endpointFormatter) add(s string) *endpointFormatter {
 	ef.current += ef.buffer
 	if s != "" {
 		ef.buffer = ef.cleanPath(s)
+	} else {
+		ef.buffer = ""
 	}
 	return ef
 }
@@ -44,6 +54,14 @@ func (ef *endpointFormatter) single(plural, singular string) string {
 }
 
 func (ef *endpointFormatter) col() *endpointFormatter {
+	if ef.buffer == "" {
+		panic("formatter directed to truncate buffered resource to its collection path, but buffer was empty")
+	}
+	r := regexp.MustCompile(`^/[^/]+/\{[^/]+_id\}$`)
+	if !r.MatchString(ef.buffer) {
+		panic("formatter directed to truncate buffered resource to its collection path, but found no such pattern in buffer")
+	}
+
 	if i := strings.LastIndex(ef.buffer, "/"); i >= 0 {
 		ef.buffer = ef.buffer[:i]
 	}
@@ -56,7 +74,7 @@ func (ef *endpointFormatter) end() string {
 	}
 	ef.add("")
 	result := ef.current
-	ef.current = ""
+	ef.clear()
 	return result
 }
 
