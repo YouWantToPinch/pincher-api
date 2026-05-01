@@ -3,13 +3,14 @@ package api
 
 import (
 	"net/http"
+
+	reg "github.com/YouWantToPinch/pincher-api/internal/registrar"
 )
 
 func SetupMux(cfg *APIConfig) http.Handler {
 	mux := http.NewServeMux()
 
 	// middleware
-	mdCors := cfg.middlewareHandleCORS
 	mdAuth := cfg.middlewareAuthenticate
 	mdClear := cfg.middlewareCheckClearance
 	mdValidateTxn := cfg.middlewareValidateTxn
@@ -17,70 +18,250 @@ func SetupMux(cfg *APIConfig) http.Handler {
 	// REGISTER API HANDLERS
 	// ======================
 
-	// Admin & State
-	mux.HandleFunc("GET /api/healthz", cfg.handleReadiness)
-	mux.HandleFunc("POST /admin/reset", cfg.handleDeleteAllUsers)
-	mux.HandleFunc("GET /admin/users", cfg.handleGetAllUsers)
-	mux.HandleFunc("GET /admin/users/count", cfg.handleGetTotalUserCount)
-	// User authentication
-	mux.HandleFunc("POST /api/users", cfg.handleCreateUser)
-	mux.HandleFunc("DELETE /api/users", mdAuth(cfg.handleDeleteUser))
-	mux.HandleFunc("PUT /api/users", mdAuth(cfg.handleUpdateUserCredentials))
-	mux.HandleFunc("POST /api/login", cfg.handleLoginUser)
-	mux.HandleFunc("POST /api/refresh", cfg.handleCheckRefreshToken)
-	mux.HandleFunc("POST /api/revoke", cfg.handleRevokeRefreshToken)
-	// Budgets
-	mux.HandleFunc("POST /api/budgets", mdAuth(cfg.handleCreateBudget))
-	mux.HandleFunc("POST /api/budgets/{budget_id}/members", mdAuth(mdClear(MANAGER, cfg.handleAddBudgetMemberWithRole)))
-	mux.HandleFunc("PUT /api/budgets/{budget_id}", mdAuth(mdClear(MANAGER, cfg.handleUpdateBudget)))
-	mux.HandleFunc("DELETE /api/budgets/{budget_id}", mdAuth(mdClear(ADMIN, cfg.handleDeleteBudget)))
-	mux.HandleFunc("DELETE /api/budgets/{budget_id}/members/{user_id}", mdAuth(mdClear(MANAGER, cfg.handleRemoveBudgetMember)))
-	mux.HandleFunc("GET /api/budgets", mdAuth(cfg.handleGetUserBudgets))
-	mux.HandleFunc("GET /api/budgets/{budget_id}", mdAuth(mdClear(VIEWER, cfg.handleGetBudget)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/capital", mdAuth(mdClear(VIEWER, cfg.handleGetBudgetCapital)))
-	// Groups & Categories
-	mux.HandleFunc("POST /api/budgets/{budget_id}/groups", mdAuth(mdClear(MANAGER, cfg.handleCreateGroup)))
-	mux.HandleFunc("POST /api/budgets/{budget_id}/categories", mdAuth(mdClear(MANAGER, cfg.handleCreateCategory)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/groups", mdAuth(mdClear(VIEWER, cfg.handleGetGroups)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/groups/{group_id}", mdAuth(mdClear(VIEWER, cfg.handleGetGroup)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/categories", mdAuth(mdClear(VIEWER, cfg.handleGetCategories)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/categories/{category_id}", mdAuth(mdClear(VIEWER, cfg.handleGetCategory)))
-	mux.HandleFunc("PUT /api/budgets/{budget_id}/groups/{group_id}", mdAuth(mdClear(MANAGER, cfg.handleUpdateGroup)))
-	mux.HandleFunc("PUT /api/budgets/{budget_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.handleUpdateCategory)))
-	mux.HandleFunc("DELETE /api/budgets/{budget_id}/groups/{group_id}", mdAuth(mdClear(MANAGER, cfg.handleDeleteGroup)))
-	mux.HandleFunc("DELETE /api/budgets/{budget_id}/categories/{category_id}", mdAuth(mdClear(MANAGER, cfg.handleDeleteCategory)))
-	// Payees
-	mux.HandleFunc("POST /api/budgets/{budget_id}/payees", mdAuth(mdClear(CONTRIBUTOR, cfg.handleCreatePayee)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/payees", mdAuth(mdClear(VIEWER, cfg.handleGetPayees)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/payees/{payee_id}", mdAuth(mdClear(VIEWER, cfg.handleGetPayee)))
-	mux.HandleFunc("PUT /api/budgets/{budget_id}/payees/{payee_id}", mdAuth(mdClear(MANAGER, cfg.handleUpdatePayee)))
-	mux.HandleFunc("DELETE /api/budgets/{budget_id}/payees/{payee_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.handleDeletePayee)))
-	// Accounts
-	mux.HandleFunc("POST /api/budgets/{budget_id}/accounts", mdAuth(mdClear(MANAGER, cfg.handleAddAccount)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts", mdAuth(mdClear(VIEWER, cfg.handleGetAccounts)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(VIEWER, cfg.handleGetAccount)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/accounts/{account_id}/capital", mdAuth(mdClear(VIEWER, cfg.handleGetBudgetAccountCapital)))
-	mux.HandleFunc("PUT /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(MANAGER, cfg.handleUpdateAccount)))
-	mux.HandleFunc("PATCH /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(MANAGER, cfg.handleRestoreAccount)))
-	mux.HandleFunc("DELETE /api/budgets/{budget_id}/accounts/{account_id}", mdAuth(mdClear(MANAGER, cfg.handleDeleteAccount)))
-	// Transactions
-	mux.HandleFunc("POST /api/budgets/{budget_id}/transactions", mdAuth(mdClear(CONTRIBUTOR, mdValidateTxn(cfg.handleLogTransaction))))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions", mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/details", mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(VIEWER, cfg.handleGetTransaction)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}/details", mdAuth(mdClear(VIEWER, cfg.handleGetTransaction)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/transactions/{transaction_id}/splits", mdAuth(mdClear(VIEWER, cfg.handleGetTransactionSplits)))
-	mux.HandleFunc("PUT /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(MANAGER, mdValidateTxn(cfg.handleUpdateTransaction))))
-	mux.HandleFunc("DELETE /api/budgets/{budget_id}/transactions/{transaction_id}", mdAuth(mdClear(CONTRIBUTOR, cfg.handleDeleteTransaction)))
-	// Months & Dollar Assignment
-	mux.HandleFunc("POST /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(MANAGER, cfg.handleAssignAmountToCategory)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories/{category_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategoryReport)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/categories", mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategories)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/groups/{group_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthGroupReport)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}/groups", mdAuth(mdClear(VIEWER, cfg.handleGetMonthGroups)))
-	mux.HandleFunc("GET /api/budgets/{budget_id}/months/{month_id}", mdAuth(mdClear(VIEWER, cfg.handleGetMonthReport)))
+	r, err := reg.NewRegistrar(mux)
+	if err != nil {
+		panic(err)
+	}
 
-	handler := mdCors(mux)
+	admin, err := reg.NewBuilder("admin")
+	if err != nil {
+		panic(err)
+	}
+	api, err := reg.NewBuilder("api")
+	if err != nil {
+		panic(err)
+	}
+
+	// Admin & State
+	r.Handle(
+		admin.Build().Post().Add("reset"),
+		cfg.handleDeleteAllUsers,
+	)
+	r.Handle(
+		admin.Build().Get().Add("users"),
+		cfg.handleGetAllUsers,
+	)
+	r.Handle(
+		admin.Build().Get().Add("users").Add("count"),
+		cfg.handleGetTotalUserCount,
+	)
+	r.Handle(
+		api.Build().Get().Add("healthz"),
+		cfg.handleReadiness,
+	)
+
+	// User authentication
+	r.Handle(
+		api.Build().Post().Add("users"),
+		cfg.handleCreateUser,
+	)
+	r.Handle(
+		api.Build().Delete().Add("users"),
+		mdAuth(cfg.handleDeleteUser),
+	)
+	r.Handle(
+		api.Build().Put().Add("users"),
+		mdAuth(cfg.handleUpdateUserCredentials),
+	)
+	r.Handle(
+		api.Build().Post().Add("login"),
+		cfg.handleLoginUser,
+	)
+	r.Handle(
+		api.Build().Post().Add("refresh"),
+		cfg.handleCheckRefreshToken,
+	)
+	r.Handle(
+		api.Build().Post().Add("revoke"),
+		cfg.handleRevokeRefreshToken,
+	)
+	// Budgets
+	r.Handle(
+		api.Build().Post().Budget().Col(),
+		mdAuth(cfg.handleCreateBudget),
+	)
+	r.Handle(
+		api.Build().Post().Budget().Member().Col(),
+		mdAuth(mdClear(MANAGER, cfg.handleAddBudgetMemberWithRole)),
+	)
+	r.Handle(
+		api.Build().Put().Budget(),
+		mdAuth(mdClear(MANAGER, cfg.handleUpdateBudget)),
+	)
+	r.Handle(
+		api.Build().Delete().Budget(),
+		mdAuth(mdClear(ADMIN, cfg.handleDeleteBudget)),
+	)
+	r.Handle(
+		api.Build().Delete().Budget().Member(),
+		mdAuth(mdClear(MANAGER, cfg.handleRemoveBudgetMember)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Col(),
+		mdAuth(cfg.handleGetUserBudgets),
+	)
+	r.Handle(
+		api.Build().Get().Budget(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetBudget)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Add("capital"),
+		mdAuth(mdClear(VIEWER, cfg.handleGetBudgetCapital)),
+	)
+	// Groups
+	r.Handle(
+		api.Build().Post().Budget().Group().Col(),
+		mdAuth(mdClear(MANAGER, cfg.handleCreateGroup)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Group().Col(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetGroups)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Group(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetGroup)),
+	)
+	r.Handle(
+		api.Build().Put().Budget().Group(),
+		mdAuth(mdClear(MANAGER, cfg.handleUpdateGroup)),
+	)
+	r.Handle(
+		api.Build().Delete().Budget().Group(),
+		mdAuth(mdClear(MANAGER, cfg.handleDeleteGroup)),
+	)
+	// Categories
+	r.Handle(
+		api.Build().Post().Budget().Category().Col(),
+		mdAuth(mdClear(MANAGER, cfg.handleCreateCategory)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Category().Col(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetCategories)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Category(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetCategory)),
+	)
+	r.Handle(
+		api.Build().Put().Budget().Category(),
+		mdAuth(mdClear(MANAGER, cfg.handleUpdateCategory)),
+	)
+	r.Handle(
+		api.Build().Delete().Budget().Category(),
+		mdAuth(mdClear(MANAGER, cfg.handleDeleteCategory)),
+	)
+	// Payees
+	r.Handle(
+		api.Build().Post().Budget().Payee().Col(),
+		mdAuth(mdClear(CONTRIBUTOR, cfg.handleCreatePayee)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Payee().Col(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetPayees)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Payee(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetPayee)),
+	)
+	r.Handle(
+		api.Build().Put().Budget().Payee(),
+		mdAuth(mdClear(MANAGER, cfg.handleUpdatePayee)),
+	)
+	r.Handle(
+		api.Build().Delete().Budget().Payee(),
+		mdAuth(mdClear(CONTRIBUTOR, cfg.handleDeletePayee)),
+	)
+	// Accounts
+	r.Handle(
+		api.Build().Post().Budget().Account().Col(),
+		mdAuth(mdClear(CONTRIBUTOR, cfg.handleAddAccount)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Account().Col(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetAccounts)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Account(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetAccount)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Account().Add("capital"),
+		mdAuth(mdClear(VIEWER, cfg.handleGetBudgetAccountCapital)),
+	)
+	r.Handle(
+		api.Build().Put().Budget().Account(),
+		mdAuth(mdClear(MANAGER, cfg.handleUpdateAccount)),
+	)
+	r.Handle(
+		api.Build().Patch().Budget().Account(),
+		mdAuth(mdClear(MANAGER, cfg.handleRestoreAccount)),
+	)
+	r.Handle(
+		api.Build().Delete().Budget().Account(),
+		mdAuth(mdClear(MANAGER, cfg.handleDeleteAccount)),
+	)
+	// Transactions
+	r.Handle(
+		api.Build().Post().Budget().Transaction().Col(),
+		mdAuth(mdClear(CONTRIBUTOR, mdValidateTxn(cfg.handleLogTransaction))),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Transaction().Col(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Transaction().Col().Add("details"),
+		mdAuth(mdClear(VIEWER, cfg.handleGetTransactions)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Transaction(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetTransaction)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Transaction().Add("details"),
+		mdAuth(mdClear(VIEWER, cfg.handleGetTransaction)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Transaction().Add("splits"),
+		mdAuth(mdClear(VIEWER, cfg.handleGetTransactionSplits)),
+	)
+	r.Handle(
+		api.Build().Put().Budget().Transaction(),
+		mdAuth(mdClear(MANAGER, mdValidateTxn(cfg.handleUpdateTransaction))),
+	)
+	r.Handle(
+		api.Build().Delete().Budget().Transaction(),
+		mdAuth(mdClear(MANAGER, cfg.handleDeleteTransaction)),
+	)
+
+	// Dollar Assignment
+	r.Handle(
+		api.Build().Post().Budget().Month().Category().Col(),
+		mdAuth(mdClear(MANAGER, cfg.handleAssignAmountToCategory)),
+	)
+	// Reporting
+	r.Handle(
+		api.Build().Get().Budget().Month().Category(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategoryReport)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Month().Category().Col(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetMonthCategories)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Month().Group(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetMonthGroupReport)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Month().Group().Col(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetMonthGroups)),
+	)
+	r.Handle(
+		api.Build().Get().Budget().Month(),
+		mdAuth(mdClear(VIEWER, cfg.handleGetMonthReport)),
+	)
+
+	handler := cfg.middlewareHandleCORS(mux)
 
 	return handler
 }
