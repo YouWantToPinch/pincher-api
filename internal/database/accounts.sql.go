@@ -161,25 +161,19 @@ func (q *Queries) RestoreAccount(ctx context.Context, id uuid.UUID) error {
 
 const updateAccount = `-- name: UpdateAccount :one
 UPDATE accounts
-SET updated_at = NOW(), account_type = $2, name = $3, notes = $4
+SET updated_at = NOW(), name = $2, notes = $3
 WHERE id = $1
 RETURNING id, created_at, updated_at, budget_id, account_type, name, notes, is_deleted
 `
 
 type UpdateAccountParams struct {
-	ID          uuid.UUID
-	AccountType string
-	Name        string
-	Notes       string
+	ID    uuid.UUID
+	Name  string
+	Notes string
 }
 
 func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error) {
-	row := q.db.QueryRow(ctx, updateAccount,
-		arg.ID,
-		arg.AccountType,
-		arg.Name,
-		arg.Notes,
-	)
+	row := q.db.QueryRow(ctx, updateAccount, arg.ID, arg.Name, arg.Notes)
 	var i Account
 	err := row.Scan(
 		&i.ID,

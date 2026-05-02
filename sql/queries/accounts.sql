@@ -35,7 +35,7 @@ WHERE id = $1;
 
 -- name: UpdateAccount :one
 UPDATE accounts
-SET updated_at = NOW(), account_type = $2, name = $3, notes = $4
+SET updated_at = NOW(), name = $2, notes = $3
 WHERE id = $1
 RETURNING *;
 
