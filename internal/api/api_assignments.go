@@ -22,7 +22,9 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if rqPayload.Amount == 0 {
+	shouldReassign := r.Method == http.MethodPut
+
+	if rqPayload.Amount == 0 && !shouldReassign {
 		respondWithError(w, http.StatusBadRequest, "could not assign non-zero amount", nil)
 		return
 	}
@@ -34,7 +36,6 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 	}
 
 	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
-
 	usingDBTxn := rqPayload.FromCategory != ""
 
 	q := cfg.db
@@ -55,7 +56,8 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 		}
 	}
 
-	assignToCat := func(categoryName string, amount int64) (db.Assignment, error) {
+	assignToCat := func(categoryName string, amount int64, reassign bool) (db.ReassignAmountToCategoryRow, error) {
+		var err error
 		parsedCategoryID := uuid.Nil
 		if rqPayload.ToCategory != "" {
 			parsedCategoryID, err = lookupResourceIDByName(r.Context(),
@@ -65,27 +67,45 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 				}, q.GetBudgetCategoryIDByName)
 			if err != nil {
 				respondWithError(w, http.StatusBadRequest, "could not get category by given name", err)
-				return db.Assignment{}, err
+				return db.ReassignAmountToCategoryRow{}, err
 			}
 		}
 
-		dbAssignment, err := q.AssignAmountToCategory(r.Context(), db.AssignAmountToCategoryParams{
-			MonthID:    parsedMonth,
-			CategoryID: parsedCategoryID,
-			Amount:     amount,
-		})
+		var dbAssignmentResult db.ReassignAmountToCategoryRow
+		if reassign {
+			dbAssignmentResult, err = q.ReassignAmountToCategory(r.Context(), db.ReassignAmountToCategoryParams{
+				MonthID:    parsedMonth,
+				CategoryID: parsedCategoryID,
+				Amount:     amount,
+			})
+		} else {
+			var dbAssignment db.Assignment
+			dbAssignment, err = q.AssignAmountToCategory(r.Context(), db.AssignAmountToCategoryParams{
+				MonthID:    parsedMonth,
+				CategoryID: parsedCategoryID,
+				Amount:     amount,
+			})
+			dbAssignmentResult = db.ReassignAmountToCategoryRow{
+				Month:          dbAssignment.Month,
+				CategoryID:     dbAssignment.CategoryID,
+				Assigned:       dbAssignment.Assigned,
+				ChangeInAmount: amount,
+			}
+		}
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "could not assign amount to category for month specified", err)
-			return db.Assignment{}, err
+			return db.ReassignAmountToCategoryRow{}, err
 		}
-		return dbAssignment, err
+
+		return dbAssignmentResult, err
 	}
-	dbAssignment, err := assignToCat(rqPayload.ToCategory, rqPayload.Amount)
+
+	dbAssignment, err := assignToCat(rqPayload.ToCategory, rqPayload.Amount, shouldReassign)
 	if err != nil {
 		return
 	}
 	if usingDBTxn {
-		_, err = assignToCat(rqPayload.FromCategory, rqPayload.Amount*-1)
+		_, err = assignToCat(rqPayload.FromCategory, dbAssignment.ChangeInAmount*-1, false)
 		if err != nil {
 			return
 		}

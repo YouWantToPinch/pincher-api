@@ -239,6 +239,10 @@ func SetupMux(cfg *APIConfig) http.Handler {
 		api.Build().Post().Budget().Month().Category().Col(),
 		mdAuth(mdClear(MANAGER, cfg.handleAssignAmountToCategory)),
 	)
+	r.Handle(
+		api.Build().Put().Budget().Month().Category().Col(),
+		mdAuth(mdClear(MANAGER, cfg.handleAssignAmountToCategory)),
+	)
 	// Reporting
 	r.Handle(
 		api.Build().Get().Budget().Month().Category(),
