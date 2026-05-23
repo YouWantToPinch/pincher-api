@@ -137,7 +137,7 @@ LEFT JOIN rep.get_category_reports_gate(
   $3::uuid, 
   $1::date
 ) AS r ON r.category_id = c.id
-WHERE c.budget_id = $3
+WHERE g.budget_id = $3
 GROUP BY g.id, g.name
 LIMIT 1
 `
@@ -185,7 +185,7 @@ LEFT JOIN rep.get_category_reports_gate(
   $2::uuid, 
   $1::date
 ) AS r ON r.category_id = c.id
-WHERE c.budget_id = $2
+WHERE g.budget_id = $2 OR c.budget_id = $2
 GROUP BY g.id, g.name
 `
 

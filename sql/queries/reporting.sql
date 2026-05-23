@@ -59,7 +59,7 @@ LEFT JOIN rep.get_category_reports_gate(
   @budget_id::uuid, 
   @month_id::date
 ) AS r ON r.category_id = c.id
-WHERE c.budget_id = @budget_id
+WHERE g.budget_id = @budget_id OR c.budget_id = @budget_id
 GROUP BY g.id, g.name;
 
 -- name: GetMonthGroupReport :one
@@ -76,6 +76,6 @@ LEFT JOIN rep.get_category_reports_gate(
   @budget_id::uuid, 
   @month_id::date
 ) AS r ON r.category_id = c.id
-WHERE c.budget_id = @budget_id
+WHERE g.budget_id = @budget_id
 GROUP BY g.id, g.name
 LIMIT 1;
