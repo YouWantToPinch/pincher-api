@@ -26,7 +26,7 @@ WHERE id = $1;
 SELECT CAST(COALESCE(SUM(td.total_amount), 0) AS BIGINT) AS total
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
-WHERE t.account_id = $1;
+WHERE t.account_id = @account_id AND DATE_TRUNC('month', t.transaction_date) <= @month_id::date;
 
 -- name: RestoreAccount :exec
 UPDATE accounts

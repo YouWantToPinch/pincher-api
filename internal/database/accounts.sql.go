@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -138,11 +139,16 @@ const getBudgetAccountCapital = `-- name: GetBudgetAccountCapital :one
 SELECT CAST(COALESCE(SUM(td.total_amount), 0) AS BIGINT) AS total
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
-WHERE t.account_id = $1
+WHERE t.account_id = $1 AND DATE_TRUNC('month', t.transaction_date) <= $2::date
 `
 
-func (q *Queries) GetBudgetAccountCapital(ctx context.Context, accountID uuid.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, getBudgetAccountCapital, accountID)
+type GetBudgetAccountCapitalParams struct {
+	AccountID uuid.UUID
+	MonthID   time.Time
+}
+
+func (q *Queries) GetBudgetAccountCapital(ctx context.Context, arg GetBudgetAccountCapitalParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getBudgetAccountCapital, arg.AccountID, arg.MonthID)
 	var total int64
 	err := row.Scan(&total)
 	return total, err

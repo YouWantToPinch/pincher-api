@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	db "github.com/YouWantToPinch/pincher-api/internal/database"
 )
@@ -132,7 +133,21 @@ func (cfg *APIConfig) handleGetBudgetAccountCapital(w http.ResponseWriter, r *ht
 		return
 	}
 
-	capitalAmount, err := cfg.db.GetBudgetAccountCapital(r.Context(), pathAccountID)
+	var parsedMaxMonth time.Time
+	if r.URL.Query().Has("month_id") {
+		parsedMaxMonth, err = parseDateFromQuery("month_id", r)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "", err)
+			return
+		}
+	} else {
+		parsedMaxMonth = time.Now()
+	}
+
+	capitalAmount, err := cfg.db.GetBudgetAccountCapital(r.Context(), db.GetBudgetAccountCapitalParams{
+		AccountID: pathAccountID,
+		MonthID:   parsedMaxMonth,
+	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not calculate budget account capital", err)
 		return
