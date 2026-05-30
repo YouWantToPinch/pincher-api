@@ -33,7 +33,8 @@ type CreateCategoryParams struct {
 }
 
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
-	row := q.db.QueryRow(ctx, createCategory,
+	row := q.db.QueryRow(
+		ctx, createCategory,
 		arg.BudgetID,
 		arg.GroupID,
 		arg.Name,
@@ -129,28 +130,51 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, 
 
 const isCategoryInUse = `-- name: IsCategoryInUse :one
 SELECT EXISTS (
-  SELECT 1
-  FROM transaction_splits
-  WHERE category_id = $1
+  SELECT 1 FROM transaction_splits WHERE category_id = $1
+  UNION ALL
+  SELECT 1 FROM assignments WHERE category_id = $1
 ) AS found
 `
 
-func (q *Queries) IsCategoryInUse(ctx context.Context, categoryID *uuid.UUID) (bool, error) {
-	row := q.db.QueryRow(ctx, isCategoryInUse, categoryID)
+func (q *Queries) IsCategoryInUse(ctx context.Context, dollar_1 *uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, isCategoryInUse, dollar_1)
 	var found bool
 	err := row.Scan(&found)
 	return found, err
 }
 
+const reassignAssignmentCategories = `-- name: ReassignAssignmentCategories :exec
+WITH moved_assignments AS (
+  INSERT INTO assignments (month, category_id, assigned)
+  SELECT month, $2::uuid, assigned
+  FROM assignments
+  WHERE category_id = $1::uuid
+  ON CONFLICT (month, category_id) 
+  DO UPDATE SET assigned = assignments.assigned + EXCLUDED.assigned
+)
+DELETE FROM assignments
+WHERE category_id = $1::uuid
+`
+
+type ReassignAssignmentCategoriesParams struct {
+	OldCategoryID uuid.UUID
+	NewCategoryID uuid.UUID
+}
+
+func (q *Queries) ReassignAssignmentCategories(ctx context.Context, arg ReassignAssignmentCategoriesParams) error {
+	_, err := q.db.Exec(ctx, reassignAssignmentCategories, arg.OldCategoryID, arg.NewCategoryID)
+	return err
+}
+
 const reassignTransactionCategories = `-- name: ReassignTransactionCategories :exec
 UPDATE transaction_splits
-SET category_id = $1
-WHERE category_id = $2
+SET category_id = $1::uuid
+WHERE category_id = $2::uuid
 `
 
 type ReassignTransactionCategoriesParams struct {
-	NewCategoryID *uuid.UUID
-	OldCategoryID *uuid.UUID
+	NewCategoryID uuid.UUID
+	OldCategoryID uuid.UUID
 }
 
 func (q *Queries) ReassignTransactionCategories(ctx context.Context, arg ReassignTransactionCategoriesParams) error {
@@ -173,7 +197,8 @@ type UpdateCategoryParams struct {
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
-	row := q.db.QueryRow(ctx, updateCategory,
+	row := q.db.QueryRow(
+		ctx, updateCategory,
 		arg.ID,
 		arg.GroupID,
 		arg.Name,

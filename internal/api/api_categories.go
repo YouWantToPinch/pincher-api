@@ -262,11 +262,20 @@ func (cfg *APIConfig) handleDeleteCategory(w http.ResponseWriter, r *http.Reques
 			}
 
 			err = q.ReassignTransactionCategories(r.Context(), db.ReassignTransactionCategoriesParams{
-				OldCategoryID: &pathCategoryID,
-				NewCategoryID: &categoryID,
+				OldCategoryID: pathCategoryID,
+				NewCategoryID: categoryID,
 			})
 			if err != nil {
 				respondWithError(w, http.StatusInternalServerError, "could not reassign category for transactions", err)
+				return
+			}
+
+			err = q.ReassignAssignmentCategories(r.Context(), db.ReassignAssignmentCategoriesParams{
+				OldCategoryID: pathCategoryID,
+				NewCategoryID: categoryID,
+			})
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "could not reassign category for assignments", err)
 				return
 			}
 		}

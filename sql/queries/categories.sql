@@ -33,14 +33,26 @@ RETURNING *;
 
 -- name: ReassignTransactionCategories :exec
 UPDATE transaction_splits
-SET category_id = @new_category_id
-WHERE category_id = @old_category_id;
+SET category_id = @new_category_id::uuid
+WHERE category_id = @old_category_id::uuid;
+
+-- name: ReassignAssignmentCategories :exec
+WITH moved_assignments AS (
+  INSERT INTO assignments (month, category_id, assigned)
+  SELECT month, @new_category_id::uuid, assigned
+  FROM assignments
+  WHERE category_id = @old_category_id::uuid
+  ON CONFLICT (month, category_id) 
+  DO UPDATE SET assigned = assignments.assigned + EXCLUDED.assigned
+)
+DELETE FROM assignments
+WHERE category_id = @old_category_id::uuid;
 
 -- name: IsCategoryInUse :one
 SELECT EXISTS (
-  SELECT 1
-  FROM transaction_splits
-  WHERE category_id = $1
+  SELECT 1 FROM transaction_splits WHERE category_id = $1
+  UNION ALL
+  SELECT 1 FROM assignments WHERE category_id = $1
 ) AS found;
 
 -- name: DeleteCategory :exec
