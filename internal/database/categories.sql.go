@@ -52,14 +52,14 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 	return i, err
 }
 
-const deleteCategoryByID = `-- name: DeleteCategoryByID :exec
+const deleteCategory = `-- name: DeleteCategory :exec
 DELETE
 FROM categories
 WHERE id = $1
 `
 
-func (q *Queries) DeleteCategoryByID(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteCategoryByID, id)
+func (q *Queries) DeleteCategory(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteCategory, id)
 	return err
 }
 
@@ -125,6 +125,37 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, 
 		&i.Notes,
 	)
 	return i, err
+}
+
+const isCategoryInUse = `-- name: IsCategoryInUse :one
+SELECT EXISTS (
+  SELECT 1
+  FROM transaction_splits
+  WHERE category_id = $1
+) AS found
+`
+
+func (q *Queries) IsCategoryInUse(ctx context.Context, categoryID *uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, isCategoryInUse, categoryID)
+	var found bool
+	err := row.Scan(&found)
+	return found, err
+}
+
+const reassignTransactionCategories = `-- name: ReassignTransactionCategories :exec
+UPDATE transaction_splits
+SET category_id = $1
+WHERE category_id = $2
+`
+
+type ReassignTransactionCategoriesParams struct {
+	NewCategoryID *uuid.UUID
+	OldCategoryID *uuid.UUID
+}
+
+func (q *Queries) ReassignTransactionCategories(ctx context.Context, arg ReassignTransactionCategoriesParams) error {
+	_, err := q.db.Exec(ctx, reassignTransactionCategories, arg.NewCategoryID, arg.OldCategoryID)
+	return err
 }
 
 const updateCategory = `-- name: UpdateCategory :one

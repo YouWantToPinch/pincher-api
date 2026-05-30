@@ -123,19 +123,19 @@ func (q *Queries) IsPayeeInUse(ctx context.Context, payeeID uuid.UUID) (bool, er
 	return found, err
 }
 
-const reassignTransactions = `-- name: ReassignTransactions :exec
+const reassignTransactionPayees = `-- name: ReassignTransactionPayees :exec
 UPDATE transactions
 SET payee_id = $1
 WHERE payee_id = $2
 `
 
-type ReassignTransactionsParams struct {
+type ReassignTransactionPayeesParams struct {
 	NewPayeeID uuid.UUID
 	OldPayeeID uuid.UUID
 }
 
-func (q *Queries) ReassignTransactions(ctx context.Context, arg ReassignTransactionsParams) error {
-	_, err := q.db.Exec(ctx, reassignTransactions, arg.NewPayeeID, arg.OldPayeeID)
+func (q *Queries) ReassignTransactionPayees(ctx context.Context, arg ReassignTransactionPayeesParams) error {
+	_, err := q.db.Exec(ctx, reassignTransactionPayees, arg.NewPayeeID, arg.OldPayeeID)
 	return err
 }
 

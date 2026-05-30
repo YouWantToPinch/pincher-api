@@ -186,7 +186,7 @@ func (cfg *APIConfig) handleDeletePayee(w http.ResponseWriter, r *http.Request) 
 			}
 
 			if rqPayload.NewPayeeName == "" {
-				respondWithError(w, http.StatusBadRequest, "replacement payee name not provided", nil)
+				respondWithError(w, http.StatusUnprocessableEntity, "replacement payee name not provided", nil)
 				return
 			}
 			PayeeID, err := lookupResourceIDByName(r.Context(),
@@ -199,7 +199,7 @@ func (cfg *APIConfig) handleDeletePayee(w http.ResponseWriter, r *http.Request) 
 				return
 			}
 
-			err = q.ReassignTransactions(r.Context(), db.ReassignTransactionsParams{
+			err = q.ReassignTransactionPayees(r.Context(), db.ReassignTransactionPayeesParams{
 				OldPayeeID: pathPayeeID,
 				NewPayeeID: PayeeID,
 			})

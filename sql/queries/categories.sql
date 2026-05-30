@@ -31,7 +31,19 @@ SET updated_at = NOW(), group_id = $2, name = $3, notes = $4
 WHERE id = $1
 RETURNING *;
 
--- name: DeleteCategoryByID :exec
+-- name: ReassignTransactionCategories :exec
+UPDATE transaction_splits
+SET category_id = @new_category_id
+WHERE category_id = @old_category_id;
+
+-- name: IsCategoryInUse :one
+SELECT EXISTS (
+  SELECT 1
+  FROM transaction_splits
+  WHERE category_id = $1
+) AS found;
+
+-- name: DeleteCategory :exec
 DELETE
 FROM categories
 WHERE id = $1;

@@ -207,21 +207,80 @@ func (cfg *APIConfig) handleDeleteCategory(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	dbCategory, err := cfg.db.GetCategoryByID(r.Context(), pathCategoryID)
-	if err != nil {
-		respondWithError(w, http.StatusNotFound, "could not get category", err)
-		return
-	}
-	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
-	if pathBudgetID != dbCategory.BudgetID {
-		respondWithCode(w, http.StatusForbidden)
-		return
+	// DB TRANSACTION BLOCK
+	{
+		tx, err := cfg.Pool.Begin(r.Context())
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "", err)
+			return
+		}
+		defer tx.Rollback(r.Context())
+
+		q := cfg.db.WithTx(tx)
+
+		dbCategory, err := q.GetCategoryByID(r.Context(), pathCategoryID)
+		if err != nil {
+			respondWithError(w, http.StatusNotFound, "could not get category", err)
+			return
+		}
+
+		pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
+		if pathBudgetID != dbCategory.BudgetID {
+			respondWithCode(w, http.StatusForbidden)
+			return
+		}
+
+		categoryInUse, err := q.IsCategoryInUse(r.Context(), &pathCategoryID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "could not determine whether category in use", err)
+		}
+
+		if categoryInUse {
+
+			type rqSchema struct {
+				NewCategoryName string `json:"new_category_name"`
+			}
+
+			rqPayload, err := decodePayload[rqSchema](r)
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "", err)
+				return
+			}
+
+			if rqPayload.NewCategoryName == "" {
+				respondWithError(w, http.StatusUnprocessableEntity, "replacement category name not provided", nil)
+				return
+			}
+			categoryID, err := lookupResourceIDByName(r.Context(),
+				db.GetBudgetCategoryIDByNameParams{
+					CategoryName: rqPayload.NewCategoryName,
+					BudgetID:     pathBudgetID,
+				}, q.GetBudgetCategoryIDByName)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, "no category found for replacement with given name", err)
+				return
+			}
+
+			err = q.ReassignTransactionCategories(r.Context(), db.ReassignTransactionCategoriesParams{
+				OldCategoryID: &pathCategoryID,
+				NewCategoryID: &categoryID,
+			})
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "could not reassign category for transactions", err)
+				return
+			}
+		}
+
+		err = q.DeleteCategory(r.Context(), pathCategoryID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "could not delete category", err)
+			return
+		}
+		if err := tx.Commit(r.Context()); err != nil {
+			respondWithError(w, http.StatusInternalServerError, "", err)
+			return
+		}
 	}
 
-	err = cfg.db.DeleteCategoryByID(r.Context(), pathCategoryID)
-	if err != nil {
-		respondWithError(w, http.StatusNotFound, "could not delete category", err)
-		return
-	}
 	respondWithCode(w, http.StatusNoContent)
 }

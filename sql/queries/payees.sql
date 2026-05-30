@@ -26,7 +26,7 @@ SET updated_at = NOW(), name = $2, notes = $3
 WHERE id = $1
 RETURNING *;
 
--- name: ReassignTransactions :exec
+-- name: ReassignTransactionPayees :exec
 UPDATE transactions
 SET payee_id = @new_payee_id
 WHERE payee_id = @old_payee_id;
