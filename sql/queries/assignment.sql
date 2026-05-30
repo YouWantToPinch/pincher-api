@@ -21,14 +21,10 @@ VALUES (
 ON CONFLICT (month, category_id)
 DO UPDATE
 SET assigned = EXCLUDED.assigned
-RETURNING *,
-  (assigned - (SELECT assigned 
-  FROM assignments 
-  WHERE month = DATE_TRUNC('month', @month_id::timestamp) 
-    AND category_id = @category_id)) 
-  AS change_in_amount;
+RETURNING assignments.*,
+  ((@amount) - COALESCE(assignments.assigned, 0)) AS change_in_amount;
 
 -- name: DeleteMonthAssignmentForCat :exec
 DELETE FROM assignments
-WHERE $1 = month AND $2 = category_id;
+WHERE month = @month_id AND category_id = @category_id;
 

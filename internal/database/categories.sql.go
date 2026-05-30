@@ -33,8 +33,7 @@ type CreateCategoryParams struct {
 }
 
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
-	row := q.db.QueryRow(
-		ctx, createCategory,
+	row := q.db.QueryRow(ctx, createCategory,
 		arg.BudgetID,
 		arg.GroupID,
 		arg.Name,
@@ -197,8 +196,7 @@ type UpdateCategoryParams struct {
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
-	row := q.db.QueryRow(
-		ctx, updateCategory,
+	row := q.db.QueryRow(ctx, updateCategory,
 		arg.ID,
 		arg.GroupID,
 		arg.Name,

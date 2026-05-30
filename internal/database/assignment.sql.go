@@ -40,16 +40,16 @@ func (q *Queries) AssignAmountToCategory(ctx context.Context, arg AssignAmountTo
 
 const deleteMonthAssignmentForCat = `-- name: DeleteMonthAssignmentForCat :exec
 DELETE FROM assignments
-WHERE $1 = month AND $2 = category_id
+WHERE month = $1 AND category_id = $2
 `
 
 type DeleteMonthAssignmentForCatParams struct {
-	Month      time.Time
+	MonthID    time.Time
 	CategoryID uuid.UUID
 }
 
 func (q *Queries) DeleteMonthAssignmentForCat(ctx context.Context, arg DeleteMonthAssignmentForCatParams) error {
-	_, err := q.db.Exec(ctx, deleteMonthAssignmentForCat, arg.Month, arg.CategoryID)
+	_, err := q.db.Exec(ctx, deleteMonthAssignmentForCat, arg.MonthID, arg.CategoryID)
 	return err
 }
 
@@ -63,12 +63,8 @@ VALUES (
 ON CONFLICT (month, category_id)
 DO UPDATE
 SET assigned = EXCLUDED.assigned
-RETURNING month, category_id, assigned,
-  (assigned - (SELECT assigned 
-  FROM assignments 
-  WHERE month = DATE_TRUNC('month', $1::timestamp) 
-    AND category_id = $2)) 
-  AS change_in_amount
+RETURNING assignments.month, assignments.category_id, assignments.assigned,
+  (($3) - COALESCE(assignments.assigned, 0)) AS change_in_amount
 `
 
 type ReassignAmountToCategoryParams struct {
