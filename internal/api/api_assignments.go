@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -24,18 +25,38 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 
 	shouldReassign := r.Method == http.MethodPut
 
-	if rqPayload.Amount == 0 && !shouldReassign {
-		respondWithError(w, http.StatusBadRequest, "could not assign non-zero amount", nil)
-		return
-	}
-
+	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
 	parsedMonth, err := parseDateFromPath("month_id", r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "", err)
 		return
 	}
 
-	pathBudgetID := getContextKeyValueAsUUID(r.Context(), "budget_id")
+	if rqPayload.Amount == 0 {
+		if !shouldReassign {
+			respondWithError(w, http.StatusBadRequest, "could not assign non-zero amount", nil)
+			return
+		} else {
+
+			parsedCategoryID, err := lookupResourceIDByName(r.Context(),
+				db.GetBudgetCategoryIDByNameParams{
+					CategoryName: rqPayload.ToCategory,
+					BudgetID:     pathBudgetID,
+				}, cfg.db.GetBudgetCategoryIDByName)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, "could not find category by given name", err)
+				return
+			}
+			err = cfg.db.DeleteMonthAssignmentForCat(context.Background(), db.DeleteMonthAssignmentForCatParams{
+				MonthID:    parsedMonth,
+				CategoryID: parsedCategoryID,
+			})
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, "could not delete category assignment", err)
+			}
+		}
+	}
+
 	usingDBTxn := rqPayload.FromCategory != ""
 
 	q := cfg.db
@@ -66,7 +87,7 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 					BudgetID:     pathBudgetID,
 				}, q.GetBudgetCategoryIDByName)
 			if err != nil {
-				respondWithError(w, http.StatusBadRequest, "could not get category by given name", err)
+				respondWithError(w, http.StatusBadRequest, "could not find category by given name", err)
 				return db.ReassignAmountToCategoryRow{}, err
 			}
 		}
