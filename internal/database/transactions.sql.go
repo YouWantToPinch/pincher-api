@@ -118,7 +118,7 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 
 const getTransactionDetails = `-- name: GetTransactionDetails :many
 
-SELECT td.id, td.transaction_date, td.transaction_type, td.notes, td.payee_name, td.budget_name, td.account_name, td.logger_name, td.total_amount, td.splits, td.cleared
+SELECT td.id, td.created_at, td.updated_at, td.transaction_date, td.transaction_type, td.notes, td.payee_name, td.budget_name, td.account_name, td.logger_name, td.total_amount, td.splits, td.cleared
 FROM transaction_details td
 JOIN transactions t ON td.id = t.id
 WHERE
@@ -162,7 +162,8 @@ type GetTransactionDetailsParams struct {
 // ensures that the zero-value UUIDs and timestamps
 // passed to the query are properly compared.
 func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionDetailsParams) ([]TransactionDetail, error) {
-	rows, err := q.db.Query(ctx, getTransactionDetails,
+	rows, err := q.db.Query(
+		ctx, getTransactionDetails,
 		arg.BudgetID,
 		arg.AccountID,
 		arg.PayeeID,
@@ -179,6 +180,8 @@ func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionD
 		var i TransactionDetail
 		if err := rows.Scan(
 			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.TransactionDate,
 			&i.TransactionType,
 			&i.Notes,
@@ -201,7 +204,7 @@ func (q *Queries) GetTransactionDetails(ctx context.Context, arg GetTransactionD
 }
 
 const getTransactionDetailsByID = `-- name: GetTransactionDetailsByID :one
-SELECT id, transaction_date, transaction_type, notes, payee_name, budget_name, account_name, logger_name, total_amount, splits, cleared
+SELECT id, created_at, updated_at, transaction_date, transaction_type, notes, payee_name, budget_name, account_name, logger_name, total_amount, splits, cleared
 FROM transaction_details
 WHERE id = $1
 `
@@ -211,6 +214,8 @@ func (q *Queries) GetTransactionDetailsByID(ctx context.Context, id uuid.UUID) (
 	var i TransactionDetail
 	err := row.Scan(
 		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.TransactionDate,
 		&i.TransactionType,
 		&i.Notes,
@@ -263,7 +268,8 @@ type GetTransactionsParams struct {
 }
 
 func (q *Queries) GetTransactions(ctx context.Context, arg GetTransactionsParams) ([]Transaction, error) {
-	rows, err := q.db.Query(ctx, getTransactions,
+	rows, err := q.db.Query(
+		ctx, getTransactions,
 		arg.BudgetID,
 		arg.AccountID,
 		arg.PayeeID,
@@ -355,7 +361,8 @@ type LogTransactionParams struct {
 }
 
 func (q *Queries) LogTransaction(ctx context.Context, arg LogTransactionParams) (Transaction, error) {
-	row := q.db.QueryRow(ctx, logTransaction,
+	row := q.db.QueryRow(
+		ctx, logTransaction,
 		arg.BudgetID,
 		arg.LoggerID,
 		arg.AccountID,
@@ -453,7 +460,8 @@ type UpdateTransactionParams struct {
 }
 
 func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) error {
-	_, err := q.db.Exec(ctx, updateTransaction,
+	_, err := q.db.Exec(
+		ctx, updateTransaction,
 		arg.AccountID,
 		arg.TransactionType,
 		arg.TransactionDate,

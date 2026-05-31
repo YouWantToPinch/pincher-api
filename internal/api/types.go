@@ -119,6 +119,8 @@ type TransactionSplit struct {
 }
 
 type TransactionDetail struct {
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       time.Time        `json:"updated_at"`
 	TransactionDate time.Time        `json:"transaction_date"`
 	ID              uuid.UUID        `json:"id"`
 	TransactionType string           `json:"transaction_type"`

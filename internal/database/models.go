@@ -103,6 +103,8 @@ type Transaction struct {
 
 type TransactionDetail struct {
 	ID              uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 	TransactionDate time.Time
 	TransactionType string
 	Notes           string

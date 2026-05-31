@@ -250,6 +250,8 @@ func (cfg *APIConfig) handleGetTransactions(w http.ResponseWriter, r *http.Reque
 
 				transactions = append(transactions, TransactionDetail{
 					ID:              detailedTxn.ID,
+					CreatedAt:       detailedTxn.CreatedAt,
+					UpdatedAt:       detailedTxn.UpdatedAt,
 					TransactionType: detailedTxn.TransactionType,
 					TransactionDate: detailedTxn.TransactionDate,
 					PayeeName:       detailedTxn.PayeeName,
