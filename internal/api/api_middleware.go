@@ -7,6 +7,7 @@ import (
 
 	"github.com/YouWantToPinch/pincher-api/internal/auth"
 	db "github.com/YouWantToPinch/pincher-api/internal/database"
+	"github.com/YouWantToPinch/pincher-api/internal/service"
 	"github.com/google/uuid"
 )
 
@@ -69,7 +70,7 @@ func (cfg *APIConfig) middlewareAuthenticate(next http.HandlerFunc) http.Handler
 			respondWithError(w, http.StatusUnauthorized, "invalid token provided", err)
 			return
 		}
-		ctxUserID := ctxKey("user_id")
+		ctxUserID := service.CTXKey("user_id")
 		ctx := context.WithValue(r.Context(), ctxUserID, validatedUserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

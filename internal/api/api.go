@@ -4,7 +4,10 @@ package api
 import (
 	"net/http"
 
+	"github.com/YouWantToPinch/pincher-api/internal/handler"
 	reg "github.com/YouWantToPinch/pincher-api/internal/registrar"
+	"github.com/YouWantToPinch/pincher-api/internal/repository"
+	"github.com/YouWantToPinch/pincher-api/internal/service"
 )
 
 func SetupMux(cfg *APIConfig) http.Handler {
@@ -14,6 +17,11 @@ func SetupMux(cfg *APIConfig) http.Handler {
 	mdAuth := cfg.middlewareAuthenticate
 	mdClear := cfg.middlewareCheckClearance
 	mdValidateTxn := cfg.middlewareValidateTxn
+
+	// services
+	userRepo := repository.NewPGUserRepository(cfg.Pool)
+	userService := service.NewUserService(userRepo)
+	userHandler := handler.NewUserHandler(userService)
 
 	// REGISTER API HANDLERS
 	// ======================
@@ -53,15 +61,15 @@ func SetupMux(cfg *APIConfig) http.Handler {
 	// User authentication
 	r.Handle(
 		api.Build().Post().Add("users"),
-		cfg.handleCreateUser,
+		userHandler.HandleCreateUser,
 	)
 	r.Handle(
 		api.Build().Delete().Add("users"),
-		mdAuth(cfg.handleDeleteUser),
+		mdAuth(userHandler.HandleDeleteUser),
 	)
 	r.Handle(
 		api.Build().Put().Add("users"),
-		mdAuth(cfg.handleUpdateUserCredentials),
+		mdAuth(userHandler.HandleUpdateUserCredentials),
 	)
 	r.Handle(
 		api.Build().Post().Add("login"),

@@ -130,7 +130,8 @@ func (cfg *APIConfig) GenerateDBConnectionString() (string, error) {
 		return "", fmt.Errorf("missing environment variables: %s", strings.Join(missing, ", "))
 	}
 
-	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+	url := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		dbURLMap[USER],
 		dbURLMap[PSWD],
 		dbURLMap[HOST],
