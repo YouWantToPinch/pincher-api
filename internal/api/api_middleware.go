@@ -13,8 +13,6 @@ import (
 
 // ================= MIDDLEWARE ================= //
 
-type ctxKey string
-
 // middlewareHandleCORS handles preflight OPTIONS requests to
 // tell browsers that cross-origin requests are permitted.
 //
@@ -108,7 +106,7 @@ func (cfg *APIConfig) middlewareCheckClearance(required BudgetMemberRole, next h
 			respondWithError(w, http.StatusForbidden, "user does not have clearance for action", err)
 			return
 		}
-		ctxBudgetID := ctxKey("budget_id")
+		ctxBudgetID := service.CTXKey("budget_id")
 		ctx := context.WithValue(r.Context(), ctxBudgetID, pathBudgetID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -210,7 +208,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 			delete(validatedTxn.amounts, k)
 		}
 
-		ctxValidatedTxn := ctxKey("validated_txn")
+		ctxValidatedTxn := service.CTXKey("validated_txn")
 		ctx := context.WithValue(r.Context(), ctxValidatedTxn, validatedTxn)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -219,7 +217,7 @@ func (cfg *APIConfig) middlewareValidateTxn(next http.HandlerFunc) http.HandlerF
 // ============== HELPERS =================
 
 func getContextKeyValueAsUUID(ctx context.Context, key string) uuid.UUID {
-	contextKeyValue, ok := ctx.Value(ctxKey(key)).(uuid.UUID)
+	contextKeyValue, ok := ctx.Value(service.CTXKey(key)).(uuid.UUID)
 	if !ok {
 		slog.Warn("failed to retrieve key from context", slog.String("key", key))
 		return uuid.Nil
@@ -228,7 +226,7 @@ func getContextKeyValueAsUUID(ctx context.Context, key string) uuid.UUID {
 }
 
 func getContextKeyValueAsTxn(ctx context.Context, key string) *validatedTxnPayload {
-	contextKeyValue, ok := ctx.Value(ctxKey(key)).(*validatedTxnPayload)
+	contextKeyValue, ok := ctx.Value(service.CTXKey(key)).(*validatedTxnPayload)
 	if !ok {
 		slog.Warn("failed to retrieve key from context", slog.String("key", key))
 		return nil

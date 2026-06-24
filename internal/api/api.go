@@ -18,11 +18,6 @@ func SetupMux(cfg *APIConfig) http.Handler {
 	mdClear := cfg.middlewareCheckClearance
 	mdValidateTxn := cfg.middlewareValidateTxn
 
-	// services
-	userRepo := repository.NewPGUserRepository(cfg.Pool)
-	userService := service.NewUserService(userRepo)
-	userHandler := handler.NewUserHandler(userService)
-
 	// REGISTER API HANDLERS
 	// ======================
 
@@ -57,6 +52,11 @@ func SetupMux(cfg *APIConfig) http.Handler {
 		api.Build().Get().Add("healthz"),
 		cfg.handleReadiness,
 	)
+
+	// User layers
+	userRepo := repository.NewPGUserRepository(cfg.Pool)
+	userService := service.NewUserService(userRepo)
+	userHandler := handler.NewUserHandler(userService)
 
 	// User authentication
 	r.Handle(
@@ -116,26 +116,32 @@ func SetupMux(cfg *APIConfig) http.Handler {
 		api.Build().Get().Budget().Add("capital"),
 		mdAuth(mdClear(VIEWER, cfg.handleGetBudgetCapital)),
 	)
-	// Groups
+
+	// GROUPS
+	// Group layers
+	groupRepo := repository.NewPGGroupRepository(cfg.Pool)
+	groupService := service.NewGroupService(groupRepo)
+	groupHandler := handler.NewGroupHandler(groupService)
+
 	r.Handle(
 		api.Build().Post().Budget().Group().Col(),
-		mdAuth(mdClear(MANAGER, cfg.handleCreateGroup)),
+		mdAuth(mdClear(MANAGER, groupHandler.HandleCreateGroup)),
 	)
 	r.Handle(
 		api.Build().Get().Budget().Group().Col(),
-		mdAuth(mdClear(VIEWER, cfg.handleGetGroups)),
+		mdAuth(mdClear(VIEWER, groupHandler.HandleGetGroups)),
 	)
 	r.Handle(
 		api.Build().Get().Budget().Group(),
-		mdAuth(mdClear(VIEWER, cfg.handleGetGroup)),
+		mdAuth(mdClear(VIEWER, groupHandler.HandleGetGroup)),
 	)
 	r.Handle(
 		api.Build().Put().Budget().Group(),
-		mdAuth(mdClear(MANAGER, cfg.handleUpdateGroup)),
+		mdAuth(mdClear(MANAGER, groupHandler.HandleUpdateGroup)),
 	)
 	r.Handle(
 		api.Build().Delete().Budget().Group(),
-		mdAuth(mdClear(MANAGER, cfg.handleDeleteGroup)),
+		mdAuth(mdClear(MANAGER, groupHandler.HandleDeleteGroup)),
 	)
 	// Categories
 	r.Handle(
