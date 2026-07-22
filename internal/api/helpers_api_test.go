@@ -259,7 +259,9 @@ func (c *APITestClient) UpdateCategory(token, budgetID, categoryID, groupName, n
 }
 
 func (c *APITestClient) DeleteBudgetCategory(token, budgetID, categoryID string) *http.Request {
-	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/categories/"+categoryID, token, nil)
+	return MakeRequest(http.MethodDelete, "/api/budgets/"+budgetID+"/categories/"+categoryID, token, map[string]any{
+		"new_category_name": "",
+	})
 }
 
 // BUDGET -> GROUP CRUD

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -47,11 +46,10 @@ func (cfg *APIConfig) handleAssignAmountToCategory(w http.ResponseWriter, r *htt
 				respondWithError(w, http.StatusBadRequest, "could not find category by given name", err)
 				return
 			}
-			err = cfg.db.DeleteMonthAssignmentForCat(context.Background(), db.DeleteMonthAssignmentForCatParams{
+			if err := cfg.db.DeleteMonthAssignmentForCat(r.Context(), db.DeleteMonthAssignmentForCatParams{
 				MonthID:    parsedMonth,
 				CategoryID: parsedCategoryID,
-			})
-			if err != nil {
+			}); err != nil {
 				respondWithError(w, http.StatusInternalServerError, "could not delete category assignment", err)
 			}
 		}
