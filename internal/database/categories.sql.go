@@ -33,7 +33,8 @@ type CreateCategoryParams struct {
 }
 
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
-	row := q.db.QueryRow(ctx, createCategory,
+	row := q.db.QueryRow(
+		ctx, createCategory,
 		arg.BudgetID,
 		arg.GroupID,
 		arg.Name,
@@ -61,6 +62,18 @@ WHERE id = $1
 func (q *Queries) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteCategory, id)
 	return err
+}
+
+const doesCategoryExist = `-- name: DoesCategoryExist :one
+SELECT EXISTS (
+  SELECT 1 FROM categories WHERE id = $1 FOR UPDATE)
+`
+
+func (q *Queries) DoesCategoryExist(ctx context.Context, id uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, doesCategoryExist, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const getCategories = `-- name: GetCategories :many
@@ -135,8 +148,8 @@ SELECT EXISTS (
 ) AS found
 `
 
-func (q *Queries) IsCategoryInUse(ctx context.Context, dollar_1 *uuid.UUID) (bool, error) {
-	row := q.db.QueryRow(ctx, isCategoryInUse, dollar_1)
+func (q *Queries) IsCategoryInUse(ctx context.Context, categoryID *uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, isCategoryInUse, categoryID)
 	var found bool
 	err := row.Scan(&found)
 	return found, err
@@ -196,7 +209,8 @@ type UpdateCategoryParams struct {
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
-	row := q.db.QueryRow(ctx, updateCategory,
+	row := q.db.QueryRow(
+		ctx, updateCategory,
 		arg.ID,
 		arg.GroupID,
 		arg.Name,

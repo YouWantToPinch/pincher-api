@@ -50,10 +50,14 @@ WHERE category_id = @old_category_id::uuid;
 
 -- name: IsCategoryInUse :one
 SELECT EXISTS (
-  SELECT 1 FROM transaction_splits WHERE category_id = $1
+  SELECT 1 FROM transaction_splits WHERE category_id = @category_id
   UNION ALL
-  SELECT 1 FROM assignments WHERE category_id = $1
+  SELECT 1 FROM assignments WHERE category_id = @category_id
 ) AS found;
+
+-- name: DoesCategoryExist :one
+SELECT EXISTS (
+  SELECT 1 FROM categories WHERE id = $1 FOR UPDATE);
 
 -- name: DeleteCategory :exec
 DELETE

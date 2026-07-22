@@ -143,26 +143,32 @@ func SetupMux(cfg *APIConfig) http.Handler {
 		api.Build().Delete().Budget().Group(),
 		mdAuth(mdClear(MANAGER, groupHandler.HandleDeleteGroup)),
 	)
-	// Categories
+
+	// CATEGORIES
+	// Category layers
+	categoryRepo := repository.NewPGCategoryRepository(cfg.Pool)
+	categoryService := service.NewCategoryService(categoryRepo)
+	categoryHandler := handler.NewCategoryHandler(categoryService)
+
 	r.Handle(
 		api.Build().Post().Budget().Category().Col(),
-		mdAuth(mdClear(MANAGER, cfg.handleCreateCategory)),
+		mdAuth(mdClear(MANAGER, categoryHandler.HandleCreateCategory)),
 	)
 	r.Handle(
 		api.Build().Get().Budget().Category().Col(),
-		mdAuth(mdClear(VIEWER, cfg.handleGetCategories)),
+		mdAuth(mdClear(VIEWER, categoryHandler.HandleGetCategories)),
 	)
 	r.Handle(
 		api.Build().Get().Budget().Category(),
-		mdAuth(mdClear(VIEWER, cfg.handleGetCategory)),
+		mdAuth(mdClear(VIEWER, categoryHandler.HandleGetCategory)),
 	)
 	r.Handle(
 		api.Build().Put().Budget().Category(),
-		mdAuth(mdClear(MANAGER, cfg.handleUpdateCategory)),
+		mdAuth(mdClear(MANAGER, categoryHandler.HandleUpdateCategory)),
 	)
 	r.Handle(
 		api.Build().Delete().Budget().Category(),
-		mdAuth(mdClear(MANAGER, cfg.handleDeleteCategory)),
+		mdAuth(mdClear(MANAGER, categoryHandler.HandleDeleteCategory)),
 	)
 	// Payees
 	r.Handle(
