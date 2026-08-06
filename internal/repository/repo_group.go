@@ -13,7 +13,7 @@ type GroupRepository interface {
 	GetGroups(ctx context.Context, budgetID uuid.UUID) ([]database.Group, error)
 	CreateGroup(ctx context.Context, arg database.CreateGroupParams) (database.Group, error)
 	UpdateGroup(ctx context.Context, arg database.UpdateGroupParams) (database.Group, error)
-	DeleteGroupByID(ctx context.Context, uuid uuid.UUID) error
+	DeleteGroupByID(ctx context.Context, id uuid.UUID) error
 }
 
 type PGGroupRepository struct {

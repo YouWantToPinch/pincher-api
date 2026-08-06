@@ -171,25 +171,29 @@ func SetupMux(cfg *APIConfig) http.Handler {
 		mdAuth(mdClear(MANAGER, categoryHandler.HandleDeleteCategory)),
 	)
 	// Payees
+	// Payee layers
+	payeeRepo := repository.NewPGPayeeRepository(cfg.Pool)
+	payeeService := service.NewPayeeService(payeeRepo)
+	payeeHandler := handler.NewPayeeHandler(payeeService)
 	r.Handle(
 		api.Build().Post().Budget().Payee().Col(),
-		mdAuth(mdClear(CONTRIBUTOR, cfg.handleCreatePayee)),
+		mdAuth(mdClear(CONTRIBUTOR, payeeHandler.HandleCreatePayee)),
 	)
 	r.Handle(
 		api.Build().Get().Budget().Payee().Col(),
-		mdAuth(mdClear(VIEWER, cfg.handleGetPayees)),
+		mdAuth(mdClear(VIEWER, payeeHandler.HandleGetPayees)),
 	)
 	r.Handle(
 		api.Build().Get().Budget().Payee(),
-		mdAuth(mdClear(VIEWER, cfg.handleGetPayee)),
+		mdAuth(mdClear(VIEWER, payeeHandler.HandleGetPayee)),
 	)
 	r.Handle(
 		api.Build().Put().Budget().Payee(),
-		mdAuth(mdClear(MANAGER, cfg.handleUpdatePayee)),
+		mdAuth(mdClear(MANAGER, payeeHandler.HandleUpdatePayee)),
 	)
 	r.Handle(
 		api.Build().Delete().Budget().Payee(),
-		mdAuth(mdClear(CONTRIBUTOR, cfg.handleDeletePayee)),
+		mdAuth(mdClear(CONTRIBUTOR, payeeHandler.HandleDeletePayee)),
 	)
 	// Accounts
 	r.Handle(

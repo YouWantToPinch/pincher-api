@@ -53,7 +53,6 @@ func (s *GroupAPIService) CreateGroup(ctx context.Context, name, notes string) (
 		Notes:    notes,
 	})
 	if err != nil {
-		slog.Error(err.Error())
 		return Group{}, ErrGroupInternalCreate
 	}
 
